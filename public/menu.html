@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HostlyDesk — Room Service</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="wrap">
+
+  <div class="keycard">
+    <div class="keycard-eyebrow">HostlyDesk · Digital Key</div>
+    <div class="keycard-room" id="roomNumber">Room —</div>
+    <div class="keycard-guest" id="guestName">Loading guest details…</div>
+    <div class="keycard-strip"></div>
+    <div class="keycard-meta">
+      <span id="hotelName">HostlyDesk Hotel</span>
+      <span id="checkoutTime">Checkout —</span>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Need something?</div>
+    <div class="section-sub">Tap what you need. It goes straight to the right team — no typing.</div>
+    <div class="grid" id="requestGrid"></div>
+    <button class="btn-primary" id="sendRequestBtn" disabled>Send request</button>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Hotel info</div>
+    <div id="accordion"></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Nearby</div>
+    <div class="section-sub">Walking distance from the hotel</div>
+    <div id="localGuide"></div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="menu.js"></script>
+</body>
+</html>

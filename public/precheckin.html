@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HostlyDesk — Pre-Check-in</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="wrap">
+
+  <div class="keycard">
+    <div class="keycard-eyebrow">HostlyDesk · Before you arrive</div>
+    <div class="keycard-room" style="font-size:28px;">Pre-Check-in</div>
+    <div class="keycard-guest">Two minutes now saves ten at the desk.</div>
+  </div>
+
+  <form class="section" id="checkinForm">
+    <div class="field">
+      <label for="bookingRef">Booking reference</label>
+      <input id="bookingRef" name="bookingRef" required placeholder="e.g. HD-48213">
+    </div>
+    <div class="field">
+      <label for="fullName">Full name</label>
+      <input id="fullName" name="fullName" required placeholder="As on your ID">
+    </div>
+    <div class="field">
+      <label for="phone">Phone number</label>
+      <input id="phone" name="phone" type="tel" required placeholder="+91 98765 43210">
+    </div>
+    <div class="field">
+      <label for="idType">ID type</label>
+      <select id="idType" name="idType" required>
+        <option value="">Select ID type</option>
+        <option value="aadhaar">Aadhaar</option>
+        <option value="passport">Passport</option>
+        <option value="driving_license">Driving licence</option>
+        <option value="other">Other government ID</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="idNumber">ID number</label>
+      <input id="idNumber" name="idNumber" required placeholder="ID number">
+    </div>
+    <div class="field">
+      <label>ID photo (front)</label>
+      <div class="upload-box" id="uploadBox">Tap to upload a photo of your ID</div>
+      <input type="file" id="idFile" accept="image/*" style="display:none">
+    </div>
+    <button class="btn-primary" type="submit">Submit pre-check-in</button>
+  </form>
+
+  <div class="section success-panel" id="successPanel" style="display:none;">
+    <div class="success-badge">✓</div>
+    <h2>You're all set</h2>
+    <p style="color:var(--charcoal-soft); font-size:14px; margin-top:8px;">
+      We've got your details. Just show your ID at the desk when you arrive —
+      no forms to fill out there.
+    </p>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="precheckin.js"></script>
+</body>
+</html>
