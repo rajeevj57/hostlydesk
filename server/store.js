@@ -41,7 +41,7 @@ const MENU_ITEMS = [
   { id: 'towels', icon: '🚿', label: 'Extra Towels', department: 'housekeeping' },
   { id: 'water', icon: '💧', label: 'Drinking Water', department: 'housekeeping' },
   { id: 'cleaning', icon: '🧹', label: 'Room Cleaning', department: 'housekeeping' },
-  { id: 'cleaning', icon: '✨', label: 'Room Cleaning', department: 'housekeeping' },
+  { id: 'pillow', icon: '💤', label: 'Extra Pillow', department: 'housekeeping' },
   { id: 'food', icon: '🍴', label: 'Order Food', department: 'kitchen' },
   { id: 'tea_coffee', icon: '☕', label: 'Tea / Coffee', department: 'kitchen' },
   { id: 'wakeup', icon: '⏰', label: 'Wake-up Call', department: 'front_office' },
