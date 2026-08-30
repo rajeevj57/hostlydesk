@@ -56,6 +56,13 @@ const server = http.createServer(async (req, res) => {
       return sendJSON(res, 200, ctx);
     }
 
+    // ---- API: full room list (for the admin QR code page) ----
+    if (p === '/api/rooms' && req.method === 'GET') {
+      const rooms = store.readJSON(store.ROOMS_FILE);
+      const tokens = Object.keys(rooms).filter(t => t !== 'DEMO101').sort((a, b) => Number(a) - Number(b));
+      return sendJSON(res, 200, tokens);
+    }
+
     if (p === '/api/menu-items' && req.method === 'GET') {
       return sendJSON(res, 200, store.MENU_ITEMS);
     }
@@ -122,20 +129,4 @@ const server = http.createServer(async (req, res) => {
       return sendJSON(res, 200, { ok: true, id: record.id });
     }
 
-    // ---- Static files (guest pages) ----
-    if (req.method === 'GET') {
-      return serveStatic(req, res, p);
-    }
-
-    sendJSON(res, 404, { error: 'Not found' });
-  } catch (err) {
-    console.error(err);
-    sendJSON(res, 500, { error: 'Server error' });
-  }
-});
-
-server.listen(PORT, () => {
-  console.log(`HostlyDesk server running: http://localhost:${PORT}`);
-  console.log(`Guest menu:     http://localhost:${PORT}/menu.html?room=DEMO101`);
-  console.log(`Pre-check-in:   http://localhost:${PORT}/precheckin.html`);
-});
+    // ---- Static files (guest pages)
