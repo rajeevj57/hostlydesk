@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HostlyDesk — Room QR Codes</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:wght@600&family=Inter:wght@400;600&display=swap');
+  * { box-sizing: border-box; }
+  body { font-family: 'Inter', sans-serif; background: #F7F4EC; margin: 0; padding: 24px; color: #1E1B16; }
+  h1 { font-family: 'Fraunces', serif; font-size: 22px; margin: 0 0 4px; }
+  .sub { color: #55503F; font-size: 14px; margin-bottom: 18px; }
+  .bar { display: flex; gap: 10px; align-items: center; margin-bottom: 20px; flex-wrap: wrap; }
+  .bar input { padding: 9px 12px; border: 1px solid #E4DECC; border-radius: 8px; font-size: 13px; width: 260px; }
+  .bar button {
+    background: #12233F; color: white; border: none; border-radius: 8px;
+    padding: 10px 16px; font-size: 13px; font-weight: 600; cursor: pointer;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 14px;
+  }
+  .card {
+    background: white; border: 1px solid #E4DECC; border-radius: 12px;
+    padding: 14px; text-align: center; break-inside: avoid;
+  }
+  .card .room-num { font-family: 'Fraunces', serif; font-weight: 600; font-size: 18px; margin-top: 8px; }
+  .card .hotel { font-size: 11px; color: #55503F; margin-top: 2px; }
+  .qr-box { display: flex; justify-content: center; }
+  @media print {
+    .bar { display: none; }
+    body { background: white; padding: 0; }
+    .grid { grid-template-columns: repeat(4, 1fr); }
+  }
+</style>
+</head>
+<body>
+
+  <h1>Room QR Codes</h1>
+  <div class="sub">One QR code per room — each opens that room's guest menu directly. Print this page (or save as PDF) and cut out one per door.</div>
+
+  <div class="bar">
+    <input id="baseUrl" value="https://hostlydesk-1.onrender.com/menu.html?room=" />
+    <button onclick="render()">Regenerate</button>
+    <button onclick="window.print()">Print / Save as PDF</button>
+  </div>
+
+  <div class="grid" id="grid">Loading rooms…</div>
+
+<script>
+async function render() {
+  const grid = document.getElementById('grid');
+  grid.innerHTML = 'Loading rooms…';
+  const res = await fetch('/api/rooms');
+  const rooms = await res.json();
+  const base = document.getElementById('baseUrl').value;
+
+  grid.innerHTML = '';
+  rooms.forEach(room => {
+    const card = document.createElement('div');
+    card.className = 'card';
+    const qrBox = document.createElement('div');
+    qrBox.className = 'qr-box';
+    card.appendChild(qrBox);
+
+    const label = document.createElement('div');
+    label.className = 'room-num';
+    label.textContent = 'Room ' + room;
+    card.appendChild(label);
+
+    const hotel = document.createElement('div');
+    hotel.className = 'hotel';
+    hotel.textContent = 'Scan for room service';
+    card.appendChild(hotel);
+
+    grid.appendChild(card);
+
+    new QRCode(qrBox, {
+      text: base + room,
+      width: 128,
+      height: 128,
+    });
+  });
+}
+render();
+</script>
+
+</body>
+</html>
