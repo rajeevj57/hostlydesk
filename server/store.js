@@ -24,15 +24,21 @@ function init() {
   if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
   ensureFile(REQUESTS_FILE, []);
   ensureFile(GUESTS_FILE, []);
-  ensureFile(ROOMS_FILE, {
-    // room QR token -> room context. In production, generate one token per room/stay.
-    DEMO101: {
-      room: '101',
-      guestName: 'Guest',
-      hotelName: 'HostlyDesk Hotel',
-      checkoutTime: '11:00 AM'
+  const defaultRooms = {};
+  for (let floor = 1; floor <= 10; floor++) {
+    for (let num = 1; num <= 10; num++) {
+      const token = String(floor * 100 + num); // 101..110, 201..210, ... 1001..1010
+      defaultRooms[token] = {
+        room: token,
+        guestName: 'Guest',
+        hotelName: 'HostlyDesk Hotel',
+        checkoutTime: '11:00 AM'
+      };
     }
-  });
+  }
+  // Keep the old demo token working too, for the link you've been testing with
+  defaultRooms.DEMO101 = { room: '101', guestName: 'Guest', hotelName: 'HostlyDesk Hotel', checkoutTime: '11:00 AM' };
+  ensureFile(ROOMS_FILE, defaultRooms);
 }
 
 // ---- Menu items (Visual Request Menu) ----
@@ -40,8 +46,8 @@ function init() {
 const MENU_ITEMS = [
   { id: 'towels', icon: '🚿', label: 'Extra Towels', department: 'housekeeping' },
   { id: 'water', icon: '💧', label: 'Drinking Water', department: 'housekeeping' },
-  { id: 'cleaning', icon: '✅', label: 'Room Cleaning', department: 'housekeeping' },
   { id: 'pillow', icon: '💤', label: 'Extra Pillow', department: 'housekeeping' },
+  { id: 'cleaning', icon: '✅', label: 'Room Cleaning', department: 'housekeeping' },
   { id: 'food', icon: '🍴', label: 'Order Food', department: 'kitchen' },
   { id: 'tea_coffee', icon: '☕', label: 'Tea / Coffee', department: 'kitchen' },
   { id: 'wakeup', icon: '⏰', label: 'Wake-up Call', department: 'front_office' },
