@@ -23,8 +23,6 @@ function writeJSON(file, data) {
   fs.writeFileSync(file, JSON.stringify(data, null, 2));
 }
 
-// ---- Default seed data (only used the very first time each file is created) ----
-
 const DEFAULT_MENU_ITEMS = [
   { id: 'towels', icon: '🚿', label: 'Extra Towels', department: 'housekeeping' },
   { id: 'water', icon: '💧', label: 'Drinking Water', department: 'housekeeping' },
@@ -59,7 +57,7 @@ function init() {
   const defaultRooms = {};
   for (let floor = 1; floor <= 10; floor++) {
     for (let num = 1; num <= 10; num++) {
-      const token = String(floor * 100 + num); // 101..110, 201..210, ... 1001..1010
+      const token = String(floor * 100 + num);
       defaultRooms[token] = {
         room: token,
         guestName: 'Guest',
