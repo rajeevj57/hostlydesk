@@ -1,4 +1,3 @@
-
 const fs = require('fs');
 const path = require('path');
 
@@ -88,5 +87,3 @@ module.exports = {
   MENU_ITEMS_FILE, INFO_ITEMS_FILE, GUIDE_FILE,
   getMenuItems, getInfoItems, getGuide,
 };
-
-
