@@ -129,4 +129,20 @@ const server = http.createServer(async (req, res) => {
       return sendJSON(res, 200, { ok: true, id: record.id });
     }
 
-    // ---- Static files (guest pages)
+    // ---- Static files (guest pages) ----
+    if (req.method === 'GET') {
+      return serveStatic(req, res, p);
+    }
+
+    sendJSON(res, 404, { error: 'Not found' });
+  } catch (err) {
+    console.error(err);
+    sendJSON(res, 500, { error: 'Server error' });
+  }
+});
+
+server.listen(PORT, () => {
+  console.log(`HostlyDesk server running: http://localhost:${PORT}`);
+  console.log(`Guest menu:     http://localhost:${PORT}/menu.html?room=DEMO101`);
+  console.log(`Pre-check-in:   http://localhost:${PORT}/precheckin.html`);
+});
