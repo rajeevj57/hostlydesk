@@ -88,5 +88,5 @@ module.exports = {
   MENU_ITEMS_FILE, INFO_ITEMS_FILE, GUIDE_FILE,
   getMenuItems, getInfoItems, getGuide,
 };
-ENDOFFILE
+
 
