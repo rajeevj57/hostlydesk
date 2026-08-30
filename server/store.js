@@ -1,4 +1,4 @@
-cat > /home/claude/hostlydesk/server/store.js << 'ENDOFFILE'
+
 const fs = require('fs');
 const path = require('path');
 
@@ -89,4 +89,4 @@ module.exports = {
   getMenuItems, getInfoItems, getGuide,
 };
 ENDOFFILE
-echo "written"; wc -l /home/claude/hostlydesk/server/store.js
+
