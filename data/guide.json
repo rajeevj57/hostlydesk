@@ -1,1 +1,6 @@
-
+[
+  { "name": "Apollo Pharmacy", "category": "Pharmacy", "distance": "3 min walk" },
+  { "name": "HDFC ATM", "category": "ATM", "distance": "4 min walk" },
+  { "name": "Spice Route", "category": "Restaurant", "distance": "6 min walk" },
+  { "name": "Cafe Amber", "category": "Cafe", "distance": "2 min walk" }
+]
