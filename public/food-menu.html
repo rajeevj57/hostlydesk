@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HostlyDesk — Food Menu</title>
+<link rel="stylesheet" href="style.css">
+<style>
+  .food-cat-tabs { display: flex; gap: 8px; overflow-x: auto; padding: 4px 0 14px; }
+  .food-cat-btn {
+    background: var(--paper); border: 1px solid var(--line); border-radius: 999px;
+    padding: 8px 16px; font-size: 13px; font-weight: 600; color: var(--charcoal-soft);
+    white-space: nowrap; cursor: pointer; flex-shrink: 0;
+  }
+  .food-cat-btn.active { background: var(--navy); color: var(--ivory); border-color: var(--navy); }
+  .food-item {
+    display: flex; align-items: center; gap: 12px;
+    background: var(--paper); border: 1px solid var(--line); border-radius: 14px;
+    padding: 12px; margin-bottom: 10px;
+  }
+  .food-icon { font-size: 26px; width: 40px; text-align: center; }
+  .food-info { flex: 1; }
+  .food-name-row { display: flex; align-items: center; gap: 6px; }
+  .veg-dot { width: 10px; height: 10px; border-radius: 2px; border: 1.5px solid var(--sage); position: relative; flex-shrink: 0; }
+  .veg-dot::after { content: ""; position: absolute; inset: 2px; background: var(--sage); border-radius: 50%; }
+  .veg-dot.non-veg { border-color: var(--alert); }
+  .veg-dot.non-veg::after { background: var(--alert); }
+  .food-name { font-size: 14px; font-weight: 600; }
+  .food-price { font-size: 13px; color: var(--charcoal-soft); margin-top: 2px; }
+  .food-qty { display: flex; align-items: center; gap: 10px; }
+  .food-qty-btn {
+    width: 28px; height: 28px; border-radius: 50%; border: 1px solid var(--line);
+    background: white; font-size: 15px; cursor: pointer;
+  }
+  .food-qty-val { min-width: 16px; text-align: center; font-size: 14px; font-weight: 600; }
+  .cart-bar {
+    position: fixed; left: 0; right: 0; bottom: 0;
+    background: var(--navy); color: var(--ivory);
+    padding: 14px 20px; display: none; align-items: center; justify-content: space-between;
+    box-shadow: 0 -4px 16px rgba(0,0,0,0.15);
+  }
+  .cart-bar.show { display: flex; }
+  .cart-bar .cart-info { font-size: 13px; }
+  .cart-bar .cart-total { font-size: 16px; font-weight: 700; }
+  .cart-bar button {
+    background: var(--brass); color: var(--navy); border: none; border-radius: 10px;
+    padding: 10px 18px; font-size: 13px; font-weight: 700; cursor: pointer;
+  }
+</style>
+</head>
+<body>
+<div class="wrap" style="padding-bottom: 90px;">
+
+  <div class="keycard">
+    <div class="keycard-eyebrow">HostlyDesk · Food Menu</div>
+    <div class="keycard-room" id="roomNumber" style="font-size:28px;">Room —</div>
+    <div class="keycard-guest">Order straight to your room — no calls needed.</div>
+  </div>
+
+  <div class="section">
+    <div class="food-cat-tabs" id="catTabs"></div>
+    <div id="foodList">Loading menu…</div>
+  </div>
+
+</div>
+
+<div class="cart-bar" id="cartBar">
+  <div class="cart-info">
+    <div id="cartCount">0 items</div>
+    <div class="cart-total" id="cartTotal">₹0</div>
+  </div>
+  <button id="placeOrderBtn">Place order</button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="food-menu.js"></script>
+</body>
+</html>
