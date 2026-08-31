@@ -41,6 +41,7 @@ async function loadAll() {
   renderInfo(info);
   renderGuide(guide);
   renderFood(food);
+  loadCheckin();
 }
 
 // ---- Request Menu ----
@@ -174,6 +175,73 @@ async function saveFood() {
     veg: row.querySelector('[data-field="veg"]').value === 'true',
   })).filter(i => i.name);
   await adminSave('/api/admin/food-items', items, 'foodStatus');
+}
+
+// ---- Guests / Check-in ----
+async function loadCheckin() {
+  const res = await fetch('/api/admin/rooms', {
+    headers: { 'X-Admin-Password': adminPassword },
+  });
+  const rooms = await res.json();
+
+  const select = document.getElementById('checkinRoom');
+  select.innerHTML = rooms.map(r => `<option value="${r.room}">Room ${r.room}</option>`).join('');
+
+  const occupied = rooms.filter(r => r.guestName && r.guestName !== 'Guest');
+  const listEl = document.getElementById('occupiedRooms');
+  if (occupied.length === 0) {
+    listEl.textContent = 'No rooms currently have a guest checked in.';
+    return;
+  }
+  listEl.innerHTML = '';
+  occupied.forEach(r => {
+    const row = document.createElement('div');
+    row.className = 'row-card';
+    row.innerHTML = `
+      <div style="flex:1;">
+        <div style="font-weight:600; font-size:14px;">Room ${r.room} — ${r.guestName}</div>
+        <div style="font-size:12px; color:var(--charcoal-soft);">Checkout: ${r.checkoutTime}</div>
+      </div>
+      <button class="remove-btn" style="font-size:13px;" data-room="${r.room}">Check out</button>
+    `;
+    row.querySelector('button').addEventListener('click', () => checkoutGuest(r.room));
+    listEl.appendChild(row);
+  });
+}
+
+async function checkinGuest() {
+  const room = document.getElementById('checkinRoom').value;
+  const guestName = document.getElementById('checkinName').value.trim();
+  const checkoutTime = document.getElementById('checkinCheckout').value.trim();
+  const statusEl = document.getElementById('checkinStatus');
+  if (!guestName) { statusEl.textContent = 'Enter a guest name.'; statusEl.classList.add('error'); return; }
+
+  statusEl.textContent = 'Checking in…';
+  statusEl.classList.remove('error');
+  try {
+    const res = await fetch('/api/admin/checkin', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Admin-Password': adminPassword },
+      body: JSON.stringify({ room, guestName, checkoutTime }),
+    });
+    if (!res.ok) throw new Error('failed');
+    statusEl.textContent = `Checked in — Room ${room} now shows "${guestName}".`;
+    document.getElementById('checkinName').value = '';
+    document.getElementById('checkinCheckout').value = '';
+    loadCheckin();
+  } catch (e) {
+    statusEl.textContent = 'Could not check in. Please try again.';
+    statusEl.classList.add('error');
+  }
+}
+
+async function checkoutGuest(room) {
+  await fetch('/api/admin/checkout', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Admin-Password': adminPassword },
+    body: JSON.stringify({ room }),
+  });
+  loadCheckin();
 }
 
 // ---- Shared save helper ----
