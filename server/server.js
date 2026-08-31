@@ -117,6 +117,47 @@ const server = http.createServer(async (req, res) => {
       return sendJSON(res, 200, { ok: true });
     }
 
+    // ---- Admin: list all rooms with current guest names (for check-in screen) ----
+    if (p === '/api/admin/rooms' && req.method === 'GET') {
+      if (!isAdmin(req)) return sendJSON(res, 401, { error: 'Unauthorized' });
+      const rooms = store.readJSON(store.ROOMS_FILE);
+      const list = Object.keys(rooms)
+        .filter(t => t !== 'DEMO101')
+        .sort((a, b) => Number(a) - Number(b))
+        .map(token => rooms[token]);
+      return sendJSON(res, 200, list);
+    }
+
+    // ---- Admin: check a guest into a room (sets their name on that room) ----
+    if (p === '/api/admin/checkin' && req.method === 'POST') {
+      if (!isAdmin(req)) return sendJSON(res, 401, { error: 'Unauthorized' });
+      const body = await readBody(req);
+      const { room, guestName, checkoutTime } = body;
+      if (!room || !guestName) return sendJSON(res, 400, { error: 'room and guestName are required' });
+
+      const rooms = store.readJSON(store.ROOMS_FILE);
+      if (!rooms[room]) return sendJSON(res, 400, { error: 'Unknown room number' });
+      rooms[room].guestName = guestName;
+      if (checkoutTime) rooms[room].checkoutTime = checkoutTime;
+      store.writeJSON(store.ROOMS_FILE, rooms);
+      return sendJSON(res, 200, { ok: true });
+    }
+
+    // ---- Admin: check a guest out (resets the room back to default) ----
+    if (p === '/api/admin/checkout' && req.method === 'POST') {
+      if (!isAdmin(req)) return sendJSON(res, 401, { error: 'Unauthorized' });
+      const body = await readBody(req);
+      const { room } = body;
+      if (!room) return sendJSON(res, 400, { error: 'room is required' });
+
+      const rooms = store.readJSON(store.ROOMS_FILE);
+      if (!rooms[room]) return sendJSON(res, 400, { error: 'Unknown room number' });
+      rooms[room].guestName = 'Guest';
+      rooms[room].checkoutTime = '11:00 AM';
+      store.writeJSON(store.ROOMS_FILE, rooms);
+      return sendJSON(res, 200, { ok: true });
+    }
+
     if (p === '/api/request' && req.method === 'POST') {
       const body = await readBody(req);
       const { room, items } = body;
