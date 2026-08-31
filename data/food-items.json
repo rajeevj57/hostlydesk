@@ -1,0 +1,82 @@
+[
+  {
+    "id": "f_paneer_tikka",
+    "name": "Paneer Tikka",
+    "icon": "🧀",
+    "price": 220,
+    "category": "Starters",
+    "veg": true
+  },
+  {
+    "id": "f_chicken_65",
+    "name": "Chicken 65",
+    "icon": "🍗",
+    "price": 260,
+    "category": "Starters",
+    "veg": false
+  },
+  {
+    "id": "f_veg_biryani",
+    "name": "Veg Biryani",
+    "icon": "🍛",
+    "price": 240,
+    "category": "Mains",
+    "veg": true
+  },
+  {
+    "id": "f_butter_chicken",
+    "name": "Butter Chicken",
+    "icon": "🍛",
+    "price": 320,
+    "category": "Mains",
+    "veg": false
+  },
+  {
+    "id": "f_dal_makhani",
+    "name": "Dal Makhani",
+    "icon": "🍲",
+    "price": 210,
+    "category": "Mains",
+    "veg": true
+  },
+  {
+    "id": "f_butter_naan",
+    "name": "Butter Naan",
+    "icon": "🫓",
+    "price": 60,
+    "category": "Mains",
+    "veg": true
+  },
+  {
+    "id": "f_gulab_jamun",
+    "name": "Gulab Jamun",
+    "icon": "🍮",
+    "price": 120,
+    "category": "Desserts",
+    "veg": true
+  },
+  {
+    "id": "f_ice_cream",
+    "name": "Ice Cream",
+    "icon": "🍨",
+    "price": 100,
+    "category": "Desserts",
+    "veg": true
+  },
+  {
+    "id": "f_masala_chai",
+    "name": "Masala Chai",
+    "icon": "☕",
+    "price": 60,
+    "category": "Drinks",
+    "veg": true
+  },
+  {
+    "id": "f_fresh_lime",
+    "name": "Fresh Lime Soda",
+    "icon": "🥤",
+    "price": 90,
+    "category": "Drinks",
+    "veg": true
+  }
+]
