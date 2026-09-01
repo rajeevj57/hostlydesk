@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HostlyDesk — Admin</title>
+<link rel="stylesheet" href="style.css">
+<style>
+  .admin-wrap { max-width: 720px; margin: 0 auto; padding: 24px 20px 60px; }
+  .tabs { display: flex; gap: 8px; margin: 20px 0; flex-wrap: wrap; }
+  .tab-btn {
+    background: var(--paper); border: 1px solid var(--line); border-radius: 999px;
+    padding: 8px 16px; font-size: 13px; font-weight: 600; cursor: pointer; color: var(--charcoal-soft);
+  }
+  .tab-btn.active { background: var(--navy); color: var(--ivory); border-color: var(--navy); }
+  .panel { display: none; }
+  .panel.active { display: block; }
+  .row-card {
+    background: var(--paper); border: 1px solid var(--line); border-radius: 12px;
+    padding: 14px; margin-bottom: 10px; display: flex; gap: 10px; align-items: flex-start; flex-wrap: wrap;
+  }
+  .row-card input, .row-card select, .row-card textarea {
+    padding: 9px 10px; border: 1px solid var(--line); border-radius: 8px; font-size: 13px;
+    font-family: 'Inter', sans-serif; background: white;
+  }
+  .row-card .icon-input { width: 52px; text-align: center; font-size: 18px; }
+  .row-card .label-input { flex: 1; min-width: 120px; }
+  .row-card .dept-select { width: 130px; }
+  .row-card .title-input { flex: 1; min-width: 140px; }
+  .row-card .body-input { flex: 2; min-width: 200px; }
+  .row-card .name-input { flex: 1; min-width: 130px; }
+  .row-card .cat-input { width: 110px; }
+  .row-card .dist-input { width: 100px; }
+  .remove-btn {
+    background: none; border: none; color: var(--alert); font-size: 18px;
+    cursor: pointer; line-height: 1; padding: 6px;
+  }
+  .add-row-btn {
+    width: 100%; background: transparent; border: 1.5px dashed var(--line);
+    border-radius: 10px; padding: 12px; color: var(--charcoal-soft); font-size: 13px;
+    cursor: pointer; margin-top: 4px;
+  }
+  .save-btn {
+    background: var(--sage); color: white; border: none; border-radius: 10px;
+    padding: 12px 20px; font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 16px;
+  }
+  .login-box { max-width: 320px; margin: 80px auto; text-align: center; }
+  .login-box input {
+    width: 100%; padding: 12px; border: 1px solid var(--line); border-radius: 10px;
+    margin: 14px 0; font-size: 14px;
+  }
+  .status-msg { font-size: 13px; margin-top: 10px; color: var(--sage); }
+  .status-msg.error { color: var(--alert); }
+</style>
+</head>
+<body>
+
+<div id="loginScreen" class="login-box">
+  <h2 class="display">HostlyDesk Admin</h2>
+  <p style="color:var(--charcoal-soft); font-size:13px;">Enter the admin password to edit your menu, hotel info, and nearby places.</p>
+  <input type="password" id="passwordInput" placeholder="Admin password">
+  <button class="btn-primary" onclick="login()">Log in</button>
+  <div id="loginError" class="status-msg error"></div>
+</div>
+
+<div id="adminScreen" class="admin-wrap" style="display:none;">
+  <h2 class="display">HostlyDesk Admin</h2>
+  <p style="color:var(--charcoal-soft); font-size:13px;">Changes here update instantly on every guest's QR menu — no code, no GitHub.</p>
+
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="menu">Request Menu</button>
+    <button class="tab-btn" data-tab="info">Hotel Info</button>
+    <button class="tab-btn" data-tab="guide">Nearby Places</button>
+    <button class="tab-btn" data-tab="food">Food Menu</button>
+    <button class="tab-btn" data-tab="checkin">Guests</button>
+    <button class="tab-btn" data-tab="rooms">Rooms</button>
+  </div>
+
+  <div class="panel active" id="panel-menu">
+    <div id="menuRows"></div>
+    <button class="add-row-btn" onclick="addMenuRow()">+ Add request item</button>
+    <button class="save-btn" onclick="saveMenu()">Save request menu</button>
+    <div id="menuStatus" class="status-msg"></div>
+  </div>
+
+  <div class="panel" id="panel-info">
+    <div id="infoRows"></div>
+    <button class="add-row-btn" onclick="addInfoRow()">+ Add info item</button>
+    <button class="save-btn" onclick="saveInfo()">Save hotel info</button>
+    <div id="infoStatus" class="status-msg"></div>
+  </div>
+
+  <div class="panel" id="panel-guide">
+    <div id="guideRows"></div>
+    <button class="add-row-btn" onclick="addGuideRow()">+ Add nearby place</button>
+    <button class="save-btn" onclick="saveGuide()">Save nearby places</button>
+    <div id="guideStatus" class="status-msg"></div>
+  </div>
+
+  <div class="panel" id="panel-food">
+    <div id="foodRows"></div>
+    <button class="add-row-btn" onclick="addFoodRow()">+ Add dish</button>
+    <button class="save-btn" onclick="saveFood()">Save food menu</button>
+    <div id="foodStatus" class="status-msg"></div>
+  </div>
+
+  <div class="panel" id="panel-checkin">
+    <div class="row-card" style="flex-direction: column; align-items: stretch;">
+      <div style="font-weight:600; font-size:14px; margin-bottom:8px;">Check in a guest</div>
+      <select id="checkinRoom" style="margin-bottom:8px;"></select>
+      <input id="checkinName" placeholder="Guest name" style="margin-bottom:8px;">
+      <input id="checkinCheckout" placeholder="Checkout time (e.g. 11:00 AM)" style="margin-bottom:8px;">
+      <button class="save-btn" onclick="checkinGuest()" style="margin-top:0;">Check in</button>
+      <div id="checkinStatus" class="status-msg"></div>
+    </div>
+
+    <div style="font-weight:600; font-size:14px; margin: 20px 0 10px;">Currently occupied rooms</div>
+    <div id="occupiedRooms" style="color:var(--charcoal-soft); font-size:13px;">Loading…</div>
+  </div>
+
+  <div class="panel" id="panel-rooms">
+    <div class="row-card" style="flex-direction: column; align-items: stretch;">
+      <div style="font-weight:600; font-size:14px; margin-bottom:6px;">Add rooms</div>
+      <div style="font-size:12px; color:var(--charcoal-soft); margin-bottom:8px;">
+        Paste your real room numbers — any layout works. Separate with commas, spaces, or new lines.<br>
+        Example: <code>101, 102, 103, 201, 202</code>
+      </div>
+      <textarea id="roomsAddInput" rows="4" placeholder="101, 102, 103, 104..." style="padding:10px; border:1px solid var(--line); border-radius:8px; font-family:'Inter',sans-serif; font-size:13px; margin-bottom:8px;"></textarea>
+      <button class="save-btn" onclick="addRooms()" style="margin-top:0;">Add these rooms</button>
+      <div id="roomsAddStatus" class="status-msg"></div>
+    </div>
+
+    <div style="font-weight:600; font-size:14px; margin: 20px 0 10px;">
+      All rooms (<span id="roomCount">0</span>)
+    </div>
+    <div id="allRoomsList" style="display:flex; flex-wrap:wrap; gap:8px;">Loading…</div>
+
+    <div class="row-card" style="flex-direction: column; align-items: stretch; margin-top:20px; border-color:var(--alert);">
+      <div style="font-weight:600; font-size:14px; margin-bottom:6px; color:var(--alert);">Replace entire room list</div>
+      <div style="font-size:12px; color:var(--charcoal-soft); margin-bottom:8px;">
+        Warning: this deletes ALL existing rooms (and their guest names) and replaces them with the list below. Use this only to start fresh.
+      </div>
+      <textarea id="roomsReplaceInput" rows="4" placeholder="101, 102, 103..." style="padding:10px; border:1px solid var(--line); border-radius:8px; font-family:'Inter',sans-serif; font-size:13px; margin-bottom:8px;"></textarea>
+      <button class="save-btn" onclick="replaceAllRooms()" style="margin-top:0; background:var(--alert);">Replace all rooms</button>
+      <div id="roomsReplaceStatus" class="status-msg"></div>
+    </div>
+  </div>
+</div>
+
+<script src="admin.js"></script>
+</body>
+</html>
