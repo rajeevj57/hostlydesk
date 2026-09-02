@@ -53,7 +53,7 @@
 async function render() {
   const grid = document.getElementById('grid');
   grid.innerHTML = 'Loading rooms…';
-  const res = await fetch('/api/rooms');
+  const res = await fetch('/api/rooms?_=' + Date.now());
   const rooms = await res.json();
   const base = document.getElementById('baseUrl').value;
 
