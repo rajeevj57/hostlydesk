@@ -334,6 +334,72 @@ async function replaceAllRooms() {
   }
 }
 
+// ---- Bulk upload: food menu from Excel/CSV ----
+function downloadFoodTemplate() {
+  const rows = [
+    ['Icon', 'Name', 'Category', 'Price', 'Veg'],
+    ['🍛', 'Butter Chicken', 'Mains', '320', 'No'],
+    ['🥗', 'Veg Biryani', 'Mains', '240', 'Yes'],
+    ['☕', 'Masala Chai', 'Drinks', '60', 'Yes'],
+  ];
+  const csv = rows.map(r => r.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'hostlydesk-food-menu-template.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+document.getElementById('foodUploadInput').addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  const statusEl = document.getElementById('foodUploadStatus');
+  if (!file) return;
+
+  statusEl.textContent = 'Reading file…';
+  statusEl.classList.remove('error');
+  try {
+    const data = await file.arrayBuffer();
+    const workbook = XLSX.read(data);
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+
+    if (rows.length === 0) throw new Error('No rows found');
+
+    let added = 0;
+    rows.forEach(row => {
+      // Match column names loosely (case-insensitive, ignores extra spaces)
+      const get = (keys) => {
+        for (const k of Object.keys(row)) {
+          const kLower = k.trim().toLowerCase();
+          if (keys.some(keyword => kLower.includes(keyword))) return row[k];
+        }
+        return '';
+      };
+      const name = String(get(['name', 'dish', 'item'])).trim();
+      if (!name) return;
+
+      const icon = String(get(['icon', 'emoji'])).trim() || '🍴';
+      const category = String(get(['category', 'section'])).trim() || 'Mains';
+      const price = Number(get(['price', 'cost', 'amount'])) || 0;
+      const vegRaw = String(get(['veg', 'vegetarian'])).trim().toLowerCase();
+      const veg = !(vegRaw === 'no' || vegRaw === 'non-veg' || vegRaw === 'false' || vegRaw === '0');
+
+      document.getElementById('foodRows').appendChild(
+        foodRowEl({ id: '', name, icon, category, price, veg })
+      );
+      added++;
+    });
+
+    statusEl.textContent = `Added ${added} dish(es) from the file below — review, then click "Save food menu" to publish.`;
+    e.target.value = '';
+  } catch (err) {
+    statusEl.textContent = 'Could not read that file. Make sure it\'s a valid Excel or CSV file with the template columns.';
+    statusEl.classList.add('error');
+  }
+});
+
 // ---- Shared save helper ----
 async function adminSave(url, data, statusElId) {
   const statusEl = document.getElementById(statusElId);
