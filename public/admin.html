@@ -1,18 +1,98 @@
-<form id="hotelForm">
-  <label for="hotelId">Hotel ID (Slug):</label>
-  <input type="text" id="hotelId" placeholder="e.g. hotel-kanha-shyam" required>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HostlyDesk - Admin</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f6f9;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      margin: 0;
+    }
+    .card {
+      background: #ffffff;
+      padding: 30px;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      width: 100%;
+      max-width: 480px;
+    }
+    h2 {
+      margin-top: 0;
+      color: #333;
+    }
+    .form-group {
+      margin-bottom: 15px;
+    }
+    label {
+      display: block;
+      font-weight: bold;
+      margin-bottom: 5px;
+      color: #555;
+    }
+    input[type="text"] {
+      width: 100%;
+      padding: 10px;
+      box-sizing: border-box;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+    button {
+      width: 100%;
+      padding: 12px;
+      background-color: #0066fe;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #0052cc;
+    }
+  </style>
+</head>
+<body>
 
-  <label for="hotelName">Property Name:</label>
-  <input type="text" id="hotelName" placeholder="e.g. Hotel Kanha Shyam" required>
+  <div class="card">
+    <h2>Register / Update Hotel</h2>
+    <form id="hotelForm">
+      <div class="form-group">
+        <label for="hotelId">Hotel ID (Slug):</label>
+        <input type="text" id="hotelId" placeholder="e.g. hotel-kanha-shyam" required>
+      </div>
 
-  <label for="frontOfficeChatId">Front Office Telegram Chat ID:</label>
-  <input type="text" id="frontOfficeChatId" placeholder="e.g. -1004406590863" required>
+      <div class="form-group">
+        <label for="hotelName">Property Name:</label>
+        <input type="text" id="hotelName" placeholder="e.g. Hotel Kanha Shyam" required>
+      </div>
 
-  <label for="housekeepingChatId">Housekeeping Telegram Chat ID:</label>
-  <input type="text" id="housekeepingChatId" placeholder="e.g. -1005506590864" required>
+      <div class="form-group">
+        <label for="frontOfficeChatId">Front Office Telegram Chat ID:</label>
+        <input type="text" id="frontOfficeChatId" placeholder="e.g. -1004406590863" required>
+      </div>
 
-  <label for="kitchenChatId">Kitchen / Room Service Telegram Chat ID:</label>
-  <input type="text" id="kitchenChatId" placeholder="e.g. -1006606590865" required>
+      <div class="form-group">
+        <label for="housekeepingChatId">Housekeeping Telegram Chat ID:</label>
+        <input type="text" id="housekeepingChatId" placeholder="e.g. -1005506590864" required>
+      </div>
 
-  <button type="submit">Save Hotel Property</button>
-</form>
+      <div class="form-group">
+        <label for="kitchenChatId">Kitchen / Room Service Telegram Chat ID:</label>
+        <input type="text" id="kitchenChatId" placeholder="e.g. -1006606590865" required>
+      </div>
+
+      <button type="submit">Save Hotel Property</button>
+    </form>
+  </div>
+
+  <script src="admin.js"></script>
+</body>
+</html>
