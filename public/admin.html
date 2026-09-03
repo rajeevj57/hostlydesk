@@ -3,96 +3,256 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>HostlyDesk - Admin</title>
+  <title>HostlyDesk Admin - Property & Content Management</title>
   <style>
+    :root {
+      --primary: #0066fe;
+      --border: #e2e8f0;
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --text: #1e293b;
+    }
+
     body {
-      font-family: Arial, sans-serif;
-      background-color: #f4f6f9;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      min-height: 100vh;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
       margin: 0;
+      padding: 20px;
     }
+
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
     .card {
-      background: #ffffff;
-      padding: 30px;
+      background: var(--card-bg);
       border-radius: 8px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-      width: 100%;
-      max-width: 480px;
+      padding: 24px;
+      margin-bottom: 24px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      border: 1px solid var(--border);
     }
-    h2 {
+
+    h1, h2 {
       margin-top: 0;
-      color: #333;
+      color: #0f172a;
     }
+
+    h2 {
+      border-bottom: 2px solid var(--bg);
+      padding-bottom: 8px;
+      font-size: 1.25rem;
+    }
+
     .form-group {
-      margin-bottom: 15px;
+      margin-bottom: 16px;
     }
+
     label {
       display: block;
-      font-weight: bold;
-      margin-bottom: 5px;
-      color: #555;
+      font-weight: 600;
+      margin-bottom: 6px;
+      font-size: 0.9rem;
     }
-    input[type="text"] {
+
+    input[type="text"], textarea, select {
       width: 100%;
       padding: 10px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 0.95rem;
       box-sizing: border-box;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-      font-size: 14px;
     }
-    button {
+
+    .dynamic-row {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 10px;
+      align-items: center;
+    }
+
+    .dynamic-row input {
+      flex: 1;
+    }
+
+    .btn {
+      padding: 10px 16px;
+      border: none;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 0.95rem;
+    }
+
+    .btn-primary {
+      background-color: var(--primary);
+      color: white;
       width: 100%;
       padding: 12px;
-      background-color: #0066fe;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      font-size: 16px;
-      font-weight: bold;
-      cursor: pointer;
     }
-    button:hover {
-      background-color: #0052cc;
+
+    .btn-secondary {
+      background-color: #e2e8f0;
+      color: #334155;
+    }
+
+    .btn-danger {
+      background-color: #ef4444;
+      color: white;
+      padding: 10px 12px;
+    }
+
+    #statusMessage {
+      margin-top: 16px;
+      text-align: center;
+      font-weight: 600;
     }
   </style>
 </head>
 <body>
 
-  <div class="card">
-    <h2>Register / Update Hotel</h2>
-    <form id="hotelForm">
-      <div class="form-group">
-        <label for="hotelId">Hotel ID (Slug):</label>
-        <input type="text" id="hotelId" placeholder="e.g. hotel-kanha-shyam" required>
+  <div class="container">
+    <h1>HostlyDesk Property Manager</h1>
+
+    <form id="adminForm">
+      <!-- Property Information -->
+      <div class="card">
+        <h2>1. Hotel Information</h2>
+        <div class="form-group">
+          <label for="hotelId">Hotel ID Slug (URL Parameter)</label>
+          <input type="text" id="hotelId" placeholder="e.g. hotel-kanha-shyam" required>
+        </div>
+        <div class="form-group">
+          <label for="hotelName">Display Hotel Name</label>
+          <input type="text" id="hotelName" placeholder="e.g. Hotel Kanha Shyam" required>
+        </div>
       </div>
 
-      <div class="form-group">
-        <label for="hotelName">Property Name:</label>
-        <input type="text" id="hotelName" placeholder="e.g. Hotel Kanha Shyam" required>
+      <!-- Telegram Group Routing -->
+      <div class="card">
+        <h2>2. Telegram Group Routing</h2>
+        <div class="form-group">
+          <label for="frontOfficeChatId">Front Office Chat ID</label>
+          <input type="text" id="frontOfficeChatId" placeholder="e.g. -100XXXXXXXXXX" required>
+        </div>
+        <div class="form-group">
+          <label for="housekeepingChatId">Housekeeping Chat ID</label>
+          <input type="text" id="housekeepingChatId" placeholder="e.g. -100XXXXXXXXXX" required>
+        </div>
+        <div class="form-group">
+          <label for="kitchenChatId">Kitchen / Room Service Chat ID</label>
+          <input type="text" id="kitchenChatId" placeholder="e.g. -100XXXXXXXXXX" required>
+        </div>
       </div>
 
-      <div class="form-group">
-        <label for="frontOfficeChatId">Front Office Telegram Chat ID:</label>
-        <input type="text" id="frontOfficeChatId" placeholder="e.g. -1004406590863" required>
+      <!-- Menu Items -->
+      <div class="card">
+        <h2>3. In-Room Food Menu</h2>
+        <div id="menuContainer"></div>
+        <button type="button" class="btn btn-secondary" onclick="addMenuItem()">+ Add Menu Item</button>
       </div>
 
-      <div class="form-group">
-        <label for="housekeepingChatId">Housekeeping Telegram Chat ID:</label>
-        <input type="text" id="housekeepingChatId" placeholder="e.g. -1005506590864" required>
+      <!-- Nearby Places -->
+      <div class="card">
+        <h2>4. Nearby Places & Attractions</h2>
+        <div id="placesContainer"></div>
+        <button type="button" class="btn btn-secondary" onclick="addPlaceItem()">+ Add Nearby Place</button>
       </div>
 
-      <div class="form-group">
-        <label for="kitchenChatId">Kitchen / Room Service Telegram Chat ID:</label>
-        <input type="text" id="kitchenChatId" placeholder="e.g. -1006606590865" required>
-      </div>
-
-      <button type="submit">Save Hotel Property</button>
+      <button type="submit" class="btn btn-primary">Save Hotel Configuration</button>
+      <div id="statusMessage"></div>
     </form>
   </div>
 
-  <script src="admin.js"></script>
+  <script>
+    // Dynamically Add Menu Item Rows
+    function addMenuItem(name = '', price = '') {
+      const container = document.getElementById('menuContainer');
+      const row = document.createElement('div');
+      row.className = 'dynamic-row menu-item';
+      row.innerHTML = `
+        <input type="text" placeholder="Item Name (e.g. Club Sandwich)" value="${name}" class="menu-name" required>
+        <input type="text" placeholder="Price (e.g. ₹250)" value="${price}" class="menu-price" required>
+        <button type="button" class="btn btn-danger" onclick="this.parentElement.remove()">✕</button>
+      `;
+      container.appendChild(row);
+    }
+
+    // Dynamically Add Nearby Place Rows
+    function addPlaceItem(name = '', description = '') {
+      const container = document.getElementById('placesContainer');
+      const row = document.createElement('div');
+      row.className = 'dynamic-row place-item';
+      row.innerHTML = `
+        <input type="text" placeholder="Place Name (e.g. Central Park)" value="${name}" class="place-name" required>
+        <input type="text" placeholder="Distance / Info (e.g. 1.5 km away)" value="${description}" class="place-desc" required>
+        <button type="button" class="btn btn-danger" onclick="this.parentElement.remove()">✕</button>
+      `;
+      container.appendChild(row);
+    }
+
+    // Default rows on load
+    addMenuItem();
+    addPlaceItem();
+
+    // Form Submission Handler
+    document.getElementById('adminForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const status = document.getElementById('statusMessage');
+      status.style.color = '#333';
+      status.textContent = 'Saving configuration...';
+
+      // Gather Dynamic Menu Items
+      const menu = [];
+      document.querySelectorAll('.menu-item').forEach(row => {
+        menu.push({
+          item: row.querySelector('.menu-name').value.trim(),
+          price: row.querySelector('.menu-price').value.trim()
+        });
+      });
+
+      // Gather Dynamic Places
+      const nearbyPlaces = [];
+      document.querySelectorAll('.place-item').forEach(row => {
+        nearbyPlaces.push({
+          name: row.querySelector('.place-name').value.trim(),
+          info: row.querySelector('.place-desc').value.trim()
+        });
+      });
+
+      const payload = {
+        hotelId: document.getElementById('hotelId').value.trim(),
+        hotelName: document.getElementById('hotelName').value.trim(),
+        frontOfficeChatId: document.getElementById('frontOfficeChatId').value.trim(),
+        housekeepingChatId: document.getElementById('housekeepingChatId').value.trim(),
+        kitchenChatId: document.getElementById('kitchenChatId').value.trim(),
+        menu: menu,
+        nearbyPlaces: nearbyPlaces
+      };
+
+      try {
+        const response = await fetch('/api/hotels', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        const result = await response.json();
+
+        if (response.ok && result.success) {
+          status.style.color = 'green';
+          status.textContent = 'Hotel configuration saved successfully!';
+        } else {
+          status.style.color = 'red';
+          status.textContent = 'Error: ' + (result.error || 'Failed to save configuration');
+        }
+      } catch (err) {
+        status.style.color = 'red';
+        status.textContent = 'Server connection error.';
+      }
+    });
+  </script>
 </body>
 </html>
