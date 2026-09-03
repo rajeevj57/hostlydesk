@@ -1,38 +1,63 @@
-// Staff alerts via Telegram Bot API.
-// Why Telegram for the MVP: bot creation is free and instant (just message
-// @BotFather), unlike WhatsApp Business API which needs Meta business
-// verification. Swap in a WhatsApp adapter later without touching the rest
-// of the app — every caller just calls notifyDepartment().
+const https = require('https');
+const store = require('./store');
 
-const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '';
+const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 
-// One Telegram chat ID per department. Each department (housekeeping,
-// kitchen, front office) should have its own Telegram group; add the bot to
-// each group and put the group's chat ID here via env vars.
-const DEPARTMENT_CHATS = {
-  housekeeping: process.env.CHAT_HOUSEKEEPING || '',
-  kitchen: process.env.CHAT_KITCHEN || '',
-  front_office: process.env.CHAT_FRONT_OFFICE || '',
-};
-
-async function sendTelegramMessage(chatId, text) {
-  if (!BOT_TOKEN || !chatId) {
-    console.log('[telegram:stub] (set TELEGRAM_BOT_TOKEN + chat IDs to send for real)');
-    console.log('  ->', text.replace(/\n/g, ' | '));
-    return { ok: true, stub: true };
+function notifyDepartment(requestData) {
+  if (!BOT_TOKEN) {
+    console.log('Telegram Bot Token not configured. Skipping notification.');
+    return;
   }
-  const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`;
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ chat_id: chatId, text, parse_mode: 'HTML' }),
+
+  // Fetch hotel list to check for custom Telegram Chat IDs
+  const hotels = store.getHotels();
+  const hotelInfo = hotels[requestData.hotelId];
+
+  // Use property-specific chat ID if available, otherwise fall back to global environment variable
+  const chatId = (hotelInfo && hotelInfo.telegramChatId) 
+    ? hotelInfo.telegramChatId 
+    : process.env.TELEGRAM_CHAT_ID;
+
+  if (!chatId) {
+    console.log(`No Telegram Chat ID found for hotel: ${requestData.hotelId}`);
+    return;
+  }
+
+  const message = `🔔 *NEW SERVICE REQUEST* 🔔\n\n` +
+    `🏨 *Hotel ID:* ${requestData.hotelId}\n` +
+    `🚪 *Room:* ${requestData.roomNumber}\n` +
+    `👤 *Guest:* ${requestData.guestName}\n` +
+    `📋 *Category:* ${requestData.category}\n` +
+    `💬 *Details:* ${requestData.details || 'None'}\n\n` +
+    `⏰ *Time:* ${new Date(requestData.createdAt).toLocaleTimeString()}`;
+
+  const payload = JSON.stringify({
+    chat_id: chatId,
+    text: message,
+    parse_mode: 'Markdown'
   });
-  return res.json();
+
+  const options = {
+    hostname: 'api.telegram.org',
+    port: 443,
+    path: `/bot${BOT_TOKEN}/sendMessage`,
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Content-Length': Buffer.byteLength(payload)
+    }
+  };
+
+  const req = https.request(options, (res) => {
+    res.on('data', () => {});
+  });
+
+  req.on('error', (e) => {
+    console.error(`Telegram notification error: ${e.message}`);
+  });
+
+  req.write(payload);
+  req.end();
 }
 
-async function notifyDepartment(department, text) {
-  const chatId = DEPARTMENT_CHATS[department] || DEPARTMENT_CHATS.front_office;
-  return sendTelegramMessage(chatId, text);
-}
-
-module.exports = { sendTelegramMessage, notifyDepartment, DEPARTMENT_CHATS };
+module.exports = { notifyDepartment };
