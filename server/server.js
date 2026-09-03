@@ -1,7 +1,5 @@
-app.get('/api/hotels/:hotelId', (req, res) => {
-  const hotel = store.getHotelById(req.params.hotelId);
-  if (!hotel) {
-    return res.status(404).json({ error: 'Hotel not found' });
-  }
-  res.json({ success: true, hotel });
+const PORT = process.env.PORT || 3000;
+
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Server running on port ${PORT}`);
 });
