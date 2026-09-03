@@ -3,43 +3,116 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Guest Request</title>
+  <title>Guest Service Portal</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f6f9;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      margin: 0;
+    }
+    .card {
+      background: #ffffff;
+      padding: 30px;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      width: 100%;
+      max-width: 440px;
+    }
+    h2 {
+      margin-top: 0;
+      color: #333;
+      text-align: center;
+    }
+    .form-group {
+      margin-bottom: 15px;
+    }
+    label {
+      display: block;
+      font-weight: bold;
+      margin-bottom: 5px;
+      color: #555;
+    }
+    input[type="text"], select, textarea {
+      width: 100%;
+      padding: 10px;
+      box-sizing: border-box;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+    textarea {
+      resize: vertical;
+      height: 80px;
+    }
+    button {
+      width: 100%;
+      padding: 12px;
+      background-color: #0066fe;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #0052cc;
+    }
+    #statusMessage {
+      margin-top: 15px;
+      text-align: center;
+      font-weight: bold;
+    }
+  </style>
 </head>
 <body>
 
-  <form id="requestForm">
-    <label for="roomNumber">Room / Table Number</label>
-    <input type="text" id="roomNumber" required>
+  <div class="card">
+    <h2>Submit Service Request</h2>
+    <form id="requestForm">
+      <div class="form-group">
+        <label for="roomNumber">Room / Table Number</label>
+        <input type="text" id="roomNumber" placeholder="e.g. 305" required>
+      </div>
 
-    <label for="guestName">Guest Name</label>
-    <input type="text" id="guestName" required>
+      <div class="form-group">
+        <label for="guestName">Guest Name</label>
+        <input type="text" id="guestName" placeholder="Enter your name" required>
+      </div>
 
-    <label for="requestType">Request Type</label>
-    <select id="requestType">
-      <option value="Housekeeping / Amenities">Housekeeping / Amenities</option>
-      <option value="Kitchen / Room Service">Kitchen / Room Service</option>
-      <option value="Front Office">Front Office</option>
-    </select>
+      <div class="form-group">
+        <label for="requestType">Request Type</label>
+        <select id="requestType">
+          <option value="Housekeeping / Amenities">Housekeeping / Amenities</option>
+          <option value="Kitchen / Room Service">Kitchen / Room Service</option>
+          <option value="Front Office">Front Office</option>
+        </select>
+      </div>
 
-    <label for="details">Details / Special Instructions</label>
-    <textarea id="details"></textarea>
+      <div class="form-group">
+        <label for="details">Details / Special Instructions</label>
+        <textarea id="details" placeholder="e.g. Extra towels needed"></textarea>
+      </div>
 
-    <button type="submit">Submit Request</button>
-  </form>
-
-  <p id="statusMessage"></p>
+      <button type="submit">Submit Request</button>
+    </form>
+    <div id="statusMessage"></div>
+  </div>
 
   <script>
     document.getElementById('requestForm').addEventListener('submit', async (e) => {
       e.preventDefault();
       const statusEl = document.getElementById('statusMessage');
+      statusEl.style.color = '#333';
       statusEl.textContent = 'Submitting...';
 
-      // 1. Get hotelId from URL query (?hotelId=hotel-kanha-shyam)
       const urlParams = new URLSearchParams(window.location.search);
       const hotelId = urlParams.get('hotelId') || 'hotel-kanha-shyam';
 
-      // 2. Build submission payload
       const requestData = {
         hotelId: hotelId,
         roomNumber: document.getElementById('roomNumber').value.trim(),
