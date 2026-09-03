@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HostlyDesk - Multi-Tenant Guest Concierge</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f4f6f9; }
+    .card { background: #fff; padding: 24px; border-radius: 8px; max-width: 480px; margin: 0 auto; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    h2 { margin-top: 0; color: #1a202c; }
+    label { display: block; margin: 12px 0 4px; font-weight: bold; font-size: 14px; }
+    input, select, textarea { width: 100%; padding: 10px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
+    button { margin-top: 16px; width: 100%; padding: 12px; background: #2563eb; color: #fff; border: none; border-radius: 4px; font-size: 16px; cursor: pointer; }
+    button:hover { background: #1d4ed8; }
+    .status-msg { margin-top: 12px; font-weight: bold; text-align: center; color: #059669; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2 id="hotelNameHeading">HostlyDesk Service</h2>
+    <p id="tenantBadge" style="color:#6b7280; font-size:12px;">Hotel ID: loading...</p>
+    
+    <form id="requestForm">
+      <label for="roomNumber">Room / Table Number</label>
+      <input type="text" id="roomNumber" placeholder="e.g. 102" required>
+
+      <label for="guestName">Guest Name</label>
+      <input type="text" id="guestName" placeholder="Your Name" required>
+
+      <label for="category">Request Type</label>
+      <select id="category">
+        <option value="Housekeeping">Housekeeping / Amenities</option>
+        <option value="Room Service">Room Service / Food</option>
+        <option value="Front Desk">Front Desk Assistance</option>
+        <option value="Maintenance">Maintenance</option>
+      </select>
+
+      <label for="details">Details / Special Instructions</label>
+      <textarea id="details" rows="3" placeholder="How can we help you?"></textarea>
+
+      <button type="submit">Submit Request</button>
+    </form>
+    <div id="statusMsg" class="status-msg"></div>
+  </div>
+
+  <script>
+    const urlParams = new URLSearchParams(window.location.search);
+    const currentHotelId = urlParams.get('hotelId') || 'default-hotel';
+
+    document.getElementById('tenantBadge').textContent = `Hotel ID: ${currentHotelId}`;
+
+    document.getElementById('requestForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const statusMsg = document.getElementById('statusMsg');
+      statusMsg.textContent = 'Submitting request...';
+
+      const payload = {
+        hotelId: currentHotelId,
+        roomNumber: document.getElementById('roomNumber').value,
+        guestName: document.getElementById('guestName').value,
+        category: document.getElementById('category').value,
+        details: document.getElementById('details').value
+      };
+
+      try {
+        const res = await fetch('/api/requests', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const result = await res.json();
+        if (result.success) {
+          statusMsg.textContent = 'Request submitted successfully!';
+          document.getElementById('requestForm').reset();
+        } else {
+          statusMsg.textContent = 'Error submitting request.';
+        }
+      } catch (err) {
+        statusMsg.textContent = 'Network error. Please try again.';
+      }
+    });
+  </script>
+</body>
+</html>
