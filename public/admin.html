@@ -1,173 +1,18 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>HostlyDesk - Super Admin Dashboard</title>
-  <style>
-    body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f8fafc; }
-    .container { max-width: 950px; margin: 0 auto; }
-    .card { background: #fff; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-    h2, h3 { margin-top: 0; color: #0f172a; }
-    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
-    .form-group { display: flex; flex-direction: column; }
-    label { font-size: 12px; font-weight: bold; margin-bottom: 4px; color: #475569; }
-    input, select, button { padding: 10px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 14px; }
-    button { background: #2563eb; color: #fff; border: none; cursor: pointer; font-weight: bold; }
-    button:hover { background: #1d4ed8; }
-    .filter-group { display: flex; gap: 10px; margin-bottom: 10px; }
-    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-    th, td { text-align: left; padding: 10px; border-bottom: 1px solid #e2e8f0; }
-    th { background: #f1f5f9; font-size: 13px; }
-    .badge { padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; background: #e2e8f0; }
-    .status-msg { margin-top: 8px; font-weight: bold; font-size: 13px; color: #059669; }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <h2>HostlyDesk Super-Admin Dashboard</h2>
+<form id="hotelForm">
+  <label for="hotelId">Hotel ID (Slug):</label>
+  <input type="text" id="hotelId" placeholder="e.g. hotel-kanha-shyam" required>
 
-    <!-- Register New Hotel -->
-    <div class="card">
-      <h3>Register / Update Hotel Property</h3>
-      <form id="hotelForm">
-        <div class="form-grid">
-          <div class="form-group">
-            <label for="hotelIdInput">Hotel ID (Slug)</label>
-            <input type="text" id="hotelIdInput" placeholder="e.g. grand-palace" required>
-          </div>
-          <div class="form-group">
-            <label for="hotelNameInput">Property Name</label>
-            <input type="text" id="hotelNameInput" placeholder="e.g. Grand Palace Hotel" required>
-          </div>
-          <div class="form-group" style="grid-column: span 2;">
-            <label for="telegramChatInput">Telegram Chat ID (Optional)</label>
-            <input type="text" id="telegramChatInput" placeholder="e.g. -100123456789">
-          </div>
-        </div>
-        <button type="submit">Save Hotel Property</button>
-      </form>
-      <div id="hotelStatus" class="status-msg"></div>
-    </div>
+  <label for="hotelName">Property Name:</label>
+  <input type="text" id="hotelName" placeholder="e.g. Hotel Kanha Shyam" required>
 
-    <!-- Requests Filter -->
-    <div class="card">
-      <h3>Property Requests Filter</h3>
-      <div class="filter-group">
-        <select id="hotelFilter" style="flex: 1;">
-          <option value="">All Hotels (Super-Admin Overview)</option>
-        </select>
-        <button onclick="loadRequests()">Refresh Data</button>
-      </div>
-    </div>
+  <label for="frontOfficeChatId">Front Office Telegram Chat ID:</label>
+  <input type="text" id="frontOfficeChatId" placeholder="e.g. -1004406590863" required>
 
-    <!-- Requests Table -->
-    <div class="card">
-      <h3>Live Guest Requests</h3>
-      <table>
-        <thead>
-          <tr>
-            <th>Hotel ID</th>
-            <th>Room</th>
-            <th>Guest</th>
-            <th>Category</th>
-            <th>Details</th>
-            <th>Time</th>
-          </tr>
-        </thead>
-        <tbody id="requestsTable">
-          <tr><td colspan="6">Loading requests...</td></tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
+  <label for="housekeepingChatId">Housekeeping Telegram Chat ID:</label>
+  <input type="text" id="housekeepingChatId" placeholder="e.g. -1005506590864" required>
 
-  <script>
-    async function loadHotels() {
-      try {
-        const res = await fetch('/api/hotels');
-        const hotels = await res.json();
-        const filterSelect = document.getElementById('hotelFilter');
-        
-        // Preserve default selection option
-        filterSelect.innerHTML = '<option value="">All Hotels (Super-Admin Overview)</option>';
-        
-        Object.keys(hotels).forEach(id => {
-          const h = hotels[id];
-          const option = document.createElement('option');
-          option.value = h.id;
-          option.textContent = `${h.name} (${h.id})`;
-          filterSelect.appendChild(option);
-        });
-      } catch (e) {
-        console.error('Failed to load hotels:', e);
-      }
-    }
+  <label for="kitchenChatId">Kitchen / Room Service Telegram Chat ID:</label>
+  <input type="text" id="kitchenChatId" placeholder="e.g. -1006606590865" required>
 
-    async function loadRequests() {
-      const selectedHotel = document.getElementById('hotelFilter').value;
-      const url = selectedHotel ? `/api/requests?hotelId=${encodeURIComponent(selectedHotel)}` : '/api/requests';
-      
-      try {
-        const res = await fetch(url);
-        const requests = await res.json();
-        const tbody = document.getElementById('requestsTable');
-        
-        if (requests.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="6">No requests found.</td></tr>';
-          return;
-        }
-
-        tbody.innerHTML = requests.map(r => `
-          <tr>
-            <td><span class="badge">${r.hotelId || 'default'}</span></td>
-            <td><strong>${r.roomNumber}</strong></td>
-            <td>${r.guestName}</td>
-            <td>${r.category}</td>
-            <td>${r.details || '-'}</td>
-            <td>${new Date(r.createdAt).toLocaleTimeString()}</td>
-          </tr>
-        `).join('');
-      } catch (e) {
-        console.error('Failed to load requests:', e);
-      }
-    }
-
-    document.getElementById('hotelForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const status = document.getElementById('hotelStatus');
-      status.textContent = 'Saving hotel...';
-
-      const payload = {
-        id: document.getElementById('hotelIdInput').value.trim(),
-        name: document.getElementById('hotelNameInput').value.trim(),
-        telegramChatId: document.getElementById('telegramChatInput').value.trim()
-      };
-
-      try {
-        const res = await fetch('/api/hotels', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
-        const result = await res.json();
-
-        if (result.success) {
-          status.textContent = `Property "${payload.name}" successfully registered!`;
-          document.getElementById('hotelForm').reset();
-          loadHotels();
-        } else {
-          status.textContent = 'Error saving hotel property.';
-        }
-      } catch (e) {
-        status.textContent = 'Network error during save.';
-      }
-    });
-
-    // Initial Load & Auto-Refresh
-    loadHotels();
-    loadRequests();
-    setInterval(loadRequests, 5000);
-  </script>
-</body>
-</html>
+  <button type="submit">Save Hotel Property</button>
+</form>
