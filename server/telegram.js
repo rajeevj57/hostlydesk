@@ -5,46 +5,45 @@ async function sendTelegramNotification(requestData) {
 
   if (!botToken) {
     console.error('TELEGRAM_BOT_TOKEN is missing in environment variables.');
-    return { success: false, error: 'Server misconfiguration: missing bot token' };
+    return { success: false, error: 'Missing bot token' };
   }
 
-  // Fetch registered hotel details using hotelId from request
+  // Retrieve hotel details from storage
   const hotels = store.getHotels();
   const hotelId = (requestData.hotelId || '').toLowerCase();
   const hotel = hotels[hotelId];
 
   if (!hotel) {
-    console.error(`Hotel not found for ID: ${hotelId}`);
+    console.error(`Hotel not registered for ID: ${hotelId}`);
     return { success: false, error: 'Hotel not registered' };
   }
 
   const category = requestData.requestType || requestData.category || '';
   let targetChatId;
 
-  // Department Routing Logic based on Request Type
+  // Department Routing Logic
   if (category.includes('Housekeeping') || category.includes('Amenities')) {
     targetChatId = hotel.housekeepingChatId;
   } else if (category.includes('Kitchen') || category.includes('Food') || category.includes('Dining')) {
     targetChatId = hotel.kitchenChatId;
   } else {
-    // Default to Front Office for general requests/checkouts
     targetChatId = hotel.frontOfficeChatId;
   }
 
-  // Fallback to Front Office Chat ID if specific department ID is empty
+  // Fallback to Front Office if specific department ID is missing
   if (!targetChatId) {
     targetChatId = hotel.frontOfficeChatId;
   }
 
   if (!targetChatId) {
     console.error(`No Chat ID configured for hotel: ${hotelId}`);
-    return { success: false, error: 'No Telegram Chat ID configured for this department' };
+    return { success: false, error: 'No Telegram Chat ID found' };
   }
 
   const message = `🔔 *New Guest Request*\n\n` +
                   `🏨 *Property:* ${hotel.hotelName}\n` +
-                  `🚪 *Room/Table:* ${requestData.roomNumber || requestData.room}\n` +
-                  `👤 *Guest:* ${requestData.guestName || requestData.name}\n` +
+                  `🚪 *Room/Table:* ${requestData.roomNumber || requestData.room || 'N/A'}\n` +
+                  `👤 *Guest:* ${requestData.guestName || requestData.name || 'N/A'}\n` +
                   `📌 *Category:* ${category}\n` +
                   `📝 *Details:* ${requestData.details || 'None'}`;
 
