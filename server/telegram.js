@@ -1,63 +1,38 @@
-const https = require('https');
-const store = require('./store');
+async function sendTelegramNotification(hotelProperty, requestData) {
+  const botToken = process.env.TELEGRAM_BOT_TOKEN;
+  const category = requestData.category; // e.g., "Front Desk", "Housekeeping", "Kitchen"
 
-const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
+  let targetChatId;
 
-function notifyDepartment(requestData) {
-  if (!BOT_TOKEN) {
-    console.log('Telegram Bot Token not configured. Skipping notification.');
+  // Smart Routing Logic based on Guest Request Type
+  if (category.includes("Housekeeping") || category.includes("Amenities")) {
+    targetChatId = hotelProperty.housekeepingChatId;
+  } else if (category.includes("Kitchen") || category.includes("Food") || category.includes("Dining")) {
+    targetChatId = hotelProperty.kitchenChatId;
+  } else {
+    // Default to Front Office for checkouts, general queries, and desk requests
+    targetChatId = hotelProperty.frontOfficeChatId;
+  }
+
+  if (!targetChatId) {
+    console.error(`No Chat ID configured for category: ${category}`);
     return;
   }
 
-  // Fetch hotel list to check for custom Telegram Chat IDs
-  const hotels = store.getHotels();
-  const hotelInfo = hotels[requestData.hotelId];
+  const message = `🔔 *New Guest Request*\n\n` +
+                  `🏨 *Property:* ${hotelProperty.hotelName}\n` +
+                  `🚪 *Room:* ${requestData.roomNumber}\n` +
+                  `👤 *Guest:* ${requestData.guestName}\n` +
+                  `📌 *Category:* ${requestData.category}\n` +
+                  `📝 *Details:* ${requestData.details}`;
 
-  // Use property-specific chat ID if available, otherwise fall back to global environment variable
-  const chatId = (hotelInfo && hotelInfo.telegramChatId) 
-    ? hotelInfo.telegramChatId 
-    : process.env.TELEGRAM_CHAT_ID;
-
-  if (!chatId) {
-    console.log(`No Telegram Chat ID found for hotel: ${requestData.hotelId}`);
-    return;
-  }
-
-  const message = `🔔 *NEW SERVICE REQUEST* 🔔\n\n` +
-    `🏨 *Hotel ID:* ${requestData.hotelId}\n` +
-    `🚪 *Room:* ${requestData.roomNumber}\n` +
-    `👤 *Guest:* ${requestData.guestName}\n` +
-    `📋 *Category:* ${requestData.category}\n` +
-    `💬 *Details:* ${requestData.details || 'None'}\n\n` +
-    `⏰ *Time:* ${new Date(requestData.createdAt).toLocaleTimeString()}`;
-
-  const payload = JSON.stringify({
-    chat_id: chatId,
-    text: message,
-    parse_mode: 'Markdown'
-  });
-
-  const options = {
-    hostname: 'api.telegram.org',
-    port: 443,
-    path: `/bot${BOT_TOKEN}/sendMessage`,
+  await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Content-Length': Buffer.byteLength(payload)
-    }
-  };
-
-  const req = https.request(options, (res) => {
-    res.on('data', () => {});
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      chat_id: targetChatId,
+      text: message,
+      parse_mode: 'Markdown'
+    })
   });
-
-  req.on('error', (e) => {
-    console.error(`Telegram notification error: ${e.message}`);
-  });
-
-  req.write(payload);
-  req.end();
 }
-
-module.exports = { notifyDepartment };
