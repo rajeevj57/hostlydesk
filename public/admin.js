@@ -1,5 +1,6 @@
 document.getElementById('hotelForm').addEventListener('submit', async (e) => {
   e.preventDefault();
+
   const hotelData = {
     hotelId: document.getElementById('hotelId').value.trim().toLowerCase(),
     hotelName: document.getElementById('hotelName').value.trim(),
@@ -8,11 +9,16 @@ document.getElementById('hotelForm').addEventListener('submit', async (e) => {
     kitchenChatId: document.getElementById('kitchenChatId').value.trim()
   };
 
-  await fetch('/api/hotels', {
+  const response = await fetch('/api/hotels', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(hotelData)
   });
 
-  alert('Hotel saved successfully!');
+  if (response.ok) {
+    alert('Hotel property updated successfully!');
+    location.reload();
+  } else {
+    alert('Failed to save hotel property.');
+  }
 });
