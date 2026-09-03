@@ -1,38 +1,78 @@
-async function sendTelegramNotification(hotelProperty, requestData) {
-  const botToken = process.env.TELEGRAM_BOT_TOKEN;
-  const category = requestData.category; // e.g., "Front Desk", "Housekeeping", "Kitchen"
+const store = require('./store');
 
+async function sendTelegramNotification(requestData) {
+  const botToken = process.env.TELEGRAM_BOT_TOKEN;
+
+  if (!botToken) {
+    console.error('TELEGRAM_BOT_TOKEN is missing in environment variables.');
+    return { success: false, error: 'Server misconfiguration: missing bot token' };
+  }
+
+  // Fetch registered hotel details using hotelId from request
+  const hotels = store.getHotels();
+  const hotelId = (requestData.hotelId || '').toLowerCase();
+  const hotel = hotels[hotelId];
+
+  if (!hotel) {
+    console.error(`Hotel not found for ID: ${hotelId}`);
+    return { success: false, error: 'Hotel not registered' };
+  }
+
+  const category = requestData.requestType || requestData.category || '';
   let targetChatId;
 
-  // Smart Routing Logic based on Guest Request Type
-  if (category.includes("Housekeeping") || category.includes("Amenities")) {
-    targetChatId = hotelProperty.housekeepingChatId;
-  } else if (category.includes("Kitchen") || category.includes("Food") || category.includes("Dining")) {
-    targetChatId = hotelProperty.kitchenChatId;
+  // Department Routing Logic based on Request Type
+  if (category.includes('Housekeeping') || category.includes('Amenities')) {
+    targetChatId = hotel.housekeepingChatId;
+  } else if (category.includes('Kitchen') || category.includes('Food') || category.includes('Dining')) {
+    targetChatId = hotel.kitchenChatId;
   } else {
-    // Default to Front Office for checkouts, general queries, and desk requests
-    targetChatId = hotelProperty.frontOfficeChatId;
+    // Default to Front Office for general requests/checkouts
+    targetChatId = hotel.frontOfficeChatId;
+  }
+
+  // Fallback to Front Office Chat ID if specific department ID is empty
+  if (!targetChatId) {
+    targetChatId = hotel.frontOfficeChatId;
   }
 
   if (!targetChatId) {
-    console.error(`No Chat ID configured for category: ${category}`);
-    return;
+    console.error(`No Chat ID configured for hotel: ${hotelId}`);
+    return { success: false, error: 'No Telegram Chat ID configured for this department' };
   }
 
   const message = `🔔 *New Guest Request*\n\n` +
-                  `🏨 *Property:* ${hotelProperty.hotelName}\n` +
-                  `🚪 *Room:* ${requestData.roomNumber}\n` +
-                  `👤 *Guest:* ${requestData.guestName}\n` +
-                  `📌 *Category:* ${requestData.category}\n` +
-                  `📝 *Details:* ${requestData.details}`;
+                  `🏨 *Property:* ${hotel.hotelName}\n` +
+                  `🚪 *Room/Table:* ${requestData.roomNumber || requestData.room}\n` +
+                  `👤 *Guest:* ${requestData.guestName || requestData.name}\n` +
+                  `📌 *Category:* ${category}\n` +
+                  `📝 *Details:* ${requestData.details || 'None'}`;
 
-  await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      chat_id: targetChatId,
-      text: message,
-      parse_mode: 'Markdown'
-    })
-  });
+  try {
+    const response = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: targetChatId,
+        text: message,
+        parse_mode: 'Markdown'
+      })
+    });
+
+    const result = await response.json();
+    
+    if (!result.ok) {
+      console.error('Telegram API Error:', result);
+      return { success: false, error: result.description };
+    }
+
+    return { success: true };
+  } catch (err) {
+    console.error('Error sending Telegram message:', err);
+    return { success: false, error: err.message };
+  }
 }
+
+module.exports = {
+  sendTelegramNotification
+};
