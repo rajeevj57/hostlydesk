@@ -3,145 +3,331 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Guest Service Portal</title>
+  <title>HostlyDesk Digital Concierge</title>
   <style>
+    :root {
+      --bg-color: #f7f5ee;
+      --card-bg: #ffffff;
+      --header-bg: #0d1b3e;
+      --text-dark: #2c2c2c;
+      --text-muted: #6e6e6e;
+      --accent-gold: #c2a649;
+      --border-color: #e5e0d8;
+    }
+
     body {
-      font-family: Arial, sans-serif;
-      background-color: #f4f6f9;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      min-height: 100vh;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-dark);
+      margin: 0;
+      padding: 0;
+    }
+
+    .header {
+      background-color: var(--header-bg);
+      color: #ffffff;
+      padding: 24px 20px;
+      border-bottom: 4px dashed var(--accent-gold);
+    }
+
+    .header-sub {
+      font-size: 0.75rem;
+      letter-spacing: 1.5px;
+      color: var(--accent-gold);
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+
+    .room-title {
+      font-size: 2.4rem;
+      font-weight: 700;
       margin: 0;
     }
+
+    .welcome-text {
+      font-size: 0.95rem;
+      color: #cbd5e1;
+      margin-top: 4px;
+    }
+
+    .meta-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.85rem;
+      color: #94a3b8;
+      margin-top: 20px;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      padding-top: 12px;
+    }
+
+    .content {
+      padding: 20px;
+      max-width: 480px;
+      margin: 0 auto;
+    }
+
+    .section-title {
+      font-size: 1.35rem;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .section-desc {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-bottom: 20px;
+      line-height: 1.3;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+
     .card {
-      background: #ffffff;
-      padding: 30px;
-      border-radius: 8px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-      width: 100%;
-      max-width: 440px;
-    }
-    h2 {
-      margin-top: 0;
-      color: #333;
+      background: var(--card-bg);
+      border-radius: 12px;
+      padding: 16px 8px;
       text-align: center;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+      border: 1px solid var(--border-color);
+      cursor: pointer;
+      user-select: none;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s ease;
+      position: relative;
     }
-    .form-group {
-      margin-bottom: 15px;
+
+    .card.selected {
+      border: 2px solid var(--header-bg);
+      background-color: #ffffff;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
     }
-    label {
-      display: block;
-      font-weight: bold;
-      margin-bottom: 5px;
-      color: #555;
+
+    .card-icon {
+      font-size: 2rem;
+      margin-bottom: 8px;
     }
-    input[type="text"], select, textarea {
-      width: 100%;
-      padding: 10px;
-      box-sizing: border-box;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-      font-size: 14px;
+
+    .card-title {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-dark);
+      line-height: 1.1;
     }
-    textarea {
-      resize: vertical;
-      height: 80px;
-    }
-    button {
-      width: 100%;
-      padding: 12px;
-      background-color: #0066fe;
+
+    .qty-badge {
+      position: absolute;
+      top: 6px;
+      right: 6px;
+      background: var(--header-bg);
       color: white;
-      border: none;
-      border-radius: 4px;
-      font-size: 16px;
+      font-size: 0.75rem;
       font-weight: bold;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .send-btn {
+      width: 100%;
+      padding: 16px;
+      background-color: #bfb29e;
+      color: #ffffff;
+      border: none;
+      border-radius: 10px;
+      font-size: 1rem;
+      font-weight: 700;
       cursor: pointer;
     }
-    button:hover {
-      background-color: #0052cc;
+
+    .send-btn.active {
+      background-color: var(--header-bg);
     }
-    #statusMessage {
-      margin-top: 15px;
+
+    #status {
+      margin-top: 16px;
       text-align: center;
-      font-weight: bold;
+      font-size: 0.9rem;
+      font-weight: 600;
     }
   </style>
 </head>
 <body>
 
-  <div class="card">
-    <h2>Submit Service Request</h2>
-    <form id="requestForm">
-      <div class="form-group">
-        <label for="roomNumber">Room / Table Number</label>
-        <input type="text" id="roomNumber" placeholder="e.g. 305" required>
+  <div class="header">
+    <div class="header-sub">HOSTLYDESK · DIGITAL KEY</div>
+    <h1 class="room-title" id="roomDisplay">Room 305</h1>
+    <div class="welcome-text">Welcome, Guest</div>
+    <div class="meta-row">
+      <span id="hotelNameDisplay">HostlyDesk Hotel</span>
+      <span>Checkout 11:00 AM</span>
+    </div>
+  </div>
+
+  <div class="content">
+    <div class="section-title">Need something?</div>
+    <div class="section-desc">Tap what you need. It goes straight to the right team — no typing.</div>
+
+    <div class="grid">
+      <div class="card" onclick="selectItem('Extra Towels', 'Housekeeping', this)">
+        <div class="card-icon">🚿</div>
+        <div class="card-title">Extra Towels</div>
       </div>
 
-      <div class="form-group">
-        <label for="guestName">Guest Name</label>
-        <input type="text" id="guestName" placeholder="Enter your name" required>
+      <div class="card" onclick="selectItem('Drinking Water', 'Housekeeping', this)">
+        <div class="card-icon">💧</div>
+        <div class="card-title">Drinking Water</div>
       </div>
 
-      <div class="form-group">
-        <label for="requestType">Request Type</label>
-        <select id="requestType">
-          <option value="Housekeeping / Amenities">Housekeeping / Amenities</option>
-          <option value="Kitchen / Room Service">Kitchen / Room Service</option>
-          <option value="Front Office">Front Office</option>
-        </select>
+      <div class="card" onclick="selectItem('Extra Pillow', 'Housekeeping', this)">
+        <div class="card-icon">💤</div>
+        <div class="card-title">Extra Pillow</div>
       </div>
 
-      <div class="form-group">
-        <label for="details">Details / Special Instructions</label>
-        <textarea id="details" placeholder="e.g. Extra towels needed"></textarea>
+      <div class="card" onclick="selectItem('Room Cleaning', 'Housekeeping', this)">
+        <div class="card-icon">✅</div>
+        <div class="card-title">Room Cleaning</div>
       </div>
 
-      <button type="submit">Submit Request</button>
-    </form>
-    <div id="statusMessage"></div>
+      <div class="card" onclick="selectItem('Order Food', 'Kitchen', this)">
+        <div class="card-icon">🍽️</div>
+        <div class="card-title">Order Food</div>
+      </div>
+
+      <div class="card" onclick="selectItem('Tea / Coffee', 'Kitchen', this)">
+        <div class="card-icon">☕</div>
+        <div class="card-title">Tea / Coffee</div>
+      </div>
+
+      <div class="card" onclick="selectItem('Wake-up Call', 'Front Office', this)">
+        <div class="card-icon">⏰</div>
+        <div class="card-title">Wake-up Call</div>
+      </div>
+
+      <div class="card" onclick="selectItem('Book a Taxi', 'Front Office', this)">
+        <div class="card-icon">🚖</div>
+        <div class="card-title">Book a Taxi</div>
+      </div>
+
+      <div class="card" onclick="selectItem('Checkout Help', 'Front Office', this)">
+        <div class="card-icon">🔔</div>
+        <div class="card-title">Checkout Help</div>
+      </div>
+    </div>
+
+    <button id="sendBtn" class="send-btn" onclick="sendRequest()" disabled>Send request</button>
+    <div id="status"></div>
   </div>
 
   <script>
-    document.getElementById('requestForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const statusEl = document.getElementById('statusMessage');
-      statusEl.style.color = '#333';
-      statusEl.textContent = 'Submitting...';
+    const urlParams = new URLSearchParams(window.location.search);
+    const hotelId = urlParams.get('hotelId') || 'hotel-kanha-shyam';
+    const roomNumber = urlParams.get('room') || '305';
 
-      const urlParams = new URLSearchParams(window.location.search);
-      const hotelId = urlParams.get('hotelId') || 'hotel-kanha-shyam';
+    document.getElementById('roomDisplay').textContent = `Room ${roomNumber}`;
 
-      const requestData = {
-        hotelId: hotelId,
-        roomNumber: document.getElementById('roomNumber').value.trim(),
-        guestName: document.getElementById('guestName').value.trim(),
-        requestType: document.getElementById('requestType').value,
-        details: document.getElementById('details').value.trim()
-      };
+    // Fetch dynamic hotel title from admin settings
+    async function loadHotel() {
+      try {
+        const res = await fetch(`/api/hotels/${hotelId}`);
+        const data = await res.json();
+        if (data.success && data.hotel) {
+          document.getElementById('hotelNameDisplay').textContent = data.hotel.hotelName;
+        }
+      } catch (err) {}
+    }
+    loadHotel();
+
+    const selectedItems = {};
+
+    function selectItem(name, dept, el) {
+      if (!selectedItems[name]) {
+        selectedItems[name] = { qty: 1, dept };
+      } else {
+        selectedItems[name].qty += 1;
+        if (selectedItems[name].qty > 5) {
+          delete selectedItems[name];
+        }
+      }
+
+      // Update Card Visuals
+      let badge = el.querySelector('.qty-badge');
+      if (selectedItems[name]) {
+        el.classList.add('selected');
+        if (!badge) {
+          badge = document.createElement('div');
+          badge.className = 'qty-badge';
+          el.appendChild(badge);
+        }
+        badge.textContent = selectedItems[name].qty;
+      } else {
+        el.classList.remove('selected');
+        if (badge) badge.remove();
+      }
+
+      // Toggle Submit Button
+      const sendBtn = document.getElementById('sendBtn');
+      if (Object.keys(selectedItems).length > 0) {
+        sendBtn.classList.add('active');
+        sendBtn.disabled = false;
+      } else {
+        sendBtn.classList.remove('active');
+        sendBtn.disabled = true;
+      }
+    }
+
+    async function sendRequest() {
+      const status = document.getElementById('status');
+      const btn = document.getElementById('sendBtn');
+      btn.disabled = true;
+      status.style.color = '#333';
+      status.textContent = 'Sending...';
+
+      const itemsList = Object.keys(selectedItems)
+        .map(name => `${selectedItems[name].qty}x ${name}`)
+        .join(', ');
+
+      const primaryItem = Object.keys(selectedItems)[0];
+      const serviceType = selectedItems[primaryItem].dept;
 
       try {
-        const response = await fetch('/api/requests', {
+        const res = await fetch('/api/requests', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(requestData)
+          body: JSON.stringify({
+            hotelId,
+            roomNumber,
+            guestName: 'Valued Guest',
+            serviceType,
+            details: itemsList
+          })
         });
 
-        const result = await response.json();
-
-        if (response.ok && result.success) {
-          statusEl.style.color = 'green';
-          statusEl.textContent = 'Request submitted successfully!';
+        const data = await res.json();
+        if (res.ok && data.success) {
+          status.style.color = 'green';
+          status.textContent = '✓ Sent! Hotel staff notified.';
+          setTimeout(() => location.reload(), 2000);
         } else {
-          statusEl.style.color = 'red';
-          statusEl.textContent = 'Error: ' + (result.error || 'Failed to send request');
+          status.style.color = 'red';
+          status.textContent = 'Error sending request.';
+          btn.disabled = false;
         }
       } catch (err) {
-        statusEl.style.color = 'red';
-        statusEl.textContent = 'Error submitting request.';
+        status.style.color = 'red';
+        status.textContent = 'Network error.';
+        btn.disabled = false;
       }
-    });
+    }
   </script>
 </body>
 </html>
