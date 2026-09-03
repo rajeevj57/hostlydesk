@@ -11,302 +11,116 @@ const PUBLIC_DIR = path.join(__dirname, '..', 'public');
 const PORT = process.env.PORT || 3000;
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'hostlydesk-admin';
 
-const MIME = {
-  '.html': 'text/html', '.js': 'application/javascript',
-  '.css': 'text/css', '.json': 'application/json',
-};
-
-function sendJSON(res, status, data) {
-  res.writeHead(status, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
-  res.end(JSON.stringify(data));
+function serveFile(res, filePath, contentType) {
+  fs.readFile(filePath, (err, data) => {
+    if (err) {
+      res.writeHead(404, { 'Content-Type': 'text/plain' });
+      res.end('404 Not Found');
+    } else {
+      res.writeHead(200, { 'Content-Type': contentType });
+      res.end(data);
+    }
+  });
 }
 
-function readBody(req) {
-  return new Promise((resolve, reject) => {
+function getContentType(filePath) {
+  const ext = path.extname(filePath).toLowerCase();
+  const types = {
+    '.html': 'text/html',
+    '.css': 'text/css',
+    '.js': 'application/javascript',
+    '.json': 'application/json',
+    '.png': 'image/png',
+    '.jpg': 'image/jpeg',
+    '.svg': 'image/svg+xml'
+  };
+  return types[ext] || 'application/octet-stream';
+}
+
+const server = http.createServer((req, res) => {
+  const reqUrl = new URL(req.url, `http://${req.headers.host}`);
+  const pathname = reqUrl.pathname;
+
+  // Serve Multi-Tenant API Requests
+  if (req.method === 'POST' && pathname === '/api/requests') {
     let body = '';
-    req.on('data', chunk => body += chunk);
+    req.on('data', chunk => { body += chunk.toString(); });
     req.on('end', () => {
-      try { resolve(body ? JSON.parse(body) : {}); }
-      catch (e) { reject(e); }
+      try {
+        const payload = JSON.parse(body);
+        const requestData = {
+          id: randomUUID(),
+          hotelId: payload.hotelId || 'default-hotel',
+          roomNumber: payload.roomNumber,
+          guestName: payload.guestName,
+          category: payload.category,
+          details: payload.details,
+          status: 'pending',
+          createdAt: new Date().toISOString()
+        };
+
+        store.addRequest(requestData);
+        notifyDepartment(requestData);
+
+        res.writeHead(201, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: true, data: requestData }));
+      } catch (err) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: false, message: 'Invalid JSON payload' }));
+      }
     });
-    req.on('error', reject);
-  });
-}
-
-function isAdmin(req) {
-  return req.headers['x-admin-password'] === ADMIN_PASSWORD;
-}
-
-function serveStatic(req, res, urlPath) {
-  const filePath = path.join(PUBLIC_DIR, urlPath === '/' ? 'menu.html' : urlPath);
-  if (!filePath.startsWith(PUBLIC_DIR)) { res.writeHead(403); return res.end(); }
-  fs.readFile(filePath, (err, content) => {
-    if (err) { res.writeHead(404); return res.end('Not found'); }
-    const ext = path.extname(filePath);
-    res.writeHead(200, { 'Content-Type': MIME[ext] || 'application/octet-stream' });
-    res.end(content);
-  });
-}
-
-const server = http.createServer(async (req, res) => {
-  const url = new URL(req.url, `http://${req.headers.host}`);
-  const p = url.pathname;
-
-  try {
-    if (p === '/api/context' && req.method === 'GET') {
-      const rooms = store.readJSON(store.ROOMS_FILE);
-      const token = url.searchParams.get('room') || 'DEMO101';
-      const ctx = rooms[token] || rooms['DEMO101'];
-      return sendJSON(res, 200, ctx);
-    }
-
-    if (p === '/api/rooms' && req.method === 'GET') {
-      const rooms = store.readJSON(store.ROOMS_FILE);
-      const tokens = Object.keys(rooms).filter(t => t !== 'DEMO101').sort((a, b) => Number(a) - Number(b));
-      return sendJSON(res, 200, tokens);
-    }
-
-    if (p === '/api/menu-items' && req.method === 'GET') {
-      return sendJSON(res, 200, store.getMenuItems());
-    }
-    if (p === '/api/info' && req.method === 'GET') {
-      return sendJSON(res, 200, store.getInfoItems());
-    }
-    if (p === '/api/guide' && req.method === 'GET') {
-      return sendJSON(res, 200, store.getGuide());
-    }
-    if (p === '/api/food-items' && req.method === 'GET') {
-      return sendJSON(res, 200, store.getFoodItems());
-    }
-
-    if (p === '/api/admin/login' && req.method === 'POST') {
-      const body = await readBody(req);
-      if (body.password === ADMIN_PASSWORD) return sendJSON(res, 200, { ok: true });
-      return sendJSON(res, 401, { ok: false, error: 'Wrong password' });
-    }
-
-    if (p === '/api/admin/menu-items' && req.method === 'POST') {
-      if (!isAdmin(req)) return sendJSON(res, 401, { error: 'Unauthorized' });
-      const body = await readBody(req);
-      if (!Array.isArray(body)) return sendJSON(res, 400, { error: 'Expected an array' });
-      store.writeJSON(store.MENU_ITEMS_FILE, body);
-      return sendJSON(res, 200, { ok: true });
-    }
-
-    if (p === '/api/admin/info' && req.method === 'POST') {
-      if (!isAdmin(req)) return sendJSON(res, 401, { error: 'Unauthorized' });
-      const body = await readBody(req);
-      if (!Array.isArray(body)) return sendJSON(res, 400, { error: 'Expected an array' });
-      store.writeJSON(store.INFO_ITEMS_FILE, body);
-      return sendJSON(res, 200, { ok: true });
-    }
-
-    if (p === '/api/admin/guide' && req.method === 'POST') {
-      if (!isAdmin(req)) return sendJSON(res, 401, { error: 'Unauthorized' });
-      const body = await readBody(req);
-      if (!Array.isArray(body)) return sendJSON(res, 400, { error: 'Expected an array' });
-      store.writeJSON(store.GUIDE_FILE, body);
-      return sendJSON(res, 200, { ok: true });
-    }
-
-    if (p === '/api/admin/food-items' && req.method === 'POST') {
-      if (!isAdmin(req)) return sendJSON(res, 401, { error: 'Unauthorized' });
-      const body = await readBody(req);
-      if (!Array.isArray(body)) return sendJSON(res, 400, { error: 'Expected an array' });
-      store.writeJSON(store.FOOD_ITEMS_FILE, body);
-      return sendJSON(res, 200, { ok: true });
-    }
-
-    // ---- Admin: list all rooms with current guest names (for check-in screen) ----
-    if (p === '/api/admin/rooms' && req.method === 'GET') {
-      if (!isAdmin(req)) return sendJSON(res, 401, { error: 'Unauthorized' });
-      const rooms = store.readJSON(store.ROOMS_FILE);
-      const list = Object.keys(rooms)
-        .filter(t => t !== 'DEMO101')
-        .sort((a, b) => Number(a) - Number(b))
-        .map(token => rooms[token]);
-      return sendJSON(res, 200, list);
-    }
-
-    // ---- Admin: add one or more rooms (keeps existing rooms untouched) ----
-    if (p === '/api/admin/rooms/add' && req.method === 'POST') {
-      if (!isAdmin(req)) return sendJSON(res, 401, { error: 'Unauthorized' });
-      const body = await readBody(req);
-      const roomNumbers = Array.isArray(body.rooms) ? body.rooms : [];
-      const rooms = store.readJSON(store.ROOMS_FILE);
-      let added = 0;
-      roomNumbers.forEach(token => {
-        const t = String(token).trim();
-        if (!t || rooms[t]) return;
-        rooms[t] = { room: t, guestName: 'Guest', hotelName: 'HostlyDesk Hotel', checkoutTime: '11:00 AM' };
-        added++;
-      });
-      store.writeJSON(store.ROOMS_FILE, rooms);
-      return sendJSON(res, 200, { ok: true, added });
-    }
-
-    // ---- Admin: remove a room entirely ----
-    if (p === '/api/admin/rooms/remove' && req.method === 'POST') {
-      if (!isAdmin(req)) return sendJSON(res, 401, { error: 'Unauthorized' });
-      const body = await readBody(req);
-      const room = String(body.room || '').trim();
-      if (!room) return sendJSON(res, 400, { error: 'room is required' });
-      const rooms = store.readJSON(store.ROOMS_FILE);
-      delete rooms[room];
-      store.writeJSON(store.ROOMS_FILE, rooms);
-      return sendJSON(res, 200, { ok: true });
-    }
-
-    // ---- Admin: replace the entire room list from scratch ----
-    if (p === '/api/admin/rooms/replace-all' && req.method === 'POST') {
-      if (!isAdmin(req)) return sendJSON(res, 401, { error: 'Unauthorized' });
-      const body = await readBody(req);
-      const roomNumbers = Array.isArray(body.rooms) ? body.rooms : [];
-      const rooms = {};
-      roomNumbers.forEach(token => {
-        const t = String(token).trim();
-        if (!t) return;
-        rooms[t] = { room: t, guestName: 'Guest', hotelName: 'HostlyDesk Hotel', checkoutTime: '11:00 AM' };
-      });
-      store.writeJSON(store.ROOMS_FILE, rooms);
-      return sendJSON(res, 200, { ok: true, count: Object.keys(rooms).length });
-    }
-
-    // ---- Admin: check a guest into a room (sets their name on that room) ----
-    if (p === '/api/admin/checkin' && req.method === 'POST') {
-      if (!isAdmin(req)) return sendJSON(res, 401, { error: 'Unauthorized' });
-      const body = await readBody(req);
-      const { room, guestName, checkoutTime } = body;
-      if (!room || !guestName) return sendJSON(res, 400, { error: 'room and guestName are required' });
-
-      const rooms = store.readJSON(store.ROOMS_FILE);
-      if (!rooms[room]) return sendJSON(res, 400, { error: 'Unknown room number' });
-      rooms[room].guestName = guestName;
-      if (checkoutTime) rooms[room].checkoutTime = checkoutTime;
-      store.writeJSON(store.ROOMS_FILE, rooms);
-      return sendJSON(res, 200, { ok: true });
-    }
-
-    // ---- Admin: check a guest out (resets the room back to default) ----
-    if (p === '/api/admin/checkout' && req.method === 'POST') {
-      if (!isAdmin(req)) return sendJSON(res, 401, { error: 'Unauthorized' });
-      const body = await readBody(req);
-      const { room } = body;
-      if (!room) return sendJSON(res, 400, { error: 'room is required' });
-
-      const rooms = store.readJSON(store.ROOMS_FILE);
-      if (!rooms[room]) return sendJSON(res, 400, { error: 'Unknown room number' });
-      rooms[room].guestName = 'Guest';
-      rooms[room].checkoutTime = '11:00 AM';
-      store.writeJSON(store.ROOMS_FILE, rooms);
-      return sendJSON(res, 200, { ok: true });
-    }
-
-    if (p === '/api/request' && req.method === 'POST') {
-      const body = await readBody(req);
-      const { room, items } = body;
-      if (!room || !Array.isArray(items) || items.length === 0) {
-        return sendJSON(res, 400, { error: 'room and items are required' });
-      }
-
-      const requests = store.readJSON(store.REQUESTS_FILE);
-      const record = {
-        id: randomUUID(),
-        room,
-        items,
-        status: 'new',
-        createdAt: new Date().toISOString(),
-      };
-      requests.push(record);
-      store.writeJSON(store.REQUESTS_FILE, requests);
-
-      const menuItems = store.getMenuItems();
-      const byDept = {};
-      for (const { id, qty } of items) {
-        const menuItem = menuItems.find(m => m.id === id);
-        if (!menuItem) continue;
-        byDept[menuItem.department] = byDept[menuItem.department] || [];
-        byDept[menuItem.department].push(`${qty}x ${menuItem.label}`);
-      }
-      await Promise.all(Object.entries(byDept).map(([dept, lines]) =>
-        notifyDepartment(dept,
-          `🔔 New request — Room ${room}\n${lines.join('\n')}\n\nRequest ID: ${record.id.slice(0, 8)}`)
-      ));
-
-      return sendJSON(res, 200, { ok: true, id: record.id });
-    }
-
-    // ---- API: guest places a food order (itemized, with prices) ----
-    if (p === '/api/food-order' && req.method === 'POST') {
-      const body = await readBody(req);
-      const { room, items } = body;
-      if (!room || !Array.isArray(items) || items.length === 0) {
-        return sendJSON(res, 400, { error: 'room and items are required' });
-      }
-
-      const foodItems = store.getFoodItems();
-      let total = 0;
-      const lines = [];
-      for (const { id, qty } of items) {
-        const dish = foodItems.find(f => f.id === id);
-        if (!dish || !qty) continue;
-        const lineTotal = dish.price * qty;
-        total += lineTotal;
-        lines.push(`${qty}x ${dish.name} — ₹${lineTotal}`);
-      }
-      if (lines.length === 0) return sendJSON(res, 400, { error: 'No valid items' });
-
-      const orders = store.readJSON(store.FOOD_ORDERS_FILE);
-      const record = {
-        id: randomUUID(),
-        room,
-        items,
-        total,
-        status: 'new',
-        createdAt: new Date().toISOString(),
-      };
-      orders.push(record);
-      store.writeJSON(store.FOOD_ORDERS_FILE, orders);
-
-      await notifyDepartment('kitchen',
-        `🍽️ New food order — Room ${room}\n${lines.join('\n')}\n\nTotal: ₹${total}\nOrder ID: ${record.id.slice(0, 8)}`);
-
-      return sendJSON(res, 200, { ok: true, id: record.id, total });
-    }
-
-    if (p === '/api/precheckin' && req.method === 'POST') {
-      const body = await readBody(req);
-      const required = ['bookingRef', 'fullName', 'phone', 'idType', 'idNumber'];
-      for (const field of required) {
-        if (!body[field]) return sendJSON(res, 400, { error: `${field} is required` });
-      }
-
-      const guests = store.readJSON(store.GUESTS_FILE);
-      const record = { id: randomUUID(), ...body, submittedAt: new Date().toISOString() };
-      guests.push(record);
-      store.writeJSON(store.GUESTS_FILE, guests);
-
-      await notifyDepartment('front_office',
-        `🧾 Pre-check-in received\nName: ${body.fullName}\nBooking: ${body.bookingRef}\nPhone: ${body.phone}\nID: ${body.idType} — ${body.idNumber}`);
-
-      return sendJSON(res, 200, { ok: true, id: record.id });
-    }
-
-    if (req.method === 'GET') {
-      return serveStatic(req, res, p);
-    }
-
-    sendJSON(res, 404, { error: 'Not found' });
-  } catch (err) {
-    console.error(err);
-    sendJSON(res, 500, { error: 'Server error' });
+    return;
   }
+
+  // Multi-Tenant Admin Requests Fetch
+  if (req.method === 'GET' && pathname === '/api/requests') {
+    const hotelFilter = reqUrl.searchParams.get('hotelId');
+    let requests = store.getRequests();
+
+    if (hotelFilter) {
+      requests = requests.filter(r => r.hotelId === hotelFilter);
+    }
+
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify(requests));
+    return;
+  }
+
+  // Multi-Tenant Hotel Management Endpoint
+  if (req.method === 'POST' && pathname === '/api/hotels') {
+    let body = '';
+    req.on('data', chunk => { body += chunk.toString(); });
+    req.on('end', () => {
+      try {
+        const hotel = JSON.parse(body);
+        if (!hotel.id || !hotel.name) {
+          throw new Error('Missing required fields');
+        }
+        store.saveHotel(hotel);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: true, hotel }));
+      } catch (err) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: false, message: err.message }));
+      }
+    });
+    return;
+  }
+
+  if (req.method === 'GET' && pathname === '/api/hotels') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify(store.getHotels()));
+    return;
+  }
+
+  // Serve static public assets
+  let safePath = path.normalize(pathname).replace(/^(\.\.[\/\\])+/, '');
+  if (safePath === '/' || safePath === '\\') safePath = '/index.html';
+
+  const filePath = path.join(PUBLIC_DIR, safePath);
+  serveFile(res, filePath, getContentType(filePath));
 });
 
 server.listen(PORT, () => {
-  console.log(`HostlyDesk server running: http://localhost:${PORT}`);
-  console.log(`Guest menu:     http://localhost:${PORT}/menu.html?room=DEMO101`);
-  console.log(`Food menu:      http://localhost:${PORT}/food-menu.html?room=DEMO101`);
-  console.log(`Pre-check-in:   http://localhost:${PORT}/precheckin.html`);
-  console.log(`Admin panel:    http://localhost:${PORT}/admin.html`);
+  console.log(`HostlyDesk multi-tenant server running on port ${PORT}`);
 });
