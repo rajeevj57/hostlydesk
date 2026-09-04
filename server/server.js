@@ -1,4 +1,87 @@
-// HANDLE GUEST SERVICE REQUESTS WITH DYNAMIC DEPARTMENT ROUTING
+const express = require('express');
+const https = require('https');
+const multer = require('multer');
+const cloudinary = require('cloudinary').v2;
+const { CloudinaryStorage } = require('multer-storage-cloudinary');
+const path = require('path');
+
+const app = express();
+
+// Middleware
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(express.static(path.join(__dirname, '../public')));
+
+// Configure Cloudinary
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET
+});
+
+// Configure Multer Storage for Cloudinary
+const storage = new CloudinaryStorage({
+  cloudinary: cloudinary,
+  params: {
+    folder: 'hostlydesk_uploads',
+    resource_type: 'auto'
+  }
+});
+
+const upload = multer({ storage: storage });
+
+// In-memory Database
+const hotels = {};
+
+// 1. SAVE HOTEL CONFIGURATION (Stage 1 & Stage 2)
+app.post('/api/hotels', upload.fields([
+  { name: 'menuPdf', maxCount: 1 },
+  { name: 'factSheetPdf', maxCount: 1 }
+]), (req, res) => {
+  try {
+    const { hotelId, hotelName, wifiName, wifiPassword, frontOfficeChatId, housekeepingChatId, kitchenChatId } = req.body;
+
+    if (!hotelId) {
+      return res.status(400).json({ success: false, message: 'Hotel ID is required.' });
+    }
+
+    if (!hotels[hotelId]) {
+      hotels[hotelId] = {};
+    }
+
+    // Assign text fields
+    if (hotelName) hotels[hotelId].hotelName = hotelName;
+    if (wifiName) hotels[hotelId].wifiName = wifiName;
+    if (wifiPassword) hotels[hotelId].wifiPassword = wifiPassword;
+    if (frontOfficeChatId) hotels[hotelId].frontOfficeChatId = frontOfficeChatId;
+    if (housekeepingChatId) hotels[hotelId].housekeepingChatId = housekeepingChatId;
+    if (kitchenChatId) hotels[hotelId].kitchenChatId = kitchenChatId;
+
+    // Assign Cloudinary PDF URLs if uploaded
+    if (req.files && req.files.menuPdf) {
+      hotels[hotelId].menuPdfUrl = req.files.menuPdf[0].path;
+    }
+    if (req.files && req.files.factSheetPdf) {
+      hotels[hotelId].factSheetUrl = req.files.factSheetPdf[0].path;
+    }
+
+    res.json({ success: true, message: 'Hotel updated successfully!', hotel: hotels[hotelId] });
+  } catch (err) {
+    console.error("Error updating hotel:", err);
+    res.status(500).json({ success: false, message: 'Server error updating hotel data.' });
+  }
+});
+
+// 2. GET HOTEL DETAILS FOR GUEST INTERFACE
+app.get('/api/hotels/:hotelId', (req, res) => {
+  const hotel = hotels[req.params.hotelId];
+  if (!hotel) {
+    return res.status(404).json({ success: false, message: 'Hotel not found.' });
+  }
+  res.json({ success: true, hotel });
+});
+
+// 3. DYNAMIC REQUEST ROUTING TO TELEGRAM
 app.post('/api/requests', (req, res) => {
   const { hotelId, room, items, department } = req.body;
 
@@ -9,8 +92,8 @@ app.post('/api/requests', (req, res) => {
   const hotel = hotels[hotelId];
   const itemsList = Array.isArray(items) ? items.join(', ') : items;
 
-  // DYNAMIC CHAT ID ROUTING
-  let targetChatId = hotel.frontOfficeChatId; // Default fallback
+  // Department Target Mapping
+  let targetChatId = hotel.frontOfficeChatId; // Fallback
 
   if (department === 'housekeeping' && hotel.housekeepingChatId) {
     targetChatId = hotel.housekeepingChatId;
@@ -54,4 +137,10 @@ app.post('/api/requests', (req, res) => {
   }
 
   res.json({ success: true, message: 'Request received!' });
+});
+
+// Server Initialization
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
 });
