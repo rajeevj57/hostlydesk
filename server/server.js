@@ -20,18 +20,18 @@ cloudinary.config({
   secure: true
 });
 
-// Use Memory Storage so files are held in buffer before uploading to Cloudinary
+// Memory Storage for direct buffer processing
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 
-// Helper function to upload buffer directly to Cloudinary with explicit public access
+// Upload buffer to Cloudinary ensuring .pdf extension remains in public_id
 const uploadToCloudinary = (fileBuffer, folder, filename) => {
   return new Promise((resolve, reject) => {
     const uploadStream = cloudinary.uploader.upload_stream(
       {
         folder: folder,
-        resource_type: 'raw', // Preserves PDF structure perfectly
-        public_id: filename.replace(/\.[^/.]+$/, ""), // Strip file extension for public_id
+        resource_type: 'raw',
+        public_id: `${filename}.pdf`, // Force .pdf extension on stored filename
         type: 'upload',
         access_mode: 'public'
       },
