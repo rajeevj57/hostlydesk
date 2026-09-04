@@ -1,44 +1,53 @@
 const express = require('express');
-const path = require('path');
 const multer = require('multer');
+const path = require('path');
 const fs = require('fs');
-const store = require('./store'); // or './server/store' depending on where store.js lives
-const { sendAlert } = require('./telegram'); // or './server/telegram'
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Ensure public/uploads folder exists
-const uploadDir = path.join(__dirname, 'public/uploads');
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
+// 1. ENSURE UPLOADS DIRECTORY EXISTS (Prevents upload crash on Render)
+const uploadsDir = path.join(__dirname, '../public/uploads');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
 }
 
-// Storage setup for PDF/Image uploads
+// 2. CONFIGURE MULTER FILE STORAGE
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, uploadDir),
-  filename: (req, file, cb) => {
+  destination: function (req, file, cb) {
+    cb(null, uploadsDir);
+  },
+  filename: function (req, file, cb) {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, `${file.fieldname}-${uniqueSuffix}${path.extname(file.originalname)}`);
+    const ext = path.extname(file.originalname);
+    cb(null, file.fieldname + '-' + uniqueSuffix + ext);
   }
 });
-const upload = multer({ storage });
+const upload = multer({ storage: storage });
 
+// 3. MIDDLEWARE
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, '../public')));
 
-// 1. Initial Setup Endpoint (Hotel IDs & Telegram)
+// In-memory database store
+const hotels = {};
+
+// 4. ROUTE: STAGE 1 - HOTEL & TELEGRAM SETUP
 app.post('/api/hotels', (req, res) => {
   try {
     const { hotelId, hotelName, frontOfficeChatId, housekeepingChatId, kitchenChatId } = req.body;
+
     if (!hotelId || !hotelName) {
-      return res.status(400).json({ success: false, message: 'Hotel ID and Name are required.' });
+      return res.status(400).json({ success: false, message: 'Hotel Slug and Name are required.' });
     }
 
-    const existingHotel = store.getHotelById(hotelId) || {};
-    const updatedHotel = {
-      ...existingHotel,
+    if (!hotels[hotelId]) {
+      hotels[hotelId] = {};
+    }
+
+    hotels[hotelId] = {
+      ...hotels[hotelId],
       hotelId,
       hotelName,
       frontOfficeChatId,
@@ -46,70 +55,76 @@ app.post('/api/hotels', (req, res) => {
       kitchenChatId
     };
 
-    store.saveHotel(updatedHotel);
-    res.json({ success: true, hotel: updatedHotel });
+    console.log(`[Stage 1] Configured Hotel: ${hotelId}`);
+    return res.json({ success: true, hotel: hotels[hotelId] });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    console.error('Error saving Stage 1 config:', err);
+    return res.status(500).json({ success: false, message: 'Server error saving config.' });
   }
 });
 
-// 2. Operational Content Endpoint (Wi-Fi, Uploads, Attractions)
+// 5. ROUTE: STAGE 2 - HOTEL OPERATIONS & FILE UPLOADS
 app.post('/api/hotels/content', upload.fields([
   { name: 'menuPdf', maxCount: 1 },
   { name: 'factSheetPdf', maxCount: 1 }
 ]), (req, res) => {
   try {
     const { hotelId, wifiName, wifiPassword, nearbyPlaces } = req.body;
-    const existingHotel = store.getHotelById(hotelId);
 
-    if (!existingHotel) {
-      return res.status(404).json({ success: false, message: 'Hotel configuration not found.' });
+    if (!hotelId || !hotels[hotelId]) {
+      return res.status(400).json({ success: false, message: 'Invalid Hotel ID. Complete Stage 1 first.' });
     }
 
-    let menuPdfUrl = existingHotel.menuPdfUrl || '';
-    let factSheetUrl = existingHotel.factSheetUrl || '';
+    const hostUrl = `${req.protocol}://${req.get('host')}`;
 
-    if (req.files && req.files['menuPdf']) {
-      menuPdfUrl = `/uploads/${req.files['menuPdf'][0].filename}`;
+    if (req.files) {
+      if (req.files['menuPdf'] && req.files['menuPdf'][0]) {
+        hotels[hotelId].menuPdfUrl = `${hostUrl}/uploads/${req.files['menuPdf'][0].filename}`;
+      }
+      if (req.files['factSheetPdf'] && req.files['factSheetPdf'][0]) {
+        hotels[hotelId].factSheetUrl = `${hostUrl}/uploads/${req.files['factSheetPdf'][0].filename}`;
+      }
     }
-    if (req.files && req.files['factSheetPdf']) {
-      factSheetUrl = `/uploads/${req.files['factSheetPdf'][0].filename}`;
-    }
 
-    const updatedHotel = {
-      ...existingHotel,
-      wifiName: wifiName || existingHotel.wifiName,
-      wifiPassword: wifiPassword || existingHotel.wifiPassword,
-      nearbyPlaces: nearbyPlaces || existingHotel.nearbyPlaces,
-      menuPdfUrl,
-      factSheetUrl
-    };
+    hotels[hotelId].wifiName = wifiName || '';
+    hotels[hotelId].wifiPassword = wifiPassword || '';
+    hotels[hotelId].nearbyPlaces = nearbyPlaces || '';
 
-    store.saveHotel(updatedHotel);
-    res.json({ success: true, hotel: updatedHotel });
+    console.log(`[Stage 2] Updated Content for Hotel: ${hotelId}`);
+    return res.json({ success: true, hotel: hotels[hotelId] });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    console.error('Error uploading operations content:', err);
+    return res.status(500).json({ success: false, message: 'Server error uploading files.' });
   }
 });
 
-// 3. Get Hotel Details Endpoint
+// 6. ROUTE: GET HOTEL DATA FOR GUEST INTERFACE
 app.get('/api/hotels/:hotelId', (req, res) => {
-  const hotel = store.getHotelById(req.params.hotelId);
-  if (hotel) {
-    res.json({ success: true, hotel });
-  } else {
-    res.status(404).json({ success: false, message: 'Hotel not found.' });
+  const { hotelId } = req.params;
+  if (hotels[hotelId]) {
+    return res.json({ success: true, hotel: hotels[hotelId] });
   }
+  return res.status(404).json({ success: false, message: 'Hotel not found.' });
 });
 
-// 4. Guest Service Request Endpoint
+// 7. ROUTE: HANDLE GUEST SERVICE REQUESTS
 app.post('/api/requests', async (req, res) => {
   try {
-    await sendAlert(req.body);
-    res.json({ success: true, message: 'Request sent to hotel staff.' });
+    const { hotelId, roomNumber, guestName, serviceType, details } = req.body;
+    const hotel = hotels[hotelId];
+
+    if (!hotel) {
+      return res.status(404).json({ success: false, message: 'Hotel profile not found.' });
+    }
+
+    console.log(`[Request] ${serviceType} request for Room ${roomNumber} at ${hotel.hotelName}: ${details}`);
+    return res.json({ success: true, message: 'Request received successfully.' });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    console.error('Error handling service request:', err);
+    return res.status(500).json({ success: false, message: 'Failed to process service request.' });
   }
 });
 
-app.listen(PORT, () => console.log(`HostlyDesk active on port ${PORT}`));
+app.listen(PORT, () => {
+  console.log(`HostlyDesk Server running live on port ${PORT}`);
+});
