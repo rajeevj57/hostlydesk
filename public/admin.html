@@ -12,7 +12,6 @@
       --text-dark: #1e293b;
       --border-color: #cbd5e1;
       --card-bg: #ffffff;
-      --success-green: #10b981;
       --error-red: #ef4444;
     }
 
@@ -33,7 +32,6 @@
     .upload-area { background-color: #f8fafc; border: 2px dashed var(--border-color); padding: 18px; border-radius: 8px; text-align: center; }
     .btn { display: block; width: 100%; padding: 14px; background-color: var(--primary-navy); color: #ffffff; border: none; border-radius: 8px; font-size: 1rem; font-weight: 700; cursor: pointer; }
     .btn-gold { background-color: var(--accent-gold); margin-top: 10px; }
-    #opsSection { display: none; margin-top: 32px; padding-top: 24px; border-top: 2px dashed var(--border-color); }
     .status-banner { margin-top: 20px; padding: 12px 16px; border-radius: 8px; font-weight: 600; text-align: center; font-size: 0.95rem; display: none; }
     .status-banner.success { display: block; background-color: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; }
     .status-banner.error { display: block; background-color: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
@@ -78,13 +76,13 @@
           <input type="text" id="kitchenChatId" placeholder="-100123456789" required>
         </div>
 
-        <button type="submit" class="btn">Save & Initialize Operations Dashboard →</button>
+        <button type="submit" class="btn">Save Stage 1 Settings</button>
       </form>
     </div>
 
     <!-- STAGE 2 -->
-    <div id="opsSection">
-      <div class="section-title">📌 Stage 2: Guest Experience & Information Content</div>
+    <div class="section-block" id="opsSection" style="display: none; border-top: 2px dashed #cbd5e1; padding-top: 24px;">
+      <div class="section-title">📌 Stage 2: Guest Information & Media Files</div>
       <form id="opsForm" enctype="multipart/form-data">
         <input type="hidden" id="opsHotelId" name="hotelId">
 
@@ -126,6 +124,8 @@
 </div>
 
 <script>
+  let activeHotelId = '';
+
   function showStatus(message, type) {
     const banner = document.getElementById('statusBanner');
     banner.className = `status-banner ${type}`;
@@ -134,11 +134,11 @@
 
   document.getElementById('configForm').addEventListener('submit', async (e) => {
     e.preventDefault();
-    showStatus('Saving initial parameters...', 'loading');
+    showStatus('Saving Stage 1 parameters...', 'loading');
 
-    const hotelId = document.getElementById('hotelId').value.trim();
+    activeHotelId = document.getElementById('hotelId').value.trim();
     const payload = {
-      hotelId: hotelId,
+      hotelId: activeHotelId,
       hotelName: document.getElementById('hotelName').value.trim(),
       frontOfficeChatId: document.getElementById('frontOfficeChatId').value.trim(),
       housekeepingChatId: document.getElementById('housekeepingChatId').value.trim(),
@@ -154,22 +154,29 @@
       const data = await res.json();
 
       if (res.ok && data.success) {
-        showStatus('✓ Stage 1 saved! Complete Stage 2 options below.', 'success');
-        document.getElementById('opsHotelId').value = hotelId;
+        showStatus('✓ Stage 1 saved! You can now upload files in Stage 2 below.', 'success');
+        document.getElementById('opsHotelId').value = activeHotelId;
         document.getElementById('opsSection').style.display = 'block';
       } else {
-        showStatus('Error saving configurations.', 'error');
+        showStatus('Error saving Stage 1 parameters.', 'error');
       }
     } catch (err) {
-      showStatus('Network connection error.', 'error');
+      showStatus('Failed to connect to server. Check Render logs.', 'error');
     }
   });
 
   document.getElementById('opsForm').addEventListener('submit', async (e) => {
     e.preventDefault();
-    showStatus('Uploading content live...', 'loading');
+    
+    if (!activeHotelId) {
+      showStatus('Please click "Save Stage 1 Settings" first before publishing content.', 'error');
+      return;
+    }
+
+    showStatus('Uploading files and publishing content...', 'loading');
 
     const formData = new FormData(e.target);
+    formData.set('hotelId', activeHotelId);
 
     try {
       const res = await fetch('/api/hotels/content', {
@@ -179,12 +186,12 @@
       const data = await res.json();
 
       if (res.ok && data.success) {
-        showStatus('✓ Details published live to guest view!', 'success');
+        showStatus('✓ Published live to guest interface!', 'success');
       } else {
-        showStatus('Upload failed. Please complete Stage 1 first.', 'error');
+        showStatus(data.message || 'Upload failed. Please re-submit Stage 1 first.', 'error');
       }
     } catch (err) {
-      showStatus('Failed to connect to server.', 'error');
+      showStatus('Failed to connect to server during upload.', 'error');
     }
   });
 </script>
