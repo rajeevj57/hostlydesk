@@ -1,5 +1,6 @@
 const express = require('express');
 const https = require('https');
+const http = require('http');
 const multer = require('multer');
 const cloudinary = require('cloudinary').v2;
 const path = require('path');
@@ -118,14 +119,20 @@ app.post('/api/hotels', upload.fields([
   }
 });
 
-// 5. API: PDF PROXY ROUTE (Fixes Browser PDF Viewing Headers)
-app.get('/api/pdf-proxy', (req, res) => {
-  const pdfUrl = req.query.url;
-  if (!pdfUrl) {
-    return res.status(400).send('Missing PDF URL parameter.');
-  }
+// 5. API: PDF PROXY ROUTE (Follows 301/302 Redirects and Forces Correct Headers)
+const fetchPdfWithRedirects = (targetUrl, res) => {
+  const protocol = targetUrl.startsWith('https') ? https : http;
 
-  https.get(pdfUrl, (stream) => {
+  protocol.get(targetUrl, (stream) => {
+    // Follow HTTP redirects (301, 302, 307, 308)
+    if (stream.statusCode >= 300 && stream.statusCode < 400 && stream.headers.location) {
+      return fetchPdfWithRedirects(stream.headers.location, res);
+    }
+
+    if (stream.statusCode !== 200) {
+      return res.status(stream.statusCode).send('Failed to fetch remote PDF stream.');
+    }
+
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', 'inline; filename="menu.pdf"');
     stream.pipe(res);
@@ -133,6 +140,15 @@ app.get('/api/pdf-proxy', (req, res) => {
     console.error('Error proxying PDF stream:', err);
     res.status(500).send('Error streaming PDF file.');
   });
+};
+
+app.get('/api/pdf-proxy', (req, res) => {
+  const pdfUrl = req.query.url;
+  if (!pdfUrl) {
+    return res.status(400).send('Missing PDF URL parameter.');
+  }
+
+  fetchPdfWithRedirects(pdfUrl, res);
 });
 
 // 6. API: GET HOTEL DETAILS FOR GUEST PAGE
