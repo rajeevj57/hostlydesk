@@ -17,16 +17,16 @@ app.use(express.static(path.join(__dirname, '../public')));
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+  secure: true
 });
 
-// Multer Storage Configuration specifically forcing image resource type for public PDF viewing
+// Multer Storage Setup
 const storage = new CloudinaryStorage({
   cloudinary: cloudinary,
   params: {
     folder: 'hostlydesk_uploads',
-    resource_type: 'image', // Forces Cloudinary to serve PDFs as public image/document assets
-    format: 'pdf'
+    resource_type: 'auto'
   }
 });
 
@@ -34,6 +34,18 @@ const upload = multer({ storage: storage });
 
 // In-Memory Database
 const hotels = {};
+
+// Helper function to sanitize and fix misspelled Cloudinary URLs
+function fixCloudinaryUrl(rawUrl) {
+  if (!rawUrl) return '';
+  // Fix the typo 'doudinary' -> 'cloudinary' if present
+  let cleanUrl = rawUrl.replace('doudinary.com', 'cloudinary.com');
+  // Ensure HTTPS protocol
+  if (cleanUrl.startsWith('http://')) {
+    cleanUrl = cleanUrl.replace('http://', 'https://');
+  }
+  return cleanUrl;
+}
 
 // 4. API: SAVE HOTEL CONFIGURATION
 app.post('/api/hotels', upload.fields([
@@ -59,12 +71,12 @@ app.post('/api/hotels', upload.fields([
     if (housekeepingChatId) hotels[hotelId].housekeepingChatId = housekeepingChatId;
     if (kitchenChatId) hotels[hotelId].kitchenChatId = kitchenChatId;
 
-    // Save exact Cloudinary public URL
+    // Save cleaned Cloudinary generated URLs
     if (req.files && req.files.menuPdf && req.files.menuPdf[0]) {
-      hotels[hotelId].menuPdfUrl = req.files.menuPdf[0].path;
+      hotels[hotelId].menuPdfUrl = fixCloudinaryUrl(req.files.menuPdf[0].path);
     }
     if (req.files && req.files.factSheetPdf && req.files.factSheetPdf[0]) {
-      hotels[hotelId].factSheetUrl = req.files.factSheetPdf[0].path;
+      hotels[hotelId].factSheetUrl = fixCloudinaryUrl(req.files.factSheetPdf[0].path);
     }
 
     res.json({ success: true, message: 'Hotel setup updated successfully!', hotel: hotels[hotelId] });
@@ -94,7 +106,6 @@ app.post('/api/requests', (req, res) => {
   const hotel = hotels[hotelId];
   const itemsList = Array.isArray(items) ? items.join(', ') : items;
 
-  // Smart Chat ID Routing logic based on Department
   let targetChatId = hotel.frontOfficeChatId; // Default fallback
 
   if (department === 'housekeeping' && hotel.housekeepingChatId) {
