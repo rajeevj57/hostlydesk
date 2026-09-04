@@ -5,30 +5,47 @@ const cloudinary = require('cloudinary').v2;
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const path = require('path');
 
+// 1. INITIALIZE EXPRESS APP FIRST
 const app = express();
 
+// 2. MIDDLEWARE CONFIGURATION
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, '../public')));
 
+// 3. CLOUDINARY CONFIGURATION
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
   api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
+// Multer Storage Configuration specifically optimized for PDF inline rendering
 const storage = new CloudinaryStorage({
   cloudinary: cloudinary,
   params: {
     folder: 'hostlydesk_uploads',
-    resource_type: 'auto'
+    resource_type: 'auto',
+    flags: 'attachment:false'
   }
 });
 
 const upload = multer({ storage: storage });
 
+// In-Memory Database
 const hotels = {};
 
+// Helper function to format Cloudinary URLs for seamless browser viewing
+function formatPdfUrl(cloudinaryUrl) {
+  if (!cloudinaryUrl) return '';
+  // Ensure PDFs open inline rather than forcing attachment downloads
+  if (cloudinaryUrl.includes('/upload/')) {
+    return cloudinaryUrl.replace('/upload/', '/upload/fl_inline/');
+  }
+  return cloudinaryUrl;
+}
+
+// 4. API: SAVE HOTEL CONFIGURATION
 app.post('/api/hotels', upload.fields([
   { name: 'menuPdf', maxCount: 1 },
   { name: 'factSheetPdf', maxCount: 1 }
@@ -44,6 +61,7 @@ app.post('/api/hotels', upload.fields([
       hotels[hotelId] = {};
     }
 
+    // Assign text configurations
     if (hotelName) hotels[hotelId].hotelName = hotelName;
     if (wifiName) hotels[hotelId].wifiName = wifiName;
     if (wifiPassword) hotels[hotelId].wifiPassword = wifiPassword;
@@ -51,40 +69,43 @@ app.post('/api/hotels', upload.fields([
     if (housekeepingChatId) hotels[hotelId].housekeepingChatId = housekeepingChatId;
     if (kitchenChatId) hotels[hotelId].kitchenChatId = kitchenChatId;
 
-    // Capture uploaded PDF URLs directly from Cloudinary output
+    // Save formatted PDF URLs
     if (req.files && req.files.menuPdf && req.files.menuPdf[0]) {
-      hotels[hotelId].menuPdfUrl = req.files.menuPdf[0].path;
+      hotels[hotelId].menuPdfUrl = formatPdfUrl(req.files.menuPdf[0].path);
     }
     if (req.files && req.files.factSheetPdf && req.files.factSheetPdf[0]) {
-      hotels[hotelId].factSheetUrl = req.files.factSheetPdf[0].path;
+      hotels[hotelId].factSheetUrl = formatPdfUrl(req.files.factSheetPdf[0].path);
     }
 
-    res.json({ success: true, message: 'Hotel updated successfully!', hotel: hotels[hotelId] });
+    res.json({ success: true, message: 'Hotel setup updated successfully!', hotel: hotels[hotelId] });
   } catch (err) {
-    console.error("Error updating hotel:", err);
-    res.status(500).json({ success: false, message: 'Server error updating hotel data.' });
+    console.error("Error saving hotel settings:", err);
+    res.status(500).json({ success: false, message: 'Server error processing upload.' });
   }
 });
 
+// 5. API: GET HOTEL DETAILS FOR GUEST PAGE
 app.get('/api/hotels/:hotelId', (req, res) => {
   const hotel = hotels[req.params.hotelId];
   if (!hotel) {
-    return res.status(404).json({ success: false, message: 'Hotel not found.' });
+    return res.status(404).json({ success: false, message: 'Hotel profile not found in memory.' });
   }
   res.json({ success: true, hotel });
 });
 
+// 6. API: DYNAMIC DEPARTMENT ROUTING TO TELEGRAM
 app.post('/api/requests', (req, res) => {
   const { hotelId, room, items, department } = req.body;
 
   if (!hotelId || !hotels[hotelId]) {
-    return res.status(400).json({ success: false, message: 'Invalid hotel configuration.' });
+    return res.status(400).json({ success: false, message: 'Hotel configuration not initialized. Save settings in Admin panel first.' });
   }
 
   const hotel = hotels[hotelId];
   const itemsList = Array.isArray(items) ? items.join(', ') : items;
 
-  let targetChatId = hotel.frontOfficeChatId;
+  // Smart Chat ID Routing logic based on Department
+  let targetChatId = hotel.frontOfficeChatId; // Default fallback
 
   if (department === 'housekeeping' && hotel.housekeepingChatId) {
     targetChatId = hotel.housekeepingChatId;
@@ -120,17 +141,18 @@ app.post('/api/requests', (req, res) => {
     });
 
     telegramReq.on('error', (e) => {
-      console.error('Telegram error:', e);
+      console.error('Telegram dispatch error:', e);
     });
 
     telegramReq.write(postData);
     telegramReq.end();
   }
 
-  res.json({ success: true, message: 'Request received!' });
+  res.json({ success: true, message: 'Request sent successfully!' });
 });
 
+// 7. START SERVER
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(`Server running smoothly on port ${PORT}`);
 });
