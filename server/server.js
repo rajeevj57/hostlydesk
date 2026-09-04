@@ -24,14 +24,14 @@ cloudinary.config({
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 
-// Upload buffer to Cloudinary ensuring .pdf extension remains in public_id
+// Upload buffer to Cloudinary as raw file
 const uploadToCloudinary = (fileBuffer, folder, filename) => {
   return new Promise((resolve, reject) => {
     const uploadStream = cloudinary.uploader.upload_stream(
       {
         folder: folder,
         resource_type: 'raw',
-        public_id: `${filename}.pdf`, // Force .pdf extension on stored filename
+        public_id: `${filename}.pdf`,
         type: 'upload',
         access_mode: 'public'
       },
@@ -95,18 +95,20 @@ app.post('/api/hotels', upload.fields([
     if (menuUrl) hotels[hotelId].menuPdfUrl = sanitizeUrl(menuUrl);
     if (factSheetUrl) hotels[hotelId].factSheetUrl = sanitizeUrl(factSheetUrl);
 
-    // Upload Menu PDF to Cloudinary if provided
+    // Upload Menu PDF to Cloudinary if provided and route through proxy
     if (req.files && req.files.menuPdf && req.files.menuPdf[0]) {
       const menuFile = req.files.menuPdf[0];
       const menuUpload = await uploadToCloudinary(menuFile.buffer, `hostlydesk/${hotelId}`, 'menu');
-      hotels[hotelId].menuPdfUrl = sanitizeUrl(menuUpload.secure_url);
+      const targetCloudUrl = sanitizeUrl(menuUpload.secure_url);
+      hotels[hotelId].menuPdfUrl = `/api/pdf-proxy?url=${encodeURIComponent(targetCloudUrl)}`;
     }
 
-    // Upload Fact Sheet PDF to Cloudinary if provided
+    // Upload Fact Sheet PDF to Cloudinary if provided and route through proxy
     if (req.files && req.files.factSheetPdf && req.files.factSheetPdf[0]) {
       const factFile = req.files.factSheetPdf[0];
       const factUpload = await uploadToCloudinary(factFile.buffer, `hostlydesk/${hotelId}`, 'factsheet');
-      hotels[hotelId].factSheetUrl = sanitizeUrl(factUpload.secure_url);
+      const targetCloudUrl = sanitizeUrl(factUpload.secure_url);
+      hotels[hotelId].factSheetUrl = `/api/pdf-proxy?url=${encodeURIComponent(targetCloudUrl)}`;
     }
 
     res.json({ success: true, message: 'Hotel setup updated successfully!', hotel: hotels[hotelId] });
@@ -116,7 +118,24 @@ app.post('/api/hotels', upload.fields([
   }
 });
 
-// 5. API: GET HOTEL DETAILS FOR GUEST PAGE
+// 5. API: PDF PROXY ROUTE (Fixes Browser PDF Viewing Headers)
+app.get('/api/pdf-proxy', (req, res) => {
+  const pdfUrl = req.query.url;
+  if (!pdfUrl) {
+    return res.status(400).send('Missing PDF URL parameter.');
+  }
+
+  https.get(pdfUrl, (stream) => {
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', 'inline; filename="menu.pdf"');
+    stream.pipe(res);
+  }).on('error', (err) => {
+    console.error('Error proxying PDF stream:', err);
+    res.status(500).send('Error streaming PDF file.');
+  });
+});
+
+// 6. API: GET HOTEL DETAILS FOR GUEST PAGE
 app.get('/api/hotels/:hotelId', (req, res) => {
   const hotel = hotels[req.params.hotelId];
   if (!hotel) {
@@ -125,7 +144,7 @@ app.get('/api/hotels/:hotelId', (req, res) => {
   res.json({ success: true, hotel });
 });
 
-// 6. API: DYNAMIC DEPARTMENT ROUTING TO TELEGRAM
+// 7. API: DYNAMIC DEPARTMENT ROUTING TO TELEGRAM
 app.post('/api/requests', (req, res) => {
   const { hotelId, room, items, department } = req.body;
 
@@ -182,7 +201,7 @@ app.post('/api/requests', (req, res) => {
   res.json({ success: true, message: 'Request sent successfully!' });
 });
 
-// 7. START SERVER
+// 8. START SERVER
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Server running smoothly on port ${PORT}`);
