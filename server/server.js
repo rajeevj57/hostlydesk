@@ -119,17 +119,29 @@ app.post('/api/hotels', upload.fields([
   }
 });
 
-// 5. API: PDF PROXY ROUTE (Follows 301/302 Redirects and Forces Correct Headers)
+// 5. API: ENHANCED PDF PROXY ROUTE (Mimics Browser Request)
 const fetchPdfWithRedirects = (targetUrl, res) => {
-  const protocol = targetUrl.startsWith('https') ? https : http;
+  const urlObj = new URL(targetUrl);
+  const protocol = urlObj.protocol === 'https:' ? https : http;
 
-  protocol.get(targetUrl, (stream) => {
+  const options = {
+    hostname: urlObj.hostname,
+    path: urlObj.pathname + urlObj.search,
+    method: 'GET',
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36',
+      'Accept': 'application/pdf,*/*'
+    }
+  };
+
+  protocol.get(options, (stream) => {
     // Follow HTTP redirects (301, 302, 307, 308)
     if (stream.statusCode >= 300 && stream.statusCode < 400 && stream.headers.location) {
       return fetchPdfWithRedirects(stream.headers.location, res);
     }
 
     if (stream.statusCode !== 200) {
+      console.error(`Failed request. Status code: ${stream.statusCode}`);
       return res.status(stream.statusCode).send('Failed to fetch remote PDF stream.');
     }
 
