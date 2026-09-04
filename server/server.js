@@ -21,12 +21,15 @@ cloudinary.config({
   secure: true
 });
 
-// Multer Storage Setup
+// Multer Storage Setup handling raw PDF uploads cleanly
 const storage = new CloudinaryStorage({
   cloudinary: cloudinary,
-  params: {
-    folder: 'hostlydesk_uploads',
-    resource_type: 'auto'
+  params: async (req, file) => {
+    const isPdf = file.mimetype === 'application/pdf' || file.originalname.toLowerCase().endsWith('.pdf');
+    return {
+      folder: 'hostlydesk_uploads',
+      resource_type: isPdf ? 'raw' : 'auto'
+    };
   }
 });
 
@@ -35,7 +38,7 @@ const upload = multer({ storage: storage });
 // In-Memory Database
 const hotels = {};
 
-// Helper function to force clean and valid HTTPS URLs
+// Helper function to sanitize and fix misspelled or malformed Cloudinary URLs
 function sanitizeUrl(rawUrl) {
   if (!rawUrl) return '';
   let cleanUrl = rawUrl;
@@ -43,7 +46,7 @@ function sanitizeUrl(rawUrl) {
   // Fix domain typos
   cleanUrl = cleanUrl.replace('doudinary.com', 'cloudinary.com');
   
-  // Fix missing colon in https//
+  // Fix malformed protocol prefixes
   if (cleanUrl.startsWith('https//')) {
     cleanUrl = cleanUrl.replace('https//', 'https://');
   } else if (cleanUrl.startsWith('http//')) {
@@ -81,7 +84,7 @@ app.post('/api/hotels', upload.fields([
     if (housekeepingChatId) hotels[hotelId].housekeepingChatId = housekeepingChatId;
     if (kitchenChatId) hotels[hotelId].kitchenChatId = kitchenChatId;
 
-    // Save cleaned Cloudinary generated URLs
+    // Save sanitized Cloudinary generated URLs
     if (req.files && req.files.menuPdf && req.files.menuPdf[0]) {
       hotels[hotelId].menuPdfUrl = sanitizeUrl(req.files.menuPdf[0].path);
     }
