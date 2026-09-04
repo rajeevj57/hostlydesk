@@ -3,197 +3,224 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>HostlyDesk - Property Management Dashboard</title>
+  <title>HostlyDesk - Hotel Setup Admin</title>
   <style>
     :root {
-      --primary-navy: #0d1b3e;
-      --accent-gold: #c2a649;
-      --bg-slate: #f8fafc;
-      --text-dark: #1e293b;
-      --border-color: #cbd5e1;
-      --card-bg: #ffffff;
-      --error-red: #ef4444;
+      --primary: #1a365d;
+      --secondary: #2b6cb0;
+      --bg: #f7fafc;
+      --card: #ffffff;
+      --text: #2d3748;
+      --accent: #38a169;
     }
 
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: var(--bg-slate); color: var(--text-dark); padding: 40px 20px; line-height: 1.5; }
-    .container { max-width: 750px; margin: 0 auto; }
-    .header-panel { background-color: var(--primary-navy); color: #ffffff; padding: 28px; border-radius: 12px 12px 0 0; border-bottom: 4px solid var(--accent-gold); }
-    .header-panel h1 { font-size: 1.8rem; font-weight: 700; }
-    .header-panel p { color: #94a3b8; font-size: 0.95rem; margin-top: 6px; }
-    .form-card { background: var(--card-bg); padding: 32px; border-radius: 0 0 12px 12px; border: 1px solid var(--border-color); border-top: none; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.05); }
-    .section-block { margin-bottom: 28px; }
-    .section-title { font-weight: 700; font-size: 1.1rem; color: var(--primary-navy); border-bottom: 2px solid #f1f5f9; padding-bottom: 8px; margin-bottom: 16px; }
-    .form-group { margin-bottom: 18px; }
-    .form-group label { display: block; font-weight: 600; font-size: 0.88rem; margin-bottom: 6px; color: #475569; }
-    .form-group label span { color: var(--error-red); }
-    input[type="text"], textarea, input[type="file"] { width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 0.95rem; background-color: #fff; }
-    textarea { height: 100px; resize: vertical; }
-    .upload-area { background-color: #f8fafc; border: 2px dashed var(--border-color); padding: 18px; border-radius: 8px; text-align: center; }
-    .btn { display: block; width: 100%; padding: 14px; background-color: var(--primary-navy); color: #ffffff; border: none; border-radius: 8px; font-size: 1rem; font-weight: 700; cursor: pointer; }
-    .btn-gold { background-color: var(--accent-gold); margin-top: 10px; }
-    .status-banner { margin-top: 20px; padding: 12px 16px; border-radius: 8px; font-weight: 600; text-align: center; font-size: 0.95rem; display: none; }
-    .status-banner.success { display: block; background-color: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; }
-    .status-banner.error { display: block; background-color: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
-    .status-banner.loading { display: block; background-color: #e0f2fe; color: #075985; border: 1px solid #bae6fd; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      margin: 0;
+      padding: 20px;
+      display: flex;
+      justify-content: center;
+    }
+
+    .admin-card {
+      width: 100%;
+      max-width: 560px;
+      background: var(--card);
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+      padding: 28px;
+      box-sizing: border-box;
+    }
+
+    h2 {
+      margin-top: 0;
+      color: var(--primary);
+      border-bottom: 2px solid #edf2f7;
+      padding-bottom: 12px;
+      font-size: 1.4rem;
+    }
+
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 6px;
+      font-size: 0.9rem;
+      color: #4a5568;
+    }
+
+    input[type="text"],
+    input[type="password"],
+    input[type="file"] {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid #cbd5e0;
+      border-radius: 6px;
+      box-sizing: border-box;
+      font-size: 0.95rem;
+    }
+
+    input[type="text"]:focus,
+    input[type="password"]:focus {
+      border-color: var(--secondary);
+      outline: none;
+    }
+
+    .section-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--primary);
+      margin: 24px 0 12px 0;
+      padding-top: 12px;
+      border-top: 1px dashed #e2e8f0;
+    }
+
+    .submit-btn {
+      width: 100%;
+      padding: 12px;
+      background-color: var(--secondary);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 1rem;
+      font-weight: bold;
+      cursor: pointer;
+      margin-top: 16px;
+      transition: background-color 0.2s;
+    }
+
+    .submit-btn:hover {
+      background-color: var(--primary);
+    }
+
+    .status-msg {
+      margin-top: 16px;
+      padding: 12px;
+      border-radius: 6px;
+      text-align: center;
+      font-size: 0.9rem;
+      display: none;
+    }
+
+    .status-msg.success {
+      display: block;
+      background-color: #f0fff4;
+      color: #276749;
+      border: 1px solid #c6f6d5;
+    }
+
+    .status-msg.error {
+      display: block;
+      background-color: #fff5f5;
+      color: #c53030;
+      border: 1px solid #fed7d7;
+    }
   </style>
 </head>
 <body>
 
-<div class="container">
-  <div class="header-panel">
-    <h1>HostlyDesk Management Console</h1>
-    <p>Configure Telegram notifications, Wi-Fi details, and guest media guides.</p>
+  <div class="admin-card">
+    <h2>🏨 HostlyDesk - Hotel Setup</h2>
+
+    <form id="adminForm" enctype="multipart/form-data">
+      
+      <!-- Stage 1: Basic Hotel & Telegram Configuration -->
+      <div class="form-group">
+        <label for="hotelId">Hotel Unique ID (e.g., kanha-shyam)</label>
+        <input type="text" id="hotelId" name="hotelId" placeholder="hotel-kanha-shyam" required>
+      </div>
+
+      <div class="form-group">
+        <label for="hotelName">Hotel Name</label>
+        <input type="text" id="hotelName" name="hotelName" placeholder="Kanha Shyam Hotel" required>
+      </div>
+
+      <div class="form-group">
+        <label for="wifiName">Guest Wi-Fi Name (SSID)</label>
+        <input type="text" id="wifiName" name="wifiName" placeholder="KanhaShyam_Guest">
+      </div>
+
+      <div class="form-group">
+        <label for="wifiPassword">Guest Wi-Fi Password</label>
+        <input type="text" id="wifiPassword" name="wifiPassword" placeholder="Welcome2026">
+      </div>
+
+      <div class="section-title">📲 Department Telegram Chat IDs</div>
+
+      <div class="form-group">
+        <label for="frontOfficeChatId">Front Office Chat ID</label>
+        <input type="text" id="frontOfficeChatId" name="frontOfficeChatId" placeholder="-1001234567890">
+      </div>
+
+      <div class="form-group">
+        <label for="housekeepingChatId">Housekeeping Chat ID</label>
+        <input type="text" id="housekeepingChatId" name="housekeepingChatId" placeholder="-1001987654321">
+      </div>
+
+      <div class="form-group">
+        <label for="kitchenChatId">Kitchen / F&B Chat ID</label>
+        <input type="text" id="kitchenChatId" name="kitchenChatId" placeholder="-1001122334455">
+      </div>
+
+      <!-- Stage 2: Media & Document Storage -->
+      <div class="section-title">📄 Menus & Fact Sheets (PDF)</div>
+
+      <div class="form-group">
+        <label for="menuPdf">Digital Menu PDF</label>
+        <input type="file" id="menuPdf" name="menuPdf" accept="application/pdf">
+      </div>
+
+      <div class="form-group">
+        <label for="factSheetPdf">Hotel Fact Sheet PDF</label>
+        <input type="file" id="factSheetPdf" name="factSheetPdf" accept="application/pdf">
+      </div>
+
+      <button type="submit" class="submit-btn">Save Hotel Configuration</button>
+    </form>
+
+    <div id="statusMessage" class="status-msg"></div>
   </div>
 
-  <div class="form-card">
-    <!-- STAGE 1 -->
-    <div class="section-block">
-      <div class="section-title">⚙️ Stage 1: Hotel Identification & Telegram Setup</div>
-      <form id="configForm">
-        <div class="form-group">
-          <label for="hotelId">Hotel Slug ID <span>*</span></label>
-          <input type="text" id="hotelId" placeholder="e.g. hotel-kanha-shyam" required>
-        </div>
+  <script>
+    const form = document.getElementById('adminForm');
+    const statusDiv = document.getElementById('statusMessage');
 
-        <div class="form-group">
-          <label for="hotelName">Display Hotel Name <span>*</span></label>
-          <input type="text" id="hotelName" placeholder="e.g. Hotel Kanha Shyam" required>
-        </div>
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
 
-        <div class="form-group">
-          <label for="frontOfficeChatId">Front Office Telegram Group Chat ID <span>*</span></label>
-          <input type="text" id="frontOfficeChatId" placeholder="-100123456789" required>
-        </div>
+      showStatus("Uploading configuration and files...", "success");
 
-        <div class="form-group">
-          <label for="housekeepingChatId">Housekeeping Telegram Group Chat ID <span>*</span></label>
-          <input type="text" id="housekeepingChatId" placeholder="-100123456789" required>
-        </div>
+      const formData = new FormData(form);
 
-        <div class="form-group">
-          <label for="kitchenChatId">Kitchen Telegram Group Chat ID <span>*</span></label>
-          <input type="text" id="kitchenChatId" placeholder="-100123456789" required>
-        </div>
+      try {
+        // Correct fetch without overriding multipart/form-data boundary headers
+        const response = await fetch('/api/hotels', {
+          method: 'POST',
+          body: formData
+        });
 
-        <button type="submit" class="btn">Save Stage 1 Settings</button>
-      </form>
-    </div>
+        const result = await response.json();
 
-    <!-- STAGE 2 -->
-    <div class="section-block" id="opsSection" style="display: none; border-top: 2px dashed #cbd5e1; padding-top: 24px;">
-      <div class="section-title">📌 Stage 2: Guest Information & Media Files</div>
-      <form id="opsForm" enctype="multipart/form-data">
-        <input type="hidden" id="opsHotelId" name="hotelId">
-
-        <div class="form-group">
-          <label for="wifiName">📶 Wi-Fi Network Name (SSID)</label>
-          <input type="text" id="wifiName" name="wifiName" placeholder="e.g. Guest_WiFi_5G">
-        </div>
-
-        <div class="form-group">
-          <label for="wifiPassword">🔑 Wi-Fi Password</label>
-          <input type="text" id="wifiPassword" name="wifiPassword" placeholder="e.g. Welcome2026">
-        </div>
-
-        <div class="form-group">
-          <label>🍽️ Room Service & Bar Menu (PDF or Image)</label>
-          <div class="upload-area">
-            <input type="file" name="menuPdf" accept=".pdf,image/*">
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label>ℹ️ Hotel Information Directory / Fact Sheet</label>
-          <div class="upload-area">
-            <input type="file" name="factSheetPdf" accept=".pdf,image/*">
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label for="nearbyPlaces">📍 Local Attractions & Recommendations</label>
-          <textarea id="nearbyPlaces" name="nearbyPlaces" placeholder="• City Mall — 1.5 km&#10;• Railway Station — 3 km"></textarea>
-        </div>
-
-        <button type="submit" class="btn btn-gold">Publish Content Live to Guest View</button>
-      </form>
-    </div>
-
-    <div id="statusBanner" class="status-banner"></div>
-  </div>
-</div>
-
-<script>
-  let activeHotelId = '';
-
-  function showStatus(message, type) {
-    const banner = document.getElementById('statusBanner');
-    banner.className = `status-banner ${type}`;
-    banner.textContent = message;
-  }
-
-  document.getElementById('configForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    showStatus('Saving Stage 1 parameters...', 'loading');
-
-    activeHotelId = document.getElementById('hotelId').value.trim();
-    const payload = {
-      hotelId: activeHotelId,
-      hotelName: document.getElementById('hotelName').value.trim(),
-      frontOfficeChatId: document.getElementById('frontOfficeChatId').value.trim(),
-      housekeepingChatId: document.getElementById('housekeepingChatId').value.trim(),
-      kitchenChatId: document.getElementById('kitchenChatId').value.trim()
-    };
-
-    try {
-      const res = await fetch('/api/hotels', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-      const data = await res.json();
-
-      if (res.ok && data.success) {
-        showStatus('✓ Stage 1 saved! You can now upload files in Stage 2 below.', 'success');
-        document.getElementById('opsHotelId').value = activeHotelId;
-        document.getElementById('opsSection').style.display = 'block';
-      } else {
-        showStatus('Error saving Stage 1 parameters.', 'error');
+        if (result.success) {
+          showStatus("✓ Setup saved successfully! You can now test guest requests.", "success");
+        } else {
+          showStatus(result.message || "Failed to save settings.", "error");
+        }
+      } catch (err) {
+        console.error("Upload error:", err);
+        showStatus("Failed to connect to server during upload.", "error");
       }
-    } catch (err) {
-      showStatus('Failed to connect to server. Check Render logs.', 'error');
+    });
+
+    function showStatus(text, type) {
+      statusDiv.innerText = text;
+      statusDiv.className = `status-msg ${type}`;
     }
-  });
-
-  document.getElementById('opsForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    
-    if (!activeHotelId) {
-      showStatus('Please click "Save Stage 1 Settings" first before publishing content.', 'error');
-      return;
-    }
-
-    showStatus('Uploading files and publishing content...', 'loading');
-
-    const formData = new FormData(e.target);
-    formData.set('hotelId', activeHotelId);
-
-    try {
-      const res = await fetch('/api/hotels/content', {
-        method: 'POST',
-        body: formData
-      });
-      const data = await res.json();
-
-      if (res.ok && data.success) {
-        showStatus('✓ Published live to guest interface!', 'success');
-      } else {
-        showStatus(data.message || 'Upload failed. Please re-submit Stage 1 first.', 'error');
-      }
-    } catch (err) {
-      showStatus('Failed to connect to server during upload.', 'error');
-    }
-  });
-</script>
+  </script>
 </body>
 </html>
