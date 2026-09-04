@@ -6,8 +6,14 @@ const multer = require('multer');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Ensure upload directory exists to prevent crash
+// Resolve paths relative to root directory
+const rootDir = path.join(__dirname, '..');
+const publicDir = fs.existsSync(path.join(__dirname, 'public')) 
+  ? path.join(__dirname, 'public') 
+  : path.join(rootDir, 'public');
+
 const uploadDir = path.join(__dirname, 'uploads');
+
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
@@ -23,15 +29,17 @@ const storage = multer.diskStorage({
 
 const upload = multer({ 
   storage,
-  limits: { fileSize: 10 * 1024 * 1024 } // 10MB limit
+  limits: { fileSize: 10 * 1024 * 1024 } // 10MB file limit
 });
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(express.static(path.join(__dirname, 'public')));
+
+// Serve static frontend files and uploads
+app.use(express.static(publicDir));
 app.use('/uploads', express.static(uploadDir));
 
-// In-memory data store
+// In-memory hotel data store
 const hotels = {};
 
 // STAGE 1: Save Configuration
@@ -77,12 +85,17 @@ app.post('/api/hotels/content', upload.fields([
   res.json({ success: true, message: 'Published successfully', data: hotels[hotelId] });
 });
 
-// Error handling middleware for unexpected upload errors
+// Serve admin.html on fallback route
+app.get('/admin.html', (req, res) => {
+  res.sendFile(path.join(publicDir, 'admin.html'));
+});
+
+// Error handling middleware
 app.use((err, req, res, next) => {
   console.error('Server error:', err);
   res.status(500).json({ success: false, message: err.message || 'Server error occurred' });
 });
 
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(`HostlyDesk running on port ${PORT}`);
 });
