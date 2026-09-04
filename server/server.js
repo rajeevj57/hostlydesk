@@ -1,5 +1,6 @@
 const express = require('express');
 const path = require('path');
+const https = require('https');
 const multer = require('multer');
 const cloudinary = require('cloudinary').v2;
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
@@ -88,7 +89,7 @@ app.get('/api/hotels/:hotelId', (req, res) => {
 });
 
 // HANDLE GUEST SERVICE REQUESTS
-app.post('/api/requests', async (req, res) => {
+app.post('/api/requests', (req, res) => {
   const { hotelId, room, items } = req.body;
 
   if (!hotelId || !hotels[hotelId]) {
@@ -99,24 +100,36 @@ app.post('/api/requests', async (req, res) => {
   const itemsList = Array.isArray(items) ? items.join(', ') : items;
   const messageText = `🛎️ *New Guest Request*\n\n🏨 *Hotel:* ${hotel.hotelName}\n🚪 *Room:* ${room || 'Unassigned'}\n📋 *Items:* ${itemsList}`;
 
-  // Send request via Telegram API if bot token exists
   const botToken = process.env.TELEGRAM_BOT_TOKEN;
   const chatId = hotel.frontOfficeChatId || hotel.housekeepingChatId;
 
   if (botToken && chatId) {
-    try {
-      await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          chat_id: chatId,
-          text: messageText,
-          parse_mode: 'Markdown'
-        })
-      });
-    } catch (err) {
-      console.error('Telegram dispatch error:', err);
-    }
+    const postData = JSON.stringify({
+      chat_id: chatId,
+      text: messageText,
+      parse_mode: 'Markdown'
+    });
+
+    const options = {
+      hostname: 'api.telegram.org',
+      path: `/bot${botToken}/sendMessage`,
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(postData)
+      }
+    };
+
+    const telegramReq = https.request(options, (telegramRes) => {
+      telegramRes.on('data', () => {});
+    });
+
+    telegramReq.on('error', (e) => {
+      console.error('Telegram dispatch error:', e);
+    });
+
+    telegramReq.write(postData);
+    telegramReq.end();
   }
 
   res.json({ success: true, message: 'Request received!' });
