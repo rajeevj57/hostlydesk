@@ -5,7 +5,7 @@ const cloudinary = require('cloudinary').v2;
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const path = require('path');
 
-// 1. INITIALIZE EXPRESS APP FIRST
+// 1. INITIALIZE EXPRESS APP
 const app = express();
 
 // 2. MIDDLEWARE CONFIGURATION
@@ -20,12 +20,14 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
-// Clean Multer Storage Configuration for PDF Files
+// Multer Storage Configuration ensuring PUBLIC access mode
 const storage = new CloudinaryStorage({
   cloudinary: cloudinary,
   params: {
     folder: 'hostlydesk_uploads',
-    resource_type: 'auto'
+    resource_type: 'auto',
+    type: 'upload',
+    access_mode: 'public'
   }
 });
 
