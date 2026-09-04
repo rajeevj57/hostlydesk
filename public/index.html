@@ -3,225 +3,42 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>HostlyDesk - Guest Concierge Portal</title>
+  <title>HostlyDesk Guest Concierge</title>
   <style>
     :root {
       --bg-warm: #f7f5ee;
       --card-white: #ffffff;
       --navy-primary: #0d1b3e;
-      --navy-light: #1e293b;
       --text-dark: #2c2c2c;
-      --text-muted: #6e6e6e;
       --accent-gold: #c2a649;
       --border-soft: #e5e0d8;
-      --green-accent: #059669;
     }
 
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
-
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      background-color: var(--bg-warm);
-      color: var(--text-dark);
-      padding-bottom: 40px;
-      line-height: 1.4;
-    }
-
-    .header-bar {
-      background-color: var(--navy-primary);
-      color: #ffffff;
-      padding: 28px 20px 20px 20px;
-      border-bottom: 4px dashed var(--accent-gold);
-    }
-
-    .header-content {
-      max-width: 480px;
-      margin: 0 auto;
-    }
-
-    .brand-tag {
-      font-size: 0.75rem;
-      letter-spacing: 2px;
-      color: var(--accent-gold);
-      text-transform: uppercase;
-      font-weight: 700;
-      margin-bottom: 4px;
-    }
-
-    .room-number {
-      font-size: 2.5rem;
-      font-weight: 800;
-      letter-spacing: -0.5px;
-    }
-
-    .welcome-msg {
-      font-size: 0.95rem;
-      color: #cbd5e1;
-      margin-top: 2px;
-    }
-
-    .hotel-meta {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      font-size: 0.85rem;
-      color: #94a3b8;
-      margin-top: 18px;
-      border-top: 1px solid rgba(255, 255, 255, 0.12);
-      padding-top: 10px;
-    }
-
-    .main-container {
-      padding: 20px;
-      max-width: 480px;
-      margin: 0 auto;
-    }
-
-    .section-label {
-      font-size: 1.1rem;
-      font-weight: 700;
-      color: var(--navy-primary);
-      margin-top: 16px;
-      margin-bottom: 12px;
-    }
-
-    .info-card {
-      background: var(--card-white);
-      border-radius: 12px;
-      padding: 16px;
-      margin-bottom: 16px;
-      border: 1px solid var(--border-soft);
-      box-shadow: 0 2px 4px rgba(0,0,0,0.03);
-    }
-
-    .wifi-flex {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      font-size: 0.9rem;
-    }
-
-    .wifi-val {
-      font-weight: 700;
-      color: var(--navy-primary);
-    }
-
-    .media-btn-group {
-      display: flex;
-      gap: 12px;
-      margin-bottom: 20px;
-    }
-
-    .media-btn {
-      flex: 1;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      padding: 14px;
-      border-radius: 10px;
-      text-decoration: none;
-      font-weight: 700;
-      font-size: 0.9rem;
-      color: #ffffff;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.08);
-      transition: transform 0.1s ease;
-    }
-
-    .media-btn:active {
-      transform: scale(0.98);
-    }
-
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: var(--bg-warm); color: var(--text-dark); padding-bottom: 40px; }
+    .header-bar { background-color: var(--navy-primary); color: #ffffff; padding: 24px 20px; border-bottom: 4px dashed var(--accent-gold); }
+    .header-content { max-width: 480px; margin: 0 auto; }
+    .brand-tag { font-size: 0.75rem; letter-spacing: 2px; color: var(--accent-gold); text-transform: uppercase; font-weight: 700; }
+    .room-number { font-size: 2.5rem; font-weight: 800; }
+    .hotel-meta { display: flex; justify-content: space-between; font-size: 0.85rem; color: #94a3b8; margin-top: 12px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 8px; }
+    .main-container { padding: 20px; max-width: 480px; margin: 0 auto; }
+    .section-label { font-size: 1.1rem; font-weight: 700; color: var(--navy-primary); margin-top: 16px; margin-bottom: 12px; }
+    .info-card { background: var(--card-white); border-radius: 12px; padding: 16px; margin-bottom: 16px; border: 1px solid var(--border-soft); }
+    .wifi-flex { display: flex; justify-content: space-between; font-size: 0.9rem; }
+    .wifi-val { font-weight: 700; color: var(--navy-primary); }
+    .media-btn-group { display: flex; gap: 12px; margin-bottom: 20px; }
+    .media-btn { flex: 1; padding: 14px; border-radius: 10px; text-decoration: none; font-weight: 700; font-size: 0.9rem; color: #ffffff; text-align: center; }
     .btn-menu { background-color: var(--navy-primary); }
     .btn-fact { background-color: var(--accent-gold); }
-
-    .service-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 12px;
-      margin-bottom: 24px;
-    }
-
-    .service-card {
-      background: var(--card-white);
-      border-radius: 12px;
-      padding: 16px 8px;
-      text-align: center;
-      border: 1px solid var(--border-soft);
-      cursor: pointer;
-      user-select: none;
-      position: relative;
-      transition: border-color 0.2s ease, box-shadow 0.2s ease;
-    }
-
-    .service-card.active {
-      border: 2px solid var(--navy-primary);
-      background-color: #f8fafc;
-    }
-
-    .icon-wrapper {
-      font-size: 2rem;
-      margin-bottom: 6px;
-    }
-
-    .service-title {
-      font-size: 0.8rem;
-      font-weight: 600;
-      color: var(--text-dark);
-    }
-
-    .quantity-badge {
-      position: absolute;
-      top: -6px;
-      right: -6px;
-      background: var(--navy-primary);
-      color: #ffffff;
-      font-size: 0.75rem;
-      font-weight: 800;
-      width: 22px;
-      height: 22px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      border: 2px solid #ffffff;
-    }
-
-    .submit-button {
-      width: 100%;
-      padding: 16px;
-      background-color: #cbd5e1;
-      color: #ffffff;
-      border: none;
-      border-radius: 12px;
-      font-size: 1.05rem;
-      font-weight: 700;
-      cursor: not-allowed;
-      transition: background-color 0.2s ease;
-    }
-
-    .submit-button.ready {
-      background-color: var(--navy-primary);
-      cursor: pointer;
-    }
-
-    #nearbyBox {
-      white-space: pre-line;
-      font-size: 0.9rem;
-      color: #475569;
-      line-height: 1.6;
-    }
-
-    .status-msg {
-      margin-top: 16px;
-      text-align: center;
-      font-weight: 600;
-      font-size: 0.95rem;
-    }
+    .service-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 24px; }
+    .service-card { background: var(--card-white); border-radius: 12px; padding: 16px 8px; text-align: center; border: 1px solid var(--border-soft); cursor: pointer; position: relative; }
+    .service-card.active { border: 2px solid var(--navy-primary); background-color: #f8fafc; }
+    .icon-wrapper { font-size: 2rem; margin-bottom: 6px; }
+    .service-title { font-size: 0.8rem; font-weight: 600; }
+    .quantity-badge { position: absolute; top: -6px; right: -6px; background: var(--navy-primary); color: #ffffff; font-size: 0.75rem; font-weight: 800; width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+    .submit-button { width: 100%; padding: 16px; background-color: #cbd5e1; color: #ffffff; border: none; border-radius: 12px; font-size: 1rem; font-weight: 700; cursor: not-allowed; }
+    .submit-button.ready { background-color: var(--navy-primary); cursor: pointer; }
+    .status-msg { margin-top: 16px; text-align: center; font-weight: 600; }
   </style>
 </head>
 <body>
@@ -230,17 +47,15 @@
     <div class="header-content">
       <div class="brand-tag">HostlyDesk Concierge</div>
       <div class="room-number" id="roomHeading">Room --</div>
-      <div class="welcome-msg">Welcome to your guest suite</div>
       <div class="hotel-meta">
         <span id="hotelTitle">HostlyDesk Hotel</span>
-        <span>Express Service</span>
+        <span>Guest Services</span>
       </div>
     </div>
   </div>
 
   <div class="main-container">
-
-    <!-- WI-FI CONNECTIONS -->
+    <!-- WI-FI CARD -->
     <div class="info-card" id="wifiBlock" style="display: none;">
       <div class="wifi-flex">
         <span>📶 Network: <span class="wifi-val" id="wifiSSID">--</span></span>
@@ -250,64 +65,50 @@
 
     <!-- DOCUMENTATION BUTTONS -->
     <div class="media-btn-group" id="mediaGroup" style="display: none;">
-      <a id="menuLink" href="#" target="_blank" class="media-btn btn-menu" style="display: none;">
-        📖 Food Menu
-      </a>
-      <a id="factSheetLink" href="#" target="_blank" class="media-btn btn-fact" style="display: none;">
-        ℹ️ Hotel Directory
-      </a>
+      <a id="menuLink" href="#" target="_blank" class="media-btn btn-menu" style="display: none;">📖 Food Menu</a>
+      <a id="factSheetLink" href="#" target="_blank" class="media-btn btn-fact" style="display: none;">ℹ️ Hotel Directory</a>
     </div>
 
     <!-- NEARBY ATTRACTIONS -->
     <div class="info-card" id="nearbyBlock" style="display: none;">
       <div class="section-label" style="margin-top:0;">📍 Local Places to Explore</div>
-      <div id="nearbyBox"></div>
+      <div id="nearbyBox" style="white-space: pre-line; font-size:0.9rem; color:#475569;"></div>
     </div>
 
     <!-- SERVICE REQUEST OPTIONS -->
     <div class="section-label">Select Room Services</div>
     <div class="service-grid">
       <div class="service-card" onclick="toggleSelection('Extra Towels', 'Housekeeping', this)">
-        <div class="icon-wrapper">🚿</div>
-        <div class="service-title">Extra Towels</div>
+        <div class="icon-wrapper">🚿</div><div class="service-title">Extra Towels</div>
       </div>
       <div class="service-card" onclick="toggleSelection('Drinking Water', 'Housekeeping', this)">
-        <div class="icon-wrapper">💧</div>
-        <div class="service-title">Water Bottle</div>
+        <div class="icon-wrapper">💧</div><div class="service-title">Water Bottle</div>
       </div>
       <div class="service-card" onclick="toggleSelection('Extra Pillow', 'Housekeeping', this)">
-        <div class="icon-wrapper">💤</div>
-        <div class="service-title">Extra Pillow</div>
+        <div class="icon-wrapper">💤</div><div class="service-title">Extra Pillow</div>
       </div>
       <div class="service-card" onclick="toggleSelection('Room Cleaning', 'Housekeeping', this)">
-        <div class="icon-wrapper">🧹</div>
-        <div class="service-title">Clean Room</div>
+        <div class="icon-wrapper">🧹</div><div class="service-title">Clean Room</div>
       </div>
       <div class="service-card" onclick="toggleSelection('In-Room Food', 'Kitchen', this)">
-        <div class="icon-wrapper">🍽️</div>
-        <div class="service-title">Order Food</div>
+        <div class="icon-wrapper">🍽️</div><div class="service-title">Order Food</div>
       </div>
       <div class="service-card" onclick="toggleSelection('Tea / Coffee', 'Kitchen', this)">
-        <div class="icon-wrapper">☕</div>
-        <div class="service-title">Tea / Coffee</div>
+        <div class="icon-wrapper">☕</div><div class="service-title">Tea / Coffee</div>
       </div>
       <div class="service-card" onclick="toggleSelection('Wake-up Call', 'Front Office', this)">
-        <div class="icon-wrapper">⏰</div>
-        <div class="service-title">Wake-up Call</div>
+        <div class="icon-wrapper">⏰</div><div class="service-title">Wake-up Call</div>
       </div>
       <div class="service-card" onclick="toggleSelection('Taxi Assistance', 'Front Office', this)">
-        <div class="icon-wrapper">🚖</div>
-        <div class="service-title">Book Taxi</div>
+        <div class="icon-wrapper">🚖</div><div class="service-title">Book Taxi</div>
       </div>
       <div class="service-card" onclick="toggleSelection('Checkout Help', 'Front Office', this)">
-        <div class="icon-wrapper">🧳</div>
-        <div class="service-title">Luggage Help</div>
+        <div class="icon-wrapper">🧳</div><div class="service-title">Luggage Help</div>
       </div>
     </div>
 
     <button id="submitRequestBtn" class="submit-button" onclick="dispatchRequest()" disabled>Send Request to Staff</button>
     <div id="statusNotification" class="status-msg"></div>
-
   </div>
 
   <script>
@@ -336,29 +137,25 @@
           if (hotel.menuPdfUrl) {
             const menuBtn = document.getElementById('menuLink');
             menuBtn.href = hotel.menuPdfUrl;
-            menuBtn.style.display = 'flex';
+            menuBtn.style.display = 'block';
             hasMedia = true;
           }
 
           if (hotel.factSheetUrl) {
             const factBtn = document.getElementById('factSheetLink');
             factBtn.href = hotel.factSheetUrl;
-            factBtn.style.display = 'flex';
+            factBtn.style.display = 'block';
             hasMedia = true;
           }
 
-          if (hasMedia) {
-            document.getElementById('mediaGroup').style.display = 'flex';
-          }
+          if (hasMedia) document.getElementById('mediaGroup').style.display = 'flex';
 
           if (hotel.nearbyPlaces) {
             document.getElementById('nearbyBox').textContent = hotel.nearbyPlaces;
             document.getElementById('nearbyBlock').style.display = 'block';
           }
         }
-      } catch (err) {
-        console.error('Failed to load hotel configuration:', err);
-      }
+      } catch (err) {}
     }
 
     fetchHotelConfiguration();
@@ -370,9 +167,7 @@
         selectedServices[itemName] = { quantity: 1, department };
       } else {
         selectedServices[itemName].quantity += 1;
-        if (selectedServices[itemName].quantity > 5) {
-          delete selectedServices[itemName];
-        }
+        if (selectedServices[itemName].quantity > 5) delete selectedServices[itemName];
       }
 
       let badge = element.querySelector('.quantity-badge');
@@ -405,7 +200,7 @@
 
       submitBtn.disabled = true;
       statusEl.style.color = '#333';
-      statusEl.textContent = 'Transmitting request to department Telegram...';
+      statusEl.textContent = 'Sending request...';
 
       const compiledDetails = Object.keys(selectedServices)
         .map(key => `${selectedServices[key].quantity}x ${key}`)
@@ -429,16 +224,16 @@
 
         const resData = await response.json();
         if (response.ok && resData.success) {
-          statusEl.style.color = 'var(--green-accent)';
-          statusEl.textContent = '✓ Request received! Hotel staff has been dispatched.';
+          statusEl.style.color = 'green';
+          statusEl.textContent = '✓ Request sent to hotel staff!';
           setTimeout(() => location.reload(), 2500);
         } else {
-          statusEl.style.color = '#ef4444';
-          statusEl.textContent = 'Submission error. Please try again or call Front Desk.';
+          statusEl.style.color = 'red';
+          statusEl.textContent = 'Submission error. Please try again.';
           submitBtn.disabled = false;
         }
       } catch (err) {
-        statusEl.style.color = '#ef4444';
+        statusEl.style.color = 'red';
         statusEl.textContent = 'Network communication error.';
         submitBtn.disabled = false;
       }
