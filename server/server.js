@@ -35,15 +35,25 @@ const upload = multer({ storage: storage });
 // In-Memory Database
 const hotels = {};
 
-// Helper function to sanitize and fix misspelled Cloudinary URLs
-function fixCloudinaryUrl(rawUrl) {
+// Helper function to force clean and valid HTTPS URLs
+function sanitizeUrl(rawUrl) {
   if (!rawUrl) return '';
-  // Fix the typo 'doudinary' -> 'cloudinary' if present
-  let cleanUrl = rawUrl.replace('doudinary.com', 'cloudinary.com');
-  // Ensure HTTPS protocol
-  if (cleanUrl.startsWith('http://')) {
+  let cleanUrl = rawUrl;
+  
+  // Fix domain typos
+  cleanUrl = cleanUrl.replace('doudinary.com', 'cloudinary.com');
+  
+  // Fix missing colon in https//
+  if (cleanUrl.startsWith('https//')) {
+    cleanUrl = cleanUrl.replace('https//', 'https://');
+  } else if (cleanUrl.startsWith('http//')) {
+    cleanUrl = cleanUrl.replace('http//', 'https://');
+  } else if (cleanUrl.startsWith('http://')) {
     cleanUrl = cleanUrl.replace('http://', 'https://');
+  } else if (!cleanUrl.startsWith('http://') && !cleanUrl.startsWith('https://')) {
+    cleanUrl = 'https://' + cleanUrl;
   }
+  
   return cleanUrl;
 }
 
@@ -73,10 +83,10 @@ app.post('/api/hotels', upload.fields([
 
     // Save cleaned Cloudinary generated URLs
     if (req.files && req.files.menuPdf && req.files.menuPdf[0]) {
-      hotels[hotelId].menuPdfUrl = fixCloudinaryUrl(req.files.menuPdf[0].path);
+      hotels[hotelId].menuPdfUrl = sanitizeUrl(req.files.menuPdf[0].path);
     }
     if (req.files && req.files.factSheetPdf && req.files.factSheetPdf[0]) {
-      hotels[hotelId].factSheetUrl = fixCloudinaryUrl(req.files.factSheetPdf[0].path);
+      hotels[hotelId].factSheetUrl = sanitizeUrl(req.files.factSheetPdf[0].path);
     }
 
     res.json({ success: true, message: 'Hotel setup updated successfully!', hotel: hotels[hotelId] });
