@@ -2,7 +2,6 @@ const express = require('express');
 const https = require('https');
 const multer = require('multer');
 const cloudinary = require('cloudinary').v2;
-const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const path = require('path');
 
 // 1. INITIALIZE EXPRESS APP
@@ -21,39 +20,40 @@ cloudinary.config({
   secure: true
 });
 
-// Multer Storage Setup: Sets resource_type to auto and appends .pdf extension for inline browser viewing
-const storage = new CloudinaryStorage({
-  cloudinary: cloudinary,
-  params: async (req, file) => {
-    const isPdf = file.mimetype === 'application/pdf' || file.originalname.toLowerCase().endsWith('.pdf');
-    return {
-      folder: 'hostlydesk_uploads',
-      resource_type: 'auto',
-      format: isPdf ? 'pdf' : undefined,
-      flags: isPdf ? 'attachment:false' : undefined // Forces inline browser preview instead of download
-    };
-  }
-});
-
+// Use Memory Storage so files are held in buffer before uploading to Cloudinary
+const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
+
+// Helper function to upload buffer directly to Cloudinary with explicit public access
+const uploadToCloudinary = (fileBuffer, folder, filename) => {
+  return new Promise((resolve, reject) => {
+    const uploadStream = cloudinary.uploader.upload_stream(
+      {
+        folder: folder,
+        resource_type: 'raw', // Preserves PDF structure perfectly
+        public_id: filename.replace(/\.[^/.]+$/, ""), // Strip file extension for public_id
+        type: 'upload',
+        access_mode: 'public'
+      },
+      (error, result) => {
+        if (error) return reject(error);
+        resolve(result);
+      }
+    );
+    uploadStream.end(fileBuffer);
+  });
+};
 
 // In-Memory Database
 const hotels = {};
 
-// Helper function to sanitize Cloudinary URLs and ensure clean HTTPS links
+// Helper function to sanitize URLs
 function sanitizeUrl(rawUrl) {
   if (!rawUrl) return '';
-  let cleanUrl = rawUrl;
+  let cleanUrl = rawUrl.trim();
   
-  // Fix domain typos
   cleanUrl = cleanUrl.replace('doudinary.com', 'cloudinary.com');
-  
-  // Ensure the URL ends with .pdf if it is a pdf upload
-  if (cleanUrl.includes('/hostlydesk_uploads/') && !cleanUrl.endsWith('.pdf')) {
-    cleanUrl = cleanUrl + '.pdf';
-  }
 
-  // Fix malformed protocol prefixes
   if (cleanUrl.startsWith('https//')) {
     cleanUrl = cleanUrl.replace('https//', 'https://');
   } else if (cleanUrl.startsWith('http//')) {
@@ -71,9 +71,9 @@ function sanitizeUrl(rawUrl) {
 app.post('/api/hotels', upload.fields([
   { name: 'menuPdf', maxCount: 1 },
   { name: 'factSheetPdf', maxCount: 1 }
-]), (req, res) => {
+]), async (req, res) => {
   try {
-    const { hotelId, hotelName, wifiName, wifiPassword, frontOfficeChatId, housekeepingChatId, kitchenChatId } = req.body;
+    const { hotelId, hotelName, wifiName, wifiPassword, frontOfficeChatId, housekeepingChatId, kitchenChatId, menuUrl, factSheetUrl } = req.body;
 
     if (!hotelId) {
       return res.status(400).json({ success: false, message: 'Hotel ID is required.' });
@@ -91,12 +91,22 @@ app.post('/api/hotels', upload.fields([
     if (housekeepingChatId) hotels[hotelId].housekeepingChatId = housekeepingChatId;
     if (kitchenChatId) hotels[hotelId].kitchenChatId = kitchenChatId;
 
-    // Save sanitized Cloudinary generated URLs
+    // Direct link input fallback
+    if (menuUrl) hotels[hotelId].menuPdfUrl = sanitizeUrl(menuUrl);
+    if (factSheetUrl) hotels[hotelId].factSheetUrl = sanitizeUrl(factSheetUrl);
+
+    // Upload Menu PDF to Cloudinary if provided
     if (req.files && req.files.menuPdf && req.files.menuPdf[0]) {
-      hotels[hotelId].menuPdfUrl = sanitizeUrl(req.files.menuPdf[0].path);
+      const menuFile = req.files.menuPdf[0];
+      const menuUpload = await uploadToCloudinary(menuFile.buffer, `hostlydesk/${hotelId}`, 'menu');
+      hotels[hotelId].menuPdfUrl = sanitizeUrl(menuUpload.secure_url);
     }
+
+    // Upload Fact Sheet PDF to Cloudinary if provided
     if (req.files && req.files.factSheetPdf && req.files.factSheetPdf[0]) {
-      hotels[hotelId].factSheetUrl = sanitizeUrl(req.files.factSheetPdf[0].path);
+      const factFile = req.files.factSheetPdf[0];
+      const factUpload = await uploadToCloudinary(factFile.buffer, `hostlydesk/${hotelId}`, 'factsheet');
+      hotels[hotelId].factSheetUrl = sanitizeUrl(factUpload.secure_url);
     }
 
     res.json({ success: true, message: 'Hotel setup updated successfully!', hotel: hotels[hotelId] });
