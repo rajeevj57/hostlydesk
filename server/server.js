@@ -20,14 +20,13 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
-// Multer Storage Configuration ensuring PUBLIC access mode
+// Multer Storage Configuration specifically forcing image resource type for public PDF viewing
 const storage = new CloudinaryStorage({
   cloudinary: cloudinary,
   params: {
     folder: 'hostlydesk_uploads',
-    resource_type: 'auto',
-    type: 'upload',
-    access_mode: 'public'
+    resource_type: 'image', // Forces Cloudinary to serve PDFs as public image/document assets
+    format: 'pdf'
   }
 });
 
@@ -60,7 +59,7 @@ app.post('/api/hotels', upload.fields([
     if (housekeepingChatId) hotels[hotelId].housekeepingChatId = housekeepingChatId;
     if (kitchenChatId) hotels[hotelId].kitchenChatId = kitchenChatId;
 
-    // Save exact Cloudinary generated URLs directly
+    // Save exact Cloudinary public URL
     if (req.files && req.files.menuPdf && req.files.menuPdf[0]) {
       hotels[hotelId].menuPdfUrl = req.files.menuPdf[0].path;
     }
