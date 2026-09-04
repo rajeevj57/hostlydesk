@@ -20,13 +20,12 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
-// Multer Storage Configuration specifically optimized for PDF inline rendering
+// Clean Multer Storage Configuration for PDF Files
 const storage = new CloudinaryStorage({
   cloudinary: cloudinary,
   params: {
     folder: 'hostlydesk_uploads',
-    resource_type: 'auto',
-    flags: 'attachment:false'
+    resource_type: 'auto'
   }
 });
 
@@ -34,16 +33,6 @@ const upload = multer({ storage: storage });
 
 // In-Memory Database
 const hotels = {};
-
-// Helper function to format Cloudinary URLs for seamless browser viewing
-function formatPdfUrl(cloudinaryUrl) {
-  if (!cloudinaryUrl) return '';
-  // Ensure PDFs open inline rather than forcing attachment downloads
-  if (cloudinaryUrl.includes('/upload/')) {
-    return cloudinaryUrl.replace('/upload/', '/upload/fl_inline/');
-  }
-  return cloudinaryUrl;
-}
 
 // 4. API: SAVE HOTEL CONFIGURATION
 app.post('/api/hotels', upload.fields([
@@ -69,12 +58,12 @@ app.post('/api/hotels', upload.fields([
     if (housekeepingChatId) hotels[hotelId].housekeepingChatId = housekeepingChatId;
     if (kitchenChatId) hotels[hotelId].kitchenChatId = kitchenChatId;
 
-    // Save formatted PDF URLs
+    // Save exact Cloudinary generated URLs directly
     if (req.files && req.files.menuPdf && req.files.menuPdf[0]) {
-      hotels[hotelId].menuPdfUrl = formatPdfUrl(req.files.menuPdf[0].path);
+      hotels[hotelId].menuPdfUrl = req.files.menuPdf[0].path;
     }
     if (req.files && req.files.factSheetPdf && req.files.factSheetPdf[0]) {
-      hotels[hotelId].factSheetUrl = formatPdfUrl(req.files.factSheetPdf[0].path);
+      hotels[hotelId].factSheetUrl = req.files.factSheetPdf[0].path;
     }
 
     res.json({ success: true, message: 'Hotel setup updated successfully!', hotel: hotels[hotelId] });
