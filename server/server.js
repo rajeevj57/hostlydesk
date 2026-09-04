@@ -21,14 +21,16 @@ cloudinary.config({
   secure: true
 });
 
-// Multer Storage Setup handling raw PDF uploads cleanly
+// Multer Storage Setup: Sets resource_type to auto and appends .pdf extension for inline browser viewing
 const storage = new CloudinaryStorage({
   cloudinary: cloudinary,
   params: async (req, file) => {
     const isPdf = file.mimetype === 'application/pdf' || file.originalname.toLowerCase().endsWith('.pdf');
     return {
       folder: 'hostlydesk_uploads',
-      resource_type: isPdf ? 'raw' : 'auto'
+      resource_type: 'auto',
+      format: isPdf ? 'pdf' : undefined,
+      flags: isPdf ? 'attachment:false' : undefined // Forces inline browser preview instead of download
     };
   }
 });
@@ -38,7 +40,7 @@ const upload = multer({ storage: storage });
 // In-Memory Database
 const hotels = {};
 
-// Helper function to sanitize and fix misspelled or malformed Cloudinary URLs
+// Helper function to sanitize Cloudinary URLs and ensure clean HTTPS links
 function sanitizeUrl(rawUrl) {
   if (!rawUrl) return '';
   let cleanUrl = rawUrl;
@@ -46,6 +48,11 @@ function sanitizeUrl(rawUrl) {
   // Fix domain typos
   cleanUrl = cleanUrl.replace('doudinary.com', 'cloudinary.com');
   
+  // Ensure the URL ends with .pdf if it is a pdf upload
+  if (cleanUrl.includes('/hostlydesk_uploads/') && !cleanUrl.endsWith('.pdf')) {
+    cleanUrl = cleanUrl + '.pdf';
+  }
+
   // Fix malformed protocol prefixes
   if (cleanUrl.startsWith('https//')) {
     cleanUrl = cleanUrl.replace('https//', 'https://');
