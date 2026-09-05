@@ -17,17 +17,17 @@
     
     /* Document Buttons */
     .doc-grid { display: grid; grid-template-columns: 1fr; gap: 10px; margin-bottom: 20px; }
-    .doc-btn { background: #eef2ff; color: #4f46e5; border: 1px solid #c7d2fe; padding: 12px; border-radius: 10px; font-weight: 600; text-align: center; cursor: pointer; font-size: 14px; }
+    .doc-btn { background: #eef2ff; color: #4f46e5; border: 1px solid #c7d2fe; padding: 14px; border-radius: 10px; font-weight: 600; text-align: center; cursor: pointer; font-size: 15px; touch-action: manipulation; }
     
     /* Service Cards Grid */
     .service-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-    .service-card { background: #fafafa; border: 1px solid #e5e7eb; border-radius: 12px; padding: 15px; text-align: center; cursor: pointer; transition: 0.2s; }
+    .service-card { background: #fafafa; border: 1px solid #e5e7eb; border-radius: 12px; padding: 15px; text-align: center; cursor: pointer; transition: 0.2s; touch-action: manipulation; }
     .service-card:hover { background: #f3f4f6; border-color: #d1d5db; }
     .service-card .icon { font-size: 28px; margin-bottom: 6px; }
     .service-card .title { font-weight: 600; font-size: 14px; color: #1f2937; }
     
     /* Base Modals */
-    .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); align-items: center; justify-content: center; padding: 10px; z-index: 1000; }
+    .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); align-items: center; justify-content: center; padding: 10px; z-index: 10000; }
     .modal-content { background: white; padding: 20px; border-radius: 12px; width: 100%; max-width: 420px; display: flex; flex-direction: column; gap: 10px; }
     
     .chip-container { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 5px; }
@@ -38,18 +38,19 @@
     .btn-submit { background: #10b981; color: white; border: none; padding: 12px; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; }
     .btn-close { background: #ef4444; color: white; border: none; padding: 10px; border-radius: 8px; font-size: 14px; cursor: pointer; }
     
-    /* Mobile PDF Canvas Modal Rules */
-    .pdf-modal-content { background: #2a2a2a; border-radius: 12px; width: 100%; max-width: 600px; height: 90vh; display: flex; flex-direction: column; overflow: hidden; }
-    .pdf-header { padding: 12px 15px; display: flex; justify-content: space-between; align-items: center; background: #1a1a1a; color: white; border-bottom: 1px solid #333; }
+    /* Mobile Touch PDF Viewer Modal */
+    .pdf-modal-content { background: #1a1a1a; border-radius: 12px; width: 100%; max-width: 600px; height: 88vh; display: flex; flex-direction: column; overflow: hidden; position: relative; z-index: 10001; }
+    .pdf-header { padding: 12px 15px; display: flex; justify-content: space-between; align-items: center; background: #111; color: white; border-bottom: 1px solid #333; z-index: 10002; }
     .pdf-container { flex: 1; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; align-items: center; gap: 12px; -webkit-overflow-scrolling: touch; }
     
-    /* Strict Mobile Canvas Bounds */
-    .pdf-container canvas {
+    .page-wrapper { width: 100%; display: flex; justify-content: center; }
+    .page-wrapper canvas {
       display: block;
       max-width: 100% !important;
       height: auto !important;
       border-radius: 4px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+      pointer-events: none; /* Prevents canvas touch blocking */
     }
   </style>
 </head>
@@ -87,7 +88,7 @@
   </div>
 </div>
 
-<!-- Guest Service Modal -->
+<!-- Guest Service Request Modal -->
 <div id="requestModal" class="modal">
   <div class="modal-content">
     <h3 id="modalDeptTitle" style="margin:0;">Send Request</h3>
@@ -104,12 +105,12 @@
   </div>
 </div>
 
-<!-- Mobile Native Canvas Document Viewer -->
+<!-- Mobile-Optimized Touch PDF Modal -->
 <div id="pdfModal" class="modal">
   <div class="pdf-modal-content">
     <div class="pdf-header">
       <strong id="pdfModalTitle" style="font-size:15px;">Menu Viewer</strong>
-      <button onclick="closeModal('pdfModal')" style="background:#ef4444; color:white; border:none; padding:6px 12px; border-radius:6px; cursor:pointer; font-weight:bold;">Close ✕</button>
+      <button id="closePdfBtn" style="background:#ef4444; color:white; border:none; padding:8px 14px; border-radius:6px; cursor:pointer; font-weight:bold; font-size:14px;">Close ✕</button>
     </div>
     <div class="pdf-container" id="pdfContainer">
       <p style="color:#ccc; margin-top:20px;">Loading Document Pages...</p>
@@ -127,6 +128,13 @@
 
   let activeDepartment = '';
 
+  // Attach touch and click events directly to Close button for mobile stability
+  document.getElementById('closePdfBtn').addEventListener('click', () => closeModal('pdfModal'));
+  document.getElementById('closePdfBtn').addEventListener('touchend', (e) => {
+    e.preventDefault();
+    closeModal('pdfModal');
+  });
+
   async function loadHotelData() {
     try {
       const res = await fetch(`/api/hotel-config/${hotelId}`);
@@ -142,7 +150,14 @@
             const btn = document.createElement('div');
             btn.className = 'doc-btn';
             btn.innerText = `📄 ${doc.title}`;
-            btn.onclick = () => openPdfModal(doc.title, doc.url);
+            
+            // Attach touch listeners directly for mobile mobile webviews/Safari
+            btn.addEventListener('click', () => openPdfModal(doc.title, doc.url));
+            btn.addEventListener('touchend', (e) => {
+              e.preventDefault();
+              openPdfModal(doc.title, doc.url);
+            });
+
             docList.appendChild(btn);
           });
         } else {
@@ -159,14 +174,12 @@
     const container = document.getElementById('pdfContainer');
     container.innerHTML = '<p style="color:#ccc; margin-top:20px;">Rendering Document...</p>';
     
-    // Display modal first so container dimensions exist for rendering math
     document.getElementById('pdfModal').style.display = 'flex';
 
     try {
       const pdf = await pdfjsLib.getDocument(`/api/view-pdf?url=${encodeURIComponent(url)}`).promise;
       container.innerHTML = '';
 
-      // Target precise device width (minus container padding)
       const containerWidth = container.clientWidth - 20 || (window.innerWidth - 40);
       const targetWidth = Math.min(containerWidth, 560);
 
@@ -177,10 +190,12 @@
         const scale = targetWidth / unscaledViewport.width;
         const viewport = page.getViewport({ scale: scale });
 
+        const pageWrapper = document.createElement('div');
+        pageWrapper.className = 'page-wrapper';
+
         const canvas = document.createElement('canvas');
         const context = canvas.getContext('2d');
         
-        // High DPR (Retina) mobile crisp rendering support
         const dpr = window.devicePixelRatio || 1;
         canvas.width = viewport.width * dpr;
         canvas.height = viewport.height * dpr;
@@ -188,7 +203,8 @@
         canvas.style.height = `${viewport.height}px`;
 
         context.scale(dpr, dpr);
-        container.appendChild(canvas);
+        pageWrapper.appendChild(canvas);
+        container.appendChild(pageWrapper);
 
         await page.render({
           canvasContext: context,
