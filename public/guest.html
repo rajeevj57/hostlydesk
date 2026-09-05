@@ -24,7 +24,7 @@
     .service-card .icon { font-size: 28px; margin-bottom: 6px; }
     .service-card .title { font-weight: 600; font-size: 14px; color: #1f2937; }
     
-    /* Fixed Request Modal Layout */
+    /* Request Modal Layout */
     .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; padding: 15px; z-index: 1000; }
     .modal-content { background: white; padding: 20px; border-radius: 12px; width: 100%; max-width: 400px; display: flex; flex-direction: column; gap: 10px; }
     
@@ -112,7 +112,10 @@
           data.documents.forEach(doc => {
             const a = document.createElement('a');
             a.className = 'doc-btn';
-            a.href = doc.url.includes('?') ? `${doc.url}&view=inline` : `${doc.url}#toolbar=1`;
+            
+            // Force inline rendering using Google Docs Viewer wrapper
+            const viewerUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(doc.url)}&embedded=true`;
+            a.href = viewerUrl;
             a.target = '_blank';
             a.rel = 'noopener noreferrer';
             a.innerText = `📄 ${doc.title}`;
