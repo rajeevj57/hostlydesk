@@ -15,7 +15,7 @@
     
     /* Dynamic PDF Grid */
     .doc-grid { display: grid; grid-template-columns: 1fr; gap: 10px; margin-bottom: 20px; }
-    .doc-btn { background: #eef2ff; color: #4f46e5; border: 1px solid #c7d2fe; padding: 12px; border-radius: 10px; font-weight: 600; text-align: center; cursor: pointer; text-decoration: none; display: block; font-size: 14px; }
+    .doc-btn { background: #eef2ff; color: #4f46e5; border: 1px solid #c7d2fe; padding: 12px; border-radius: 10px; font-weight: 600; text-align: center; cursor: pointer; font-size: 14px; }
     
     /* Service Cards Grid */
     .service-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
@@ -24,9 +24,9 @@
     .service-card .icon { font-size: 28px; margin-bottom: 6px; }
     .service-card .title { font-weight: 600; font-size: 14px; color: #1f2937; }
     
-    /* Request Modal Layout */
-    .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; padding: 15px; z-index: 1000; }
-    .modal-content { background: white; padding: 20px; border-radius: 12px; width: 100%; max-width: 400px; display: flex; flex-direction: column; gap: 10px; }
+    /* Modals */
+    .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); align-items: center; justify-content: center; padding: 10px; z-index: 1000; }
+    .modal-content { background: white; padding: 20px; border-radius: 12px; width: 100%; max-width: 420px; display: flex; flex-direction: column; gap: 10px; }
     
     .chip-container { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 5px; }
     .chip { background: #e0e7ff; color: #3730a3; padding: 6px 12px; border-radius: 15px; font-size: 12px; font-weight: 600; cursor: pointer; }
@@ -35,6 +35,10 @@
     textarea { width: 100%; height: 90px; padding: 10px; border: 1px solid #ccc; border-radius: 8px; resize: none; font-size: 14px; }
     .btn-submit { background: #10b981; color: white; border: none; padding: 12px; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; }
     .btn-close { background: #ef4444; color: white; border: none; padding: 10px; border-radius: 8px; font-size: 14px; cursor: pointer; }
+    
+    /* In-App PDF Viewer Container */
+    .pdf-modal-content { background: white; border-radius: 12px; width: 100%; max-width: 600px; height: 85vh; display: flex; flex-direction: column; overflow: hidden; }
+    .pdf-viewer { width: 100%; height: 100%; border: none; }
   </style>
 </head>
 <body>
@@ -71,6 +75,7 @@
   </div>
 </div>
 
+<!-- Service Request Modal -->
 <div id="requestModal" class="modal">
   <div class="modal-content">
     <h3 id="modalDeptTitle" style="margin:0;">Send Request</h3>
@@ -86,7 +91,18 @@
     <textarea id="requestNotes"></textarea>
     
     <button class="btn-submit" onclick="sendServiceRequest()">Send Request to Staff</button>
-    <button class="btn-close" onclick="closeModal()">Cancel</button>
+    <button class="btn-close" onclick="closeModal('requestModal')">Cancel</button>
+  </div>
+</div>
+
+<!-- Inline PDF Viewer Pop-up -->
+<div id="pdfModal" class="modal">
+  <div class="pdf-modal-content">
+    <div style="padding: 10px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ddd;">
+      <strong id="pdfModalTitle">Menu Viewer</strong>
+      <button onclick="closeModal('pdfModal')" style="background:#ef4444; color:white; border:none; padding:6px 12px; border-radius:6px; cursor:pointer;">Close Viewer ✕</button>
+    </div>
+    <iframe id="pdfFrame" class="pdf-viewer" src=""></iframe>
   </div>
 </div>
 
@@ -110,16 +126,11 @@
 
         if (data.documents && data.documents.length > 0) {
           data.documents.forEach(doc => {
-            const a = document.createElement('a');
-            a.className = 'doc-btn';
-            
-            // Force inline rendering using Google Docs Viewer wrapper
-            const viewerUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(doc.url)}&embedded=true`;
-            a.href = viewerUrl;
-            a.target = '_blank';
-            a.rel = 'noopener noreferrer';
-            a.innerText = `📄 ${doc.title}`;
-            docList.appendChild(a);
+            const btn = document.createElement('div');
+            btn.className = 'doc-btn';
+            btn.innerText = `📄 ${doc.title}`;
+            btn.onclick = () => openPdfModal(doc.title, doc.url);
+            docList.appendChild(btn);
           });
         } else {
           docList.innerHTML = '<p style="color:#888; font-size:13px; text-align:center;">No PDFs uploaded yet.</p>';
@@ -128,6 +139,12 @@
     } catch (err) {
       console.error('Error fetching hotel configuration:', err);
     }
+  }
+
+  function openPdfModal(title, url) {
+    document.getElementById('pdfModalTitle').innerText = title;
+    document.getElementById('pdfFrame').src = `https://docs.google.com/gview?url=${encodeURIComponent(url)}&embedded=true`;
+    document.getElementById('pdfModal').style.display = 'flex';
   }
 
   function openRequest(dept, placeholder) {
@@ -150,8 +167,9 @@
     }
   }
 
-  function closeModal() {
-    document.getElementById('requestModal').style.display = 'none';
+  function closeModal(modalId) {
+    document.getElementById(modalId).style.display = 'none';
+    if(modalId === 'pdfModal') document.getElementById('pdfFrame').src = '';
   }
 
   async function sendServiceRequest() {
@@ -175,7 +193,7 @@
     if (response.ok) {
       alert(`Your request has been dispatched directly to ${activeDepartment}!`);
       document.getElementById('requestNotes').value = '';
-      closeModal();
+      closeModal('requestModal');
     } else {
       alert('Failed to dispatch request. Please check if department Telegram Chat ID is configured.');
     }
