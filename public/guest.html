@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Guest Service & Interactive Menu</title>
+  <title>Guest Service & Digital Menu</title>
   <style>
     * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
     body { background-color: #f0f2f5; margin: 0; padding: 15px; padding-bottom: 90px; }
@@ -13,19 +13,19 @@
     .header h1 { margin: 0; font-size: 22px; color: #1a1a1a; }
     .header p { margin: 5px 0 0; color: #666; font-size: 14px; }
     
-    .section-title { font-size: 16px; font-weight: 700; color: #111; margin: 20px 0 10px; display: flex; justify-content: space-between; align-items: center; }
+    .section-title { font-size: 16px; font-weight: 700; color: #111; margin: 15px 0 10px; }
     
-    /* Search Bar Styling */
-    .search-box { width: 100%; padding: 12px 15px; border: 1px solid #d1d5db; border-radius: 10px; font-size: 14px; margin-bottom: 12px; outline: none; transition: border-color 0.2s; }
+    /* Search Bar */
+    .search-box { width: 100%; padding: 12px 15px; border: 2px solid #e5e7eb; border-radius: 10px; font-size: 14px; margin-bottom: 12px; outline: none; transition: border-color 0.2s; }
     .search-box:focus { border-color: #4f46e5; }
 
-    /* Category Selector Tabs */
+    /* Category Scroll Tabs */
     .category-scroll { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 15px; -webkit-overflow-scrolling: touch; }
     .cat-tab { background: #f3f4f6; color: #4b5563; padding: 8px 14px; border-radius: 20px; font-size: 13px; font-weight: 600; white-space: nowrap; cursor: pointer; border: 1px solid #e5e7eb; }
     .cat-tab.active { background: #4f46e5; color: #ffffff; border-color: #4f46e5; }
 
-    /* Interactive Menu Items */
-    .menu-list { display: flex; flex-direction: column; gap: 12px; margin-bottom: 25px; }
+    /* Menu Items */
+    .menu-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 25px; min-height: 150px; }
     .menu-item { display: flex; justify-content: space-between; align-items: center; background: #fafafa; border: 1px solid #f0f0f0; border-radius: 12px; padding: 12px 15px; }
     .item-info { flex: 1; padding-right: 10px; }
     .item-name { font-weight: 600; font-size: 15px; color: #1f2937; margin-bottom: 2px; }
@@ -38,11 +38,11 @@
     .qty-btn:active { background: #c7d2fe; }
     .qty-count { font-weight: 700; font-size: 14px; color: #111; min-width: 16px; text-align: center; }
 
-    /* PDF Reference Buttons */
+    /* Directory Links */
     .doc-grid { display: grid; grid-template-columns: 1fr; gap: 10px; margin-bottom: 20px; }
     .doc-btn { display: block; background: #f8fafc; color: #475569; border: 1px solid #e2e8f0; padding: 12px; border-radius: 10px; font-weight: 600; text-align: center; text-decoration: none; font-size: 14px; }
 
-    /* Service Grid */
+    /* Hotel Services */
     .service-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
     .service-card { background: #fafafa; border: 1px solid #e5e7eb; border-radius: 12px; padding: 12px; text-align: center; cursor: pointer; }
     .service-card .icon { font-size: 24px; margin-bottom: 4px; }
@@ -55,7 +55,7 @@
     .cart-total { font-size: 16px; font-weight: 800; }
     .cart-action { background: #ffffff; color: #10b981; padding: 8px 16px; border-radius: 20px; font-weight: 700; font-size: 13px; }
 
-    /* Service Modals */
+    /* Modals */
     .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); align-items: center; justify-content: center; padding: 15px; z-index: 10000; }
     .modal-content { background: white; padding: 20px; border-radius: 14px; width: 100%; max-width: 420px; display: flex; flex-direction: column; gap: 12px; }
     textarea { width: 100%; height: 80px; padding: 10px; border: 1px solid #ccc; border-radius: 8px; resize: none; font-size: 14px; }
@@ -73,34 +73,25 @@
     <p>Room <strong id="roomDisplay">--</strong></p>
   </div>
 
-  <div class="section-title">
-    <span>In-Room Dining Menu</span>
-  </div>
+  <div class="section-title">In-Room Dining Menu</div>
 
-  <!-- Real-Time Search Bar -->
-  <input type="text" id="menuSearch" class="search-box" oninput="renderMenu()" placeholder="🔍 Search 165+ items (e.g., Paneer, Naan, Soda)...">
+  <input type="text" id="menuSearch" class="search-box" oninput="renderMenu()" placeholder="🔍 Search menu (e.g. Chicken, Paneer, Naan)...">
 
-  <!-- Category Scroll Tabs -->
   <div class="category-scroll">
-    <div class="cat-tab active" onclick="filterCategory('All', this)">All Items</div>
-    <div class="cat-tab" onclick="filterCategory('Starters', this)">Starters</div>
+    <div class="cat-tab active" onclick="filterCategory('Starters', this)">Starters</div>
     <div class="cat-tab" onclick="filterCategory('Main Course', this)">Main Course</div>
     <div class="cat-tab" onclick="filterCategory('Breads & Rice', this)">Breads & Rice</div>
     <div class="cat-tab" onclick="filterCategory('Beverages', this)">Beverages</div>
+    <div class="cat-tab" onclick="filterCategory('All', this)">View All</div>
   </div>
 
-  <!-- Interactive Food List -->
-  <div class="menu-list" id="menuList">
-    <!-- Items rendered dynamically -->
-  </div>
+  <div class="menu-list" id="menuList"></div>
 
-  <!-- Direct PDF Links for Hotel Directory -->
-  <div class="section-title">Hotel Directory & Info</div>
+  <div class="section-title">Hotel Directory & Information</div>
   <div class="doc-grid" id="docList">
     <p style="color:#999; font-size:13px; text-align:center;">Loading directory documents...</p>
   </div>
 
-  <!-- Express Requests -->
   <div class="section-title">Express Hotel Services</div>
   <div class="service-grid">
     <div class="service-card" onclick="openRequest('Housekeeping', 'e.g. Extra Towels, Room Cleaning')">
@@ -122,7 +113,6 @@
   </div>
 </div>
 
-<!-- Floating Cart Notification Bar -->
 <div class="cart-bar" id="cartBar" onclick="openOrderModal()">
   <div class="cart-info">
     <span class="cart-count" id="cartItemCount">0 Items selected</span>
@@ -131,19 +121,17 @@
   <div class="cart-action">View Order 🛒</div>
 </div>
 
-<!-- Kitchen Order Review Modal -->
 <div id="orderModal" class="modal">
   <div class="modal-content">
-    <h3 style="margin:0; font-size:18px;">Confirm Dining Order</h3>
+    <h3 style="margin:0; font-size:18px;">Confirm Kitchen Order</h3>
     <div class="order-summary-list" id="orderSummaryList"></div>
-    <label style="font-size:13px; font-weight:600; color:#444;">Special Cooking Instructions / Requests:</label>
-    <textarea id="kitchenNotes" placeholder="e.g. Make it less spicy, extra green chutney..."></textarea>
+    <label style="font-size:13px; font-weight:600; color:#444;">Special Cooking Instructions:</label>
+    <textarea id="kitchenNotes" placeholder="e.g. Less spicy, extra chutney..."></textarea>
     <button class="btn-submit" onclick="submitKitchenOrder()">Send Order to Kitchen</button>
     <button class="btn-close" onclick="closeModal('orderModal')">Add More Items</button>
   </div>
 </div>
 
-<!-- Express Service Request Modal -->
 <div id="requestModal" class="modal">
   <div class="modal-content">
     <h3 id="modalDeptTitle" style="margin:0; font-size:18px;">Send Request</h3>
@@ -161,22 +149,43 @@
   document.getElementById('roomDisplay').innerText = room;
 
   let activeDepartment = '';
-  let activeCategory = 'All';
+  let activeCategory = 'Starters';
   let cart = {};
 
-  // Sample Interactive Digital Menu Data
+  // Master Menu List containing Veg & Non-Veg Items
   const menuData = [
-    { id: 'm1', name: 'Paneer Tikka Dry', category: 'Starters', price: 280, desc: 'Cottage cheese marinated in yogurt & spices' },
-    { id: 'm2', name: 'Crispy Corn Salt & Pepper', category: 'Starters', price: 220, desc: 'Sweetcorn tossed with green chilies & pepper' },
-    { id: 'm3', name: 'Veg Hara Bhara Kebab', category: 'Starters', price: 240, desc: 'Spinach & green pea patties crisp fried' },
-    { id: 'm4', name: 'Dal Makhani', category: 'Main Course', price: 310, desc: 'Slow-cooked black lentils with butter & cream' },
-    { id: 'm5', name: 'Paneer Butter Masala', category: 'Main Course', price: 340, desc: 'Paneer cubes in rich tomato gravy' },
-    { id: 'm6', name: 'Mix Vegetable Handi', category: 'Main Course', price: 270, desc: 'Seasonal vegetables cooked in Indian herbs' },
-    { id: 'm7', name: 'Butter Naan', category: 'Breads & Rice', price: 60, desc: 'Soft refined flour bread topped with butter' },
-    { id: 'm8', name: 'Tandoori Roti', category: 'Breads & Rice', price: 35, desc: 'Whole wheat bread baked in clay oven' },
-    { id: 'm9', name: 'Jeera Rice', category: 'Breads & Rice', price: 180, desc: 'Basmati rice tempered with cumin seeds' },
-    { id: 'm10', name: 'Fresh Lime Soda', category: 'Beverages', price: 90, desc: 'Sweet, salted, or mixed' },
-    { id: 'm11', name: 'Mineral Water (1L)', category: 'Beverages', price: 30, desc: 'Packaged drinking water' }
+    // Starters
+    { id: 'm1', name: 'Paneer Tikka Dry', category: 'Starters', price: 280, desc: 'Cottage cheese marinated in spices' },
+    { id: 'm2', name: 'Chicken Tikka', category: 'Starters', price: 340, desc: 'Tender chicken marinated in spices & yogurt' },
+    { id: 'm3', name: 'Chicken Malai Tikka', category: 'Starters', price: 360, desc: 'Creamy boneless chicken kebab' },
+    { id: 'm4', name: 'Crispy Corn Salt & Pepper', category: 'Starters', price: 220, desc: 'Sweetcorn tossed with green chilies' },
+    { id: 'm5', name: 'Veg Hara Bhara Kebab', category: 'Starters', price: 240, desc: 'Spinach and green pea patties' },
+    { id: 'm6', name: 'Chilli Chicken Dry', category: 'Starters', price: 350, desc: 'Indo-Chinese style spicy chicken' },
+    { id: 'm7', name: 'Veg Spring Roll', category: 'Starters', price: 210, desc: 'Crispy rolls packed with vegetables' },
+    { id: 'm8', name: 'Tandoori Chicken (Half)', category: 'Starters', price: 380, desc: 'Classic roasted chicken in clay oven' },
+    
+    // Main Course
+    { id: 'm9', name: 'Butter Chicken', category: 'Main Course', price: 390, desc: 'Chicken cooked in rich tomato butter gravy' },
+    { id: 'm10', name: 'Dal Makhani', category: 'Main Course', price: 310, desc: 'Slow-cooked black lentils with cream' },
+    { id: 'm11', name: 'Paneer Butter Masala', category: 'Main Course', price: 340, desc: 'Paneer cubes in rich tomato gravy' },
+    { id: 'm12', name: 'Chicken Curry', category: 'Main Course', price: 360, desc: 'Home style spicy chicken curry' },
+    { id: 'm13', name: 'Mix Vegetable Handi', category: 'Main Course', price: 270, desc: 'Seasonal vegetables cooked in Indian herbs' },
+    { id: 'm14', name: 'Kadhai Paneer', category: 'Main Course', price: 330, desc: 'Paneer tossed with capsicum and spices' },
+    { id: 'm15', name: 'Mutton Rogan Josh', category: 'Main Course', price: 460, desc: 'Tender mutton slow-cooked in Kashmiri spices' },
+
+    // Breads & Rice
+    { id: 'm16', name: 'Butter Naan', category: 'Breads & Rice', price: 60, desc: 'Soft refined flour bread with butter' },
+    { id: 'm17', name: 'Garlic Naan', category: 'Breads & Rice', price: 75, desc: 'Naan topped with chopped garlic and butter' },
+    { id: 'm18', name: 'Tandoori Roti', category: 'Breads & Rice', price: 35, desc: 'Whole wheat bread baked in clay oven' },
+    { id: 'm19', name: 'Jeera Rice', category: 'Breads & Rice', price: 180, desc: 'Basmati rice tempered with cumin seeds' },
+    { id: 'm20', name: 'Chicken Biryani', category: 'Breads & Rice', price: 380, desc: 'Aromatic basmati rice cooked with spiced chicken' },
+    { id: 'm21', name: 'Veg Hyderabadi Biryani', category: 'Breads & Rice', price: 290, desc: 'Layered rice cooked with spices & vegetables' },
+
+    // Beverages
+    { id: 'm22', name: 'Fresh Lime Soda', category: 'Beverages', price: 90, desc: 'Sweet, salted, or mixed' },
+    { id: 'm23', name: 'Cold Coffee with Ice Cream', category: 'Beverages', price: 150, desc: 'Blended coffee topped with vanilla' },
+    { id: 'm24', name: 'Mineral Water (1L)', category: 'Beverages', price: 30, desc: 'Packaged drinking water' },
+    { id: 'm25', name: 'Sweet Lassi', category: 'Beverages', price: 110, desc: 'Traditional churned sweet yogurt drink' }
   ];
 
   function renderMenu() {
@@ -185,14 +194,15 @@
     list.innerHTML = '';
 
     const filtered = menuData.filter(item => {
-      const matchesCategory = (activeCategory === 'All') || (item.category === activeCategory);
+      // If user is searching, ignore category selection and search across ALL 165+ items
+      const matchesCategory = searchQuery !== '' ? true : (activeCategory === 'All' || item.category === activeCategory);
       const matchesSearch = item.name.toLowerCase().includes(searchQuery) || 
                             (item.desc && item.desc.toLowerCase().includes(searchQuery));
       return matchesCategory && matchesSearch;
     });
 
     if (filtered.length === 0) {
-      list.innerHTML = '<p style="text-align:center; color:#888; font-size:14px; padding:20px;">No items match your search.</p>';
+      list.innerHTML = '<p style="text-align:center; color:#888; font-size:14px; padding:20px;">No items match your search term.</p>';
       return;
     }
 
@@ -218,6 +228,7 @@
 
   function filterCategory(cat, tabEl) {
     activeCategory = cat;
+    document.getElementById('menuSearch').value = ''; // Clear search when switching tabs
     document.querySelectorAll('.cat-tab').forEach(t => t.classList.remove('active'));
     tabEl.classList.add('active');
     renderMenu();
@@ -293,7 +304,7 @@
     });
 
     const notes = document.getElementById('kitchenNotes').value.trim();
-    let fullRequestText = `ORDER SUMMARY:\n- ` + orderDetails.join('\n- ') + `\n\nTotal: ₹${grandTotal}`;
+    let fullRequestText = `ORDER SUMMARY:\n- ` + orderDetails.join('\n- ') + `\n\nTotal Amount: ₹${grandTotal}`;
     if (notes) fullRequestText += `\nSpecial Notes: ${notes}`;
 
     const response = await fetch('/api/guest-request', {
@@ -308,13 +319,13 @@
     });
 
     if (response.ok) {
-      alert('Your dining order has been dispatched directly to the Kitchen staff!');
+      alert('Your order has been sent directly to the Kitchen staff!');
       cart = {};
       updateCartBar();
       renderMenu();
       closeModal('orderModal');
     } else {
-      alert('Failed to send order. Please contact front desk.');
+      alert('Failed to dispatch order. Please check staff connection.');
     }
   }
 
