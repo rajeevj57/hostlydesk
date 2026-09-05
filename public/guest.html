@@ -13,8 +13,13 @@
     .header h1 { margin: 0; font-size: 22px; color: #1a1a1a; }
     .header p { margin: 5px 0 0; color: #666; font-size: 14px; }
     
-    /* Category Selector */
     .section-title { font-size: 16px; font-weight: 700; color: #111; margin: 20px 0 10px; display: flex; justify-content: space-between; align-items: center; }
+    
+    /* Search Bar Styling */
+    .search-box { width: 100%; padding: 12px 15px; border: 1px solid #d1d5db; border-radius: 10px; font-size: 14px; margin-bottom: 12px; outline: none; transition: border-color 0.2s; }
+    .search-box:focus { border-color: #4f46e5; }
+
+    /* Category Selector Tabs */
     .category-scroll { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 15px; -webkit-overflow-scrolling: touch; }
     .cat-tab { background: #f3f4f6; color: #4b5563; padding: 8px 14px; border-radius: 20px; font-size: 13px; font-weight: 600; white-space: nowrap; cursor: pointer; border: 1px solid #e5e7eb; }
     .cat-tab.active { background: #4f46e5; color: #ffffff; border-color: #4f46e5; }
@@ -37,7 +42,7 @@
     .doc-grid { display: grid; grid-template-columns: 1fr; gap: 10px; margin-bottom: 20px; }
     .doc-btn { display: block; background: #f8fafc; color: #475569; border: 1px solid #e2e8f0; padding: 12px; border-radius: 10px; font-weight: 600; text-align: center; text-decoration: none; font-size: 14px; }
 
-    /* Quick Service Grid */
+    /* Service Grid */
     .service-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
     .service-card { background: #fafafa; border: 1px solid #e5e7eb; border-radius: 12px; padding: 12px; text-align: center; cursor: pointer; }
     .service-card .icon { font-size: 24px; margin-bottom: 4px; }
@@ -68,12 +73,17 @@
     <p>Room <strong id="roomDisplay">--</strong></p>
   </div>
 
-  <!-- Category Scroll Tabs -->
   <div class="section-title">
     <span>In-Room Dining Menu</span>
   </div>
+
+  <!-- Real-Time Search Bar -->
+  <input type="text" id="menuSearch" class="search-box" oninput="renderMenu()" placeholder="🔍 Search 165+ items (e.g., Paneer, Naan, Soda)...">
+
+  <!-- Category Scroll Tabs -->
   <div class="category-scroll">
-    <div class="cat-tab active" onclick="filterCategory('Starters', this)">Starters</div>
+    <div class="cat-tab active" onclick="filterCategory('All', this)">All Items</div>
+    <div class="cat-tab" onclick="filterCategory('Starters', this)">Starters</div>
     <div class="cat-tab" onclick="filterCategory('Main Course', this)">Main Course</div>
     <div class="cat-tab" onclick="filterCategory('Breads & Rice', this)">Breads & Rice</div>
     <div class="cat-tab" onclick="filterCategory('Beverages', this)">Beverages</div>
@@ -81,10 +91,10 @@
 
   <!-- Interactive Food List -->
   <div class="menu-list" id="menuList">
-    <!-- Populated dynamically via JS -->
+    <!-- Items rendered dynamically -->
   </div>
 
-  <!-- Direct PDF Links for Reference -->
+  <!-- Direct PDF Links for Hotel Directory -->
   <div class="section-title">Hotel Directory & Info</div>
   <div class="doc-grid" id="docList">
     <p style="color:#999; font-size:13px; text-align:center;">Loading directory documents...</p>
@@ -151,10 +161,10 @@
   document.getElementById('roomDisplay').innerText = room;
 
   let activeDepartment = '';
-  let activeCategory = 'Starters';
+  let activeCategory = 'All';
   let cart = {};
 
-  // Sample Interactive Digital Menu Items
+  // Sample Interactive Digital Menu Data
   const menuData = [
     { id: 'm1', name: 'Paneer Tikka Dry', category: 'Starters', price: 280, desc: 'Cottage cheese marinated in yogurt & spices' },
     { id: 'm2', name: 'Crispy Corn Salt & Pepper', category: 'Starters', price: 220, desc: 'Sweetcorn tossed with green chilies & pepper' },
@@ -171,9 +181,21 @@
 
   function renderMenu() {
     const list = document.getElementById('menuList');
+    const searchQuery = document.getElementById('menuSearch').value.toLowerCase().trim();
     list.innerHTML = '';
 
-    const filtered = menuData.filter(item => item.category === activeCategory);
+    const filtered = menuData.filter(item => {
+      const matchesCategory = (activeCategory === 'All') || (item.category === activeCategory);
+      const matchesSearch = item.name.toLowerCase().includes(searchQuery) || 
+                            (item.desc && item.desc.toLowerCase().includes(searchQuery));
+      return matchesCategory && matchesSearch;
+    });
+
+    if (filtered.length === 0) {
+      list.innerHTML = '<p style="text-align:center; color:#888; font-size:14px; padding:20px;">No items match your search.</p>';
+      return;
+    }
+
     filtered.forEach(item => {
       const qty = cart[item.id] ? cart[item.id].qty : 0;
       const el = document.createElement('div');
@@ -181,7 +203,7 @@
       el.innerHTML = `
         <div class="item-info">
           <div class="item-name">${item.name}</div>
-          <div class="item-desc">${item.desc}</div>
+          <div class="item-desc">${item.desc || ''}</div>
           <div class="item-price">₹${item.price}</div>
         </div>
         <div class="qty-controls">
