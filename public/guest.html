@@ -3,72 +3,81 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Guest Service - Digital Concierge</title>
+  <title>Guest Concierge Dashboard</title>
   <style>
-    body { font-family: Arial, sans-serif; margin: 0; padding: 15px; background-color: #f4f6f9; }
-    .container { max-width: 500px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-    h2 { color: #2c3e50; text-align: center; }
-    .menu-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #eee; }
-    .item-info { flex-grow: 1; }
-    .item-title { font-weight: bold; color: #333; }
-    .item-price { color: #666; font-size: 0.9em; }
-    .qty-controls { display: flex; align-items: center; gap: 8px; }
-    .qty-btn { background: #007bff; color: white; border: none; width: 28px; height: 28px; border-radius: 50%; font-weight: bold; cursor: pointer; }
-    .order-summary { margin-top: 20px; padding-top: 15px; border-top: 2px solid #2c3e50; }
-    .send-btn { width: 100%; background: #28a745; color: white; padding: 12px; border: none; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 15px; }
-    .send-btn:disabled { background: #ccc; }
+    * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    body { background-color: #f0f2f5; margin: 0; padding: 15px; }
+    .dashboard { max-width: 480px; margin: 0 auto; background: #ffffff; border-radius: 16px; padding: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+    .header { text-align: center; border-bottom: 1px solid #eee; padding-bottom: 15px; margin-bottom: 20px; }
+    .header h1 { margin: 0; font-size: 22px; color: #1a1a1a; }
+    .header p { margin: 5px 0 0; color: #666; font-size: 14px; }
+    
+    .section-title { font-size: 16px; font-weight: 600; color: #333; margin: 20px 0 10px; }
+    
+    /* Document Viewer Buttons */
+    .doc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+    .doc-btn { background: #eef2ff; color: #4f46e5; border: 1px solid #c7d2fe; padding: 12px; border-radius: 10px; font-weight: 600; text-align: center; cursor: pointer; text-decoration: none; display: block; font-size: 14px; }
+    
+    /* Service Quick Action Cards */
+    .service-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .service-card { background: #fafafa; border: 1px solid #e5e7eb; border-radius: 12px; padding: 15px; text-align: center; cursor: pointer; transition: 0.2s; }
+    .service-card:hover { background: #f3f4f6; border-color: #d1d5db; }
+    .service-card .icon { font-size: 28px; margin-bottom: 6px; }
+    .service-card .title { font-weight: 600; font-size: 14px; color: #1f2937; }
+    
+    /* Request Form Modal */
+    .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; padding: 15px; }
+    .modal-content { background: white; padding: 20px; border-radius: 12px; width: 100%; max-width: 400px; }
+    textarea { width: 100%; height: 90px; margin: 10px 0; padding: 10px; border: 1px solid #ccc; border-radius: 8px; resize: none; }
+    .btn-submit { background: #10b981; color: white; border: none; padding: 12px; border-radius: 8px; width: 100%; font-size: 16px; font-weight: bold; cursor: pointer; }
+    .btn-close { background: #ef4444; color: white; border: none; padding: 8px; border-radius: 6px; margin-top: 8px; width: 100%; cursor: pointer; }
   </style>
 </head>
 <body>
 
-<div class="container">
-  <h2 id="hotelName">Hotel Concierge</h2>
-  <p><strong>Room Number:</strong> <span id="roomDisplay">--</span></p>
-
-  <h3>Food & Beverages Menu</h3>
-  
-  <div id="menuList">
-    <!-- Interactive Menu Items -->
-    <div class="menu-item" data-name="Paneer Tikka" data-price="280">
-      <div class="item-info">
-        <div class="item-title">Paneer Tikka</div>
-        <div class="item-price">₹280</div>
-      </div>
-      <div class="qty-controls">
-        <button class="qty-btn" onclick="updateQty('Paneer Tikka', -1)">-</button>
-        <span id="qty-Paneer Tikka">0</span>
-        <button class="qty-btn" onclick="updateQty('Paneer Tikka', 1)">+</button>
-      </div>
-    </div>
-
-    <div class="menu-item" data-name="Dal Makhani" data-price="240">
-      <div class="item-info">
-        <div class="item-title">Dal Makhani</div>
-        <div class="item-price">₹240</div>
-      </div>
-      <div class="qty-controls">
-        <button class="qty-btn" onclick="updateQty('Dal Makhani', -1)">-</button>
-        <span id="qty-Dal Makhani">0</span>
-        <button class="qty-btn" onclick="updateQty('Dal Makhani', 1)">+</button>
-      </div>
-    </div>
-
-    <div class="menu-item" data-name="Butter Naan" data-price="50">
-      <div class="item-info">
-        <div class="item-title">Butter Naan</div>
-        <div class="item-price">₹50</div>
-      </div>
-      <div class="qty-controls">
-        <button class="qty-btn" onclick="updateQty('Butter Naan', -1)">-</button>
-        <span id="qty-Butter Naan">0</span>
-        <button class="qty-btn" onclick="updateQty('Butter Naan', 1)">+</button>
-      </div>
-    </div>
+<div class="dashboard">
+  <div class="header">
+    <h1 id="hotelNameDisplay">Welcome Guest</h1>
+    <p>Room <strong id="roomDisplay">--</strong></p>
   </div>
 
-  <div class="order-summary">
-    <strong>Total: ₹<span id="totalPrice">0</span></strong>
-    <button class="send-btn" id="orderBtn" onclick="submitOrder()" disabled>Send Room Order</button>
+  <!-- Manager Uploaded Documents -->
+  <div class="section-title">Hotel Directory & Menus</div>
+  <div class="doc-grid">
+    <a id="menuPdfBtn" class="doc-btn" href="#" target="_blank" style="display:none;">📖 Digital Menu</a>
+    <a id="factSheetBtn" class="doc-btn" href="#" target="_blank" style="display:none;">📄 Hotel Fact Sheet</a>
+  </div>
+
+  <!-- Request Department Services -->
+  <div class="section-title">Request Hotel Services</div>
+  <div class="service-grid">
+    <div class="service-card" onclick="openRequest('Kitchen', 'Food Order / In-Room Dining')">
+      <div class="icon">🍽️</div>
+      <div class="title">In-Room Dining</div>
+    </div>
+    <div class="service-card" onclick="openRequest('Housekeeping', 'Extra Towels / Cleaning')">
+      <div class="icon">🧹</div>
+      <div class="title">Housekeeping</div>
+    </div>
+    <div class="service-card" onclick="openRequest('FrontDesk', 'Reception / Assistance')">
+      <div class="icon">🛎️</div>
+      <div class="title">Front Desk</div>
+    </div>
+    <div class="service-card" onclick="openRequest('Maintenance', 'AC / TV / Electrical Issue')">
+      <div class="icon">🔧</div>
+      <div class="title">Maintenance</div>
+    </div>
+  </div>
+</div>
+
+<!-- Request Popup Modal -->
+<div id="requestModal" class="modal">
+  <div class="modal-content">
+    <h3 id="modalDeptTitle" style="margin-top:0;">Send Request</h3>
+    <label for="requestNotes">Details / Special Instructions:</label>
+    <textarea id="requestNotes" placeholder="Type items (e.g. 1x Paneer Tikka, 2x Water Bottles) or specific request..."></textarea>
+    <button class="btn-submit" onclick="sendServiceRequest()">Send Request to Staff</button>
+    <button class="btn-close" onclick="closeModal()">Cancel</button>
   </div>
 </div>
 
@@ -78,29 +87,52 @@
   const room = urlParams.get('room') || '101';
   document.getElementById('roomDisplay').innerText = room;
 
-  const cart = {};
-  const prices = { "Paneer Tikka": 280, "Dal Makhani": 240, "Butter Naan": 50 };
+  let activeDepartment = '';
 
-  function updateQty(item, change) {
-    cart[item] = (cart[item] || 0) + change;
-    if (cart[item] <= 0) delete cart[item];
-    
-    document.getElementById(`qty-${item}`).innerText = cart[item] || 0;
-    calculateTotal();
-  }
-
-  function calculateTotal() {
-    let total = 0;
-    for (let item in cart) {
-      total += cart[item] * prices[item];
+  // Load Hotel Details & PDF Links uploaded by Manager
+  async function loadHotelData() {
+    try {
+      const res = await fetch(`/api/hotel-config/${hotelId}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.hotelName) document.getElementById('hotelNameDisplay').innerText = data.hotelName;
+        
+        // Show Digital Menu if uploaded
+        if (data.menuPdfUrl) {
+          const menuBtn = document.getElementById('menuPdfBtn');
+          menuBtn.href = data.menuPdfUrl;
+          menuBtn.style.display = 'block';
+        }
+        
+        // Show Fact Sheet if uploaded
+        if (data.factSheetUrl) {
+          const factBtn = document.getElementById('factSheetBtn');
+          factBtn.href = data.factSheetUrl;
+          factBtn.style.display = 'block';
+        }
+      }
+    } catch (err) {
+      console.log('Error fetching hotel configuration:', err);
     }
-    document.getElementById('totalPrice').innerText = total;
-    document.getElementById('orderBtn').disabled = total === 0;
   }
 
-  async function submitOrder() {
-    let orderDetails = Object.keys(cart).map(i => `${cart[i]}x ${i}`).join(', ');
-    let total = document.getElementById('totalPrice').innerText;
+  function openRequest(dept, placeholder) {
+    activeDepartment = dept;
+    document.getElementById('modalDeptTitle').innerText = `Request ${dept}`;
+    document.getElementById('requestNotes').placeholder = `Type details for ${placeholder}...`;
+    document.getElementById('requestModal').style.display = 'flex';
+  }
+
+  function closeModal() {
+    document.getElementById('requestModal').style.display = 'none';
+  }
+
+  async function sendServiceRequest() {
+    const text = document.getElementById('requestNotes').value.trim();
+    if (!text) {
+      alert('Please enter your request details before sending.');
+      return;
+    }
 
     const response = await fetch('/api/guest-request', {
       method: 'POST',
@@ -108,18 +140,22 @@
       body: JSON.stringify({
         hotelId,
         room,
-        department: 'Kitchen',
-        requestText: `Order: ${orderDetails} | Total: ₹${total}`
+        department: activeDepartment,
+        requestText: text
       })
     });
 
     if (response.ok) {
-      alert('Your order for Paneer Tikka / items has been sent directly to the Kitchen!');
-      location.reload();
+      alert(`Your request has been dispatched directly to ${activeDepartment}!`);
+      document.getElementById('requestNotes').value = '';
+      closeModal();
     } else {
-      alert('Failed to send order. Please try again.');
+      alert('Failed to dispatch request. Please try again or inform Front Desk.');
     }
   }
+
+  loadHotelData();
 </script>
+
 </body>
 </html>
