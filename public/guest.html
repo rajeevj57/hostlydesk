@@ -36,7 +36,7 @@
     .btn-submit { background: #10b981; color: white; border: none; padding: 12px; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; }
     .btn-close { background: #ef4444; color: white; border: none; padding: 10px; border-radius: 8px; font-size: 14px; cursor: pointer; }
     
-    /* In-App PDF Viewer Container */
+    /* Native Inline PDF Viewer Pop-up */
     .pdf-modal-content { background: white; border-radius: 12px; width: 100%; max-width: 600px; height: 85vh; display: flex; flex-direction: column; overflow: hidden; }
     .pdf-viewer { width: 100%; height: 100%; border: none; }
   </style>
@@ -95,7 +95,7 @@
   </div>
 </div>
 
-<!-- Inline PDF Viewer Pop-up -->
+<!-- Inline PDF Viewer Modal -->
 <div id="pdfModal" class="modal">
   <div class="pdf-modal-content">
     <div style="padding: 10px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ddd;">
@@ -143,7 +143,11 @@
 
   function openPdfModal(title, url) {
     document.getElementById('pdfModalTitle').innerText = title;
-    document.getElementById('pdfFrame').src = `https://docs.google.com/gview?url=${encodeURIComponent(url)}&embedded=true`;
+    
+    // Direct stream via server proxy (eliminates Chrome gview download bar)
+    const inlineUrl = `/api/view-pdf?url=${encodeURIComponent(url)}`;
+    document.getElementById('pdfFrame').src = inlineUrl;
+    
     document.getElementById('pdfModal').style.display = 'flex';
   }
 
@@ -169,7 +173,7 @@
 
   function closeModal(modalId) {
     document.getElementById(modalId).style.display = 'none';
-    if(modalId === 'pdfModal') document.getElementById('pdfFrame').src = '';
+    if (modalId === 'pdfModal') document.getElementById('pdfFrame').src = '';
   }
 
   async function sendServiceRequest() {
