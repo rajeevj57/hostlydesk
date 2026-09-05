@@ -7,17 +7,28 @@ const path = require('path');
 // 1. INITIALIZE EXPRESS APP
 const app = express();
 
-// 2. MIDDLEWARE CONFIGURATION
+// 2. MIDDLEWARE & STATIC FILE CONFIGURATION
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Serve all static files from the public directory
 app.use(express.static(path.join(__dirname, '../public')));
+
+// Explicit route fallbacks for key HTML pages
+app.get('/guest.html', (req, res) => {
+  res.sendFile(path.join(__dirname, '../public/guest.html'));
+});
+
+app.get('/admin.html', (req, res) => {
+  res.sendFile(path.join(__dirname, '../public/admin.html'));
+});
 
 // 3. SUPABASE CONFIGURATION
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_ANON_KEY;
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-// Memory Storage for buffer uploads
+// Memory Storage for buffer uploads via Multer
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 
@@ -32,7 +43,7 @@ const uploadToSupabase = async (fileBuffer, filePath, mimeType) => {
 
   if (error) throw error;
 
-  // Retrieve clean public URL for browser viewing
+  // Retrieve clean public URL for direct browser viewing
   const { data: publicUrlData } = supabase.storage
     .from('hostlydesk-files')
     .getPublicUrl(filePath);
