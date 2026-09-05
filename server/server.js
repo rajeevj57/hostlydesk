@@ -7,21 +7,43 @@ const app = express();
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '../public')));
 
-// Initialize Supabase
+// Supabase Initialization
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 
-// Multer memory storage
+// Multer Storage Configuration
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 
-// In-memory hotel configuration store
+// In-Memory Hotel Configuration Store
 const hotelConfigs = {};
 
-// POST Endpoint: Save Configuration & Upload PDFs with Inline Disposition
+// GET Endpoint: Proxy PDF streamer to prevent unwanted downloads or gview errors
+app.get('/api/view-pdf', async (req, res) => {
+  try {
+    const fileUrl = req.query.url;
+    if (!fileUrl) return res.status(400).send('URL parameter is required.');
+
+    const response = await fetch(fileUrl);
+    if (!response.ok) throw new Error('Failed to fetch document from storage.');
+
+    const blob = await response.arrayBuffer();
+    const buffer = Buffer.from(blob);
+
+    // Set headers for pure inline browser rendering
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', 'inline; filename="document.pdf"');
+    res.send(buffer);
+  } catch (err) {
+    console.error('PDF Stream Error:', err);
+    res.status(500).send('Error rendering document viewer.');
+  }
+});
+
+// POST Endpoint: Save Configuration & Upload PDFs
 app.post('/api/admin/config', upload.any(), async (req, res) => {
   try {
     const { hotelId, hotelName, frontDeskChatId, housekeepingChatId, kitchenChatId, maintenanceChatId } = req.body;
@@ -37,14 +59,12 @@ app.post('/api/admin/config', upload.any(), async (req, res) => {
     const existingDocs = req.body.existingDocs ? JSON.parse(req.body.existingDocs) : (hotelConfigs[hotelId].documents || []);
     let updatedDocs = [...existingDocs];
 
-    // Process uploaded PDF files with inline content disposition
     if (req.files && req.files.length > 0) {
       for (const file of req.files) {
         const docTitle = req.body[`title_${file.fieldname}`] || file.originalname.replace(/\.[^/.]+$/, "");
         const sanitizeFileName = `${Date.now()}_${file.originalname.replace(/[^a-zA-Z0-9.-]/g, "_")}`;
         const filePath = `documents/${hotelId}/${sanitizeFileName}`;
 
-        // Force inline header to prevent forced browser downloads
         const { data, error } = await supabase.storage
           .from('hostlydesk-files')
           .upload(filePath, file.buffer, {
@@ -90,7 +110,7 @@ app.post('/api/admin/config', upload.any(), async (req, res) => {
   }
 });
 
-// GET Endpoint: Fetch Hotel Config for Guests
+// GET Endpoint: Hotel Config for Guest Portal
 app.get('/api/hotel-config/:hotelId', (req, res) => {
   const { hotelId } = req.params;
   const config = hotelConfigs[hotelId] || {
@@ -102,7 +122,7 @@ app.get('/api/hotel-config/:hotelId', (req, res) => {
   res.json(config);
 });
 
-// POST Endpoint: Dispatch Guest Request to Telegram
+// POST Endpoint: Guest Service Request Dispatch
 app.post('/api/guest-request', async (req, res) => {
   try {
     const { hotelId, room, department, requestText } = req.body;
