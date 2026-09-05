@@ -1,196 +1,143 @@
 const express = require('express');
-const https = require('https');
 const multer = require('multer');
 const { createClient } = require('@supabase/supabase-js');
 const path = require('path');
 
-// 1. INITIALIZE EXPRESS APP
 const app = express();
-
-// 2. MIDDLEWARE & STATIC FILE CONFIGURATION
 app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
-// Serve all static files from the public directory
 app.use(express.static(path.join(__dirname, '../public')));
 
-// Explicit route fallbacks for key HTML pages
-app.get('/guest.html', (req, res) => {
-  res.sendFile(path.join(__dirname, '../public/guest.html'));
-});
-
-app.get('/admin.html', (req, res) => {
-  res.sendFile(path.join(__dirname, '../public/admin.html'));
-});
-
-// 3. SUPABASE CONFIGURATION
+// Initialize Supabase
 const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_ANON_KEY;
-const supabase = createClient(supabaseUrl, supabaseKey);
+const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-// Memory Storage for buffer uploads via Multer
+const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
+
+// Multer memory storage for multi-file uploads
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 
-// Helper: Upload file buffer directly to Supabase Storage
-const uploadToSupabase = async (fileBuffer, filePath, mimeType) => {
-  const { data, error } = await supabase.storage
-    .from('hostlydesk-files')
-    .upload(filePath, fileBuffer, {
-      contentType: mimeType,
-      upsert: true // Overwrites file if updated by hotel
-    });
+// In-memory hotel configuration store (can be synced with Supabase DB)
+const hotelConfigs = {};
 
-  if (error) throw error;
-
-  // Retrieve clean public URL for direct browser viewing
-  const { data: publicUrlData } = supabase.storage
-    .from('hostlydesk-files')
-    .getPublicUrl(filePath);
-
-  return publicUrlData.publicUrl;
-};
-
-// In-Memory Database
-const hotels = {};
-
-// Helper: Sanitize URLs
-function sanitizeUrl(rawUrl) {
-  if (!rawUrl) return '';
-  let cleanUrl = rawUrl.trim();
-  
-  if (cleanUrl.startsWith('https//')) {
-    cleanUrl = cleanUrl.replace('https//', 'https://');
-  } else if (cleanUrl.startsWith('http//')) {
-    cleanUrl = cleanUrl.replace('http//', 'https://');
-  } else if (cleanUrl.startsWith('http://')) {
-    cleanUrl = cleanUrl.replace('http://', 'https://');
-  } else if (!cleanUrl.startsWith('http://') && !cleanUrl.startsWith('https://')) {
-    cleanUrl = 'https://' + cleanUrl;
-  }
-  
-  return cleanUrl;
-}
-
-// 4. API: SAVE HOTEL CONFIGURATION
-app.post('/api/hotels', upload.fields([
-  { name: 'menuPdf', maxCount: 1 },
-  { name: 'factSheetPdf', maxCount: 1 }
-]), async (req, res) => {
+// POST Endpoint: Save Hotel Configuration & Upload Multiple PDFs
+app.post('/api/admin/config', upload.any(), async (req, res) => {
   try {
-    const { hotelId, hotelName, wifiName, wifiPassword, frontOfficeChatId, housekeepingChatId, kitchenChatId, menuUrl, factSheetUrl } = req.body;
+    const { hotelId, hotelName, frontDeskChatId, housekeepingChatId, kitchenChatId, maintenanceChatId } = req.body;
 
     if (!hotelId) {
-      return res.status(400).json({ success: false, message: 'Hotel ID is required.' });
+      return res.status(400).json({ error: 'Hotel ID is required.' });
     }
 
-    if (!hotels[hotelId]) {
-      hotels[hotelId] = {};
+    // Initialize or fetch existing hotel config
+    if (!hotelConfigs[hotelId]) {
+      hotelConfigs[hotelId] = { documents: [] };
     }
 
-    // Assign text configurations
-    if (hotelName) hotels[hotelId].hotelName = hotelName;
-    if (wifiName) hotels[hotelId].wifiName = wifiName;
-    if (wifiPassword) hotels[hotelId].wifiPassword = wifiPassword;
-    if (frontOfficeChatId) hotels[hotelId].frontOfficeChatId = frontOfficeChatId;
-    if (housekeepingChatId) hotels[hotelId].housekeepingChatId = housekeepingChatId;
-    if (kitchenChatId) hotels[hotelId].kitchenChatId = kitchenChatId;
+    const existingDocs = req.body.existingDocs ? JSON.parse(req.body.existingDocs) : (hotelConfigs[hotelId].documents || []);
+    let updatedDocs = [...existingDocs];
 
-    // Direct link input fallback
-    if (menuUrl) hotels[hotelId].menuPdfUrl = sanitizeUrl(menuUrl);
-    if (factSheetUrl) hotels[hotelId].factSheetUrl = sanitizeUrl(factSheetUrl);
+    // Process uploaded PDF files dynamically
+    if (req.files && req.files.length > 0) {
+      for (const file of req.files) {
+        // Find custom title sent for this file input
+        const docTitle = req.body[`title_${file.fieldname}`] || file.originalname.replace(/\.[^/.]+$/, "");
+        const sanitizeFileName = `${Date.now()}_${file.originalname.replace(/[^a-zA-Z0-9.-]/g, "_")}`;
+        const filePath = `documents/${hotelId}/${sanitizeFileName}`;
 
-    // Upload Menu PDF to Supabase Storage
-    if (req.files && req.files.menuPdf && req.files.menuPdf[0]) {
-      const menuFile = req.files.menuPdf[0];
-      const menuPath = `${hotelId}/menu.pdf`;
-      const publicUrl = await uploadToSupabase(menuFile.buffer, menuPath, 'application/pdf');
-      hotels[hotelId].menuPdfUrl = publicUrl;
-    }
+        // Upload to Supabase Storage Bucket
+        const { data, error } = await supabase.storage
+          .from('hostlydesk-files')
+          .upload(filePath, file.buffer, {
+            contentType: file.mimetype || 'application/pdf',
+            upsert: true
+          });
 
-    // Upload Fact Sheet PDF to Supabase Storage
-    if (req.files && req.files.factSheetPdf && req.files.factSheetPdf[0]) {
-      const factFile = req.files.factSheetPdf[0];
-      const factPath = `${hotelId}/factsheet.pdf`;
-      const publicUrl = await uploadToSupabase(factFile.buffer, factPath, 'application/pdf');
-      hotels[hotelId].factSheetUrl = publicUrl;
-    }
+        if (error) throw error;
 
-    res.json({ success: true, message: 'Hotel setup updated successfully!', hotel: hotels[hotelId] });
-  } catch (err) {
-    console.error("Error saving hotel settings:", err);
-    res.status(500).json({ success: false, message: 'Server error processing upload.' });
-  }
-});
+        const { data: publicUrlData } = supabase.storage
+          .from('hostlydesk-files')
+          .getPublicUrl(filePath);
 
-// 5. API: GET HOTEL DETAILS FOR GUEST PAGE
-app.get('/api/hotels/:hotelId', (req, res) => {
-  const hotel = hotels[req.params.hotelId];
-  if (!hotel) {
-    return res.status(404).json({ success: false, message: 'Hotel profile not found in memory.' });
-  }
-  res.json({ success: true, hotel });
-});
-
-// 6. API: DYNAMIC DEPARTMENT ROUTING TO TELEGRAM
-app.post('/api/requests', (req, res) => {
-  const { hotelId, room, items, department } = req.body;
-
-  if (!hotelId || !hotels[hotelId]) {
-    return res.status(400).json({ success: false, message: 'Hotel configuration not initialized. Save settings in Admin panel first.' });
-  }
-
-  const hotel = hotels[hotelId];
-  const itemsList = Array.isArray(items) ? items.join(', ') : items;
-
-  let targetChatId = hotel.frontOfficeChatId; // Default fallback
-
-  if (department === 'housekeeping' && hotel.housekeepingChatId) {
-    targetChatId = hotel.housekeepingChatId;
-  } else if (department === 'kitchen' && hotel.kitchenChatId) {
-    targetChatId = hotel.kitchenChatId;
-  } else if (department === 'frontoffice' && hotel.frontOfficeChatId) {
-    targetChatId = hotel.frontOfficeChatId;
-  }
-
-  const messageText = `🛎️ *New ${department ? department.toUpperCase() : 'GUEST'} Request*\n\n🏨 *Hotel:* ${hotel.hotelName}\n🚪 *Room:* ${room || 'Unassigned'}\n📋 *Items:* ${itemsList}`;
-
-  const botToken = process.env.TELEGRAM_BOT_TOKEN;
-
-  if (botToken && targetChatId) {
-    const postData = JSON.stringify({
-      chat_id: targetChatId,
-      text: messageText,
-      parse_mode: 'Markdown'
-    });
-
-    const options = {
-      hostname: 'api.telegram.org',
-      path: `/bot${botToken}/sendMessage`,
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Content-Length': Buffer.byteLength(postData)
+        updatedDocs.push({
+          title: docTitle,
+          url: publicUrlData.publicUrl
+        });
       }
+    }
+
+    // Update config object
+    hotelConfigs[hotelId] = {
+      hotelId,
+      hotelName: hotelName || 'Hotel Concierge',
+      chatIds: {
+        FrontDesk: frontDeskChatId || '',
+        Housekeeping: housekeepingChatId || '',
+        Kitchen: kitchenChatId || '',
+        Maintenance: maintenanceChatId || ''
+      },
+      documents: updatedDocs
     };
 
-    const telegramReq = https.request(options, (telegramRes) => {
-      telegramRes.on('data', () => {});
+    res.json({
+      success: true,
+      message: 'Hotel configuration updated successfully!',
+      config: hotelConfigs[hotelId]
     });
 
-    telegramReq.on('error', (e) => {
-      console.error('Telegram dispatch error:', e);
-    });
-
-    telegramReq.write(postData);
-    telegramReq.end();
+  } catch (err) {
+    console.error('Server Configuration Error:', err);
+    res.status(500).json({ error: 'Server error processing upload or saving config.' });
   }
-
-  res.json({ success: true, message: 'Request sent successfully!' });
 });
 
-// 7. START SERVER
+// GET Endpoint: Fetch Hotel Configuration for Guest UI
+app.get('/api/hotel-config/:hotelId', (req, res) => {
+  const { hotelId } = req.params;
+  const config = hotelConfigs[hotelId] || {
+    hotelId,
+    hotelName: 'Hotel Concierge',
+    chatIds: {},
+    documents: []
+  };
+  res.json(config);
+});
+
+// POST Endpoint: Dispatch Guest Request to Telegram
+app.post('/api/guest-request', async (req, res) => {
+  try {
+    const { hotelId, room, department, requestText } = req.body;
+    const config = hotelConfigs[hotelId];
+
+    const chatId = config && config.chatIds ? config.chatIds[department] : null;
+
+    if (!chatId) {
+      console.warn(`No Chat ID configured for department: ${department}`);
+    }
+
+    const message = `🔔 *New Guest Request*\n\n🏨 *Hotel:* ${config ? config.hotelName : hotelId}\n🚪 *Room Number:* ${room}\n📋 *Department:* ${department}\n\n📝 *Request Details:*\n${requestText}`;
+
+    // Send notification via Telegram API
+    if (TELEGRAM_BOT_TOKEN && chatId) {
+      const telegramUrl = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
+      await fetch(telegramUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chat_id: chatId,
+          text: message,
+          parse_mode: 'Markdown'
+        })
+      });
+    }
+
+    res.json({ success: true, message: 'Request sent to staff!' });
+  } catch (err) {
+    console.error('Guest Request Dispatch Error:', err);
+    res.status(500).json({ error: 'Failed to dispatch request to Telegram.' });
+  }
+});
+
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Server running smoothly on port ${PORT}`);
-});
+app.listen(PORT, () => console.log(`HostlyDesk running on port ${PORT}`));
