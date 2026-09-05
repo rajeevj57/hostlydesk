@@ -1,8 +1,7 @@
 const express = require('express');
 const https = require('https');
-const http = require('http');
 const multer = require('multer');
-const cloudinary = require('cloudinary').v2;
+const { createClient } = require('@supabase/supabase-js');
 const path = require('path');
 
 // 1. INITIALIZE EXPRESS APP
@@ -13,48 +12,42 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, '../public')));
 
-// 3. CLOUDINARY CONFIGURATION
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-  secure: true
-});
+// 3. SUPABASE CONFIGURATION
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_ANON_KEY;
+const supabase = createClient(supabaseUrl, supabaseKey);
 
-// Memory Storage for direct buffer processing
+// Memory Storage for buffer uploads
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 
-// Upload buffer to Cloudinary as raw file
-const uploadToCloudinary = (fileBuffer, folder, filename) => {
-  return new Promise((resolve, reject) => {
-    const uploadStream = cloudinary.uploader.upload_stream(
-      {
-        folder: folder,
-        resource_type: 'raw',
-        public_id: `${filename}.pdf`,
-        type: 'upload',
-        access_mode: 'public'
-      },
-      (error, result) => {
-        if (error) return reject(error);
-        resolve(result);
-      }
-    );
-    uploadStream.end(fileBuffer);
-  });
+// Helper: Upload file buffer directly to Supabase Storage
+const uploadToSupabase = async (fileBuffer, filePath, mimeType) => {
+  const { data, error } = await supabase.storage
+    .from('hostlydesk-files')
+    .upload(filePath, fileBuffer, {
+      contentType: mimeType,
+      upsert: true // Overwrites file if updated by hotel
+    });
+
+  if (error) throw error;
+
+  // Retrieve clean public URL for browser viewing
+  const { data: publicUrlData } = supabase.storage
+    .from('hostlydesk-files')
+    .getPublicUrl(filePath);
+
+  return publicUrlData.publicUrl;
 };
 
 // In-Memory Database
 const hotels = {};
 
-// Helper function to sanitize URLs
+// Helper: Sanitize URLs
 function sanitizeUrl(rawUrl) {
   if (!rawUrl) return '';
   let cleanUrl = rawUrl.trim();
   
-  cleanUrl = cleanUrl.replace('doudinary.com', 'cloudinary.com');
-
   if (cleanUrl.startsWith('https//')) {
     cleanUrl = cleanUrl.replace('https//', 'https://');
   } else if (cleanUrl.startsWith('http//')) {
@@ -96,20 +89,20 @@ app.post('/api/hotels', upload.fields([
     if (menuUrl) hotels[hotelId].menuPdfUrl = sanitizeUrl(menuUrl);
     if (factSheetUrl) hotels[hotelId].factSheetUrl = sanitizeUrl(factSheetUrl);
 
-    // Upload Menu PDF to Cloudinary if provided and route through proxy
+    // Upload Menu PDF to Supabase Storage
     if (req.files && req.files.menuPdf && req.files.menuPdf[0]) {
       const menuFile = req.files.menuPdf[0];
-      const menuUpload = await uploadToCloudinary(menuFile.buffer, `hostlydesk/${hotelId}`, 'menu');
-      const targetCloudUrl = sanitizeUrl(menuUpload.secure_url);
-      hotels[hotelId].menuPdfUrl = `/api/pdf-proxy?url=${encodeURIComponent(targetCloudUrl)}`;
+      const menuPath = `${hotelId}/menu.pdf`;
+      const publicUrl = await uploadToSupabase(menuFile.buffer, menuPath, 'application/pdf');
+      hotels[hotelId].menuPdfUrl = publicUrl;
     }
 
-    // Upload Fact Sheet PDF to Cloudinary if provided and route through proxy
+    // Upload Fact Sheet PDF to Supabase Storage
     if (req.files && req.files.factSheetPdf && req.files.factSheetPdf[0]) {
       const factFile = req.files.factSheetPdf[0];
-      const factUpload = await uploadToCloudinary(factFile.buffer, `hostlydesk/${hotelId}`, 'factsheet');
-      const targetCloudUrl = sanitizeUrl(factUpload.secure_url);
-      hotels[hotelId].factSheetUrl = `/api/pdf-proxy?url=${encodeURIComponent(targetCloudUrl)}`;
+      const factPath = `${hotelId}/factsheet.pdf`;
+      const publicUrl = await uploadToSupabase(factFile.buffer, factPath, 'application/pdf');
+      hotels[hotelId].factSheetUrl = publicUrl;
     }
 
     res.json({ success: true, message: 'Hotel setup updated successfully!', hotel: hotels[hotelId] });
@@ -119,51 +112,7 @@ app.post('/api/hotels', upload.fields([
   }
 });
 
-// 5. API: ENHANCED PDF PROXY ROUTE (Mimics Browser Request)
-const fetchPdfWithRedirects = (targetUrl, res) => {
-  const urlObj = new URL(targetUrl);
-  const protocol = urlObj.protocol === 'https:' ? https : http;
-
-  const options = {
-    hostname: urlObj.hostname,
-    path: urlObj.pathname + urlObj.search,
-    method: 'GET',
-    headers: {
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36',
-      'Accept': 'application/pdf,*/*'
-    }
-  };
-
-  protocol.get(options, (stream) => {
-    // Follow HTTP redirects (301, 302, 307, 308)
-    if (stream.statusCode >= 300 && stream.statusCode < 400 && stream.headers.location) {
-      return fetchPdfWithRedirects(stream.headers.location, res);
-    }
-
-    if (stream.statusCode !== 200) {
-      console.error(`Failed request. Status code: ${stream.statusCode}`);
-      return res.status(stream.statusCode).send('Failed to fetch remote PDF stream.');
-    }
-
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', 'inline; filename="menu.pdf"');
-    stream.pipe(res);
-  }).on('error', (err) => {
-    console.error('Error proxying PDF stream:', err);
-    res.status(500).send('Error streaming PDF file.');
-  });
-};
-
-app.get('/api/pdf-proxy', (req, res) => {
-  const pdfUrl = req.query.url;
-  if (!pdfUrl) {
-    return res.status(400).send('Missing PDF URL parameter.');
-  }
-
-  fetchPdfWithRedirects(pdfUrl, res);
-});
-
-// 6. API: GET HOTEL DETAILS FOR GUEST PAGE
+// 5. API: GET HOTEL DETAILS FOR GUEST PAGE
 app.get('/api/hotels/:hotelId', (req, res) => {
   const hotel = hotels[req.params.hotelId];
   if (!hotel) {
@@ -172,7 +121,7 @@ app.get('/api/hotels/:hotelId', (req, res) => {
   res.json({ success: true, hotel });
 });
 
-// 7. API: DYNAMIC DEPARTMENT ROUTING TO TELEGRAM
+// 6. API: DYNAMIC DEPARTMENT ROUTING TO TELEGRAM
 app.post('/api/requests', (req, res) => {
   const { hotelId, room, items, department } = req.body;
 
@@ -229,7 +178,7 @@ app.post('/api/requests', (req, res) => {
   res.json({ success: true, message: 'Request sent successfully!' });
 });
 
-// 8. START SERVER
+// 7. START SERVER
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Server running smoothly on port ${PORT}`);
