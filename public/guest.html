@@ -3,294 +3,123 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>HostlyDesk - Guest Concierge</title>
+  <title>Guest Service - Digital Concierge</title>
   <style>
-    :root {
-      --primary: #1e293b;
-      --accent: #2563eb;
-      --bg: #f8fafc;
-      --card-bg: #ffffff;
-      --text: #0f172a;
-      --text-muted: #64748b;
-    }
-
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    }
-
-    body {
-      background-color: var(--bg);
-      color: var(--text);
-      display: flex;
-      justify-content: center;
-      min-height: 100vh;
-      padding: 20px 15px;
-    }
-
-    .container {
-      width: 100%;
-      max-width: 480px;
-    }
-
-    .header {
-      text-align: center;
-      margin-bottom: 24px;
-      padding: 20px;
-      background: var(--card-bg);
-      border-radius: 16px;
-      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-    }
-
-    .header h1 {
-      font-size: 1.5rem;
-      color: var(--primary);
-      margin-bottom: 4px;
-    }
-
-    .header p {
-      font-size: 0.9rem;
-      color: var(--text-muted);
-    }
-
-    .card {
-      background: var(--card-bg);
-      padding: 20px;
-      border-radius: 16px;
-      margin-bottom: 16px;
-      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-    }
-
-    .card h2 {
-      font-size: 1.1rem;
-      margin-bottom: 12px;
-      color: var(--primary);
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .wifi-details {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      background: #eff6ff;
-      padding: 12px 16px;
-      border-radius: 8px;
-      font-size: 0.95rem;
-    }
-
-    .btn {
-      width: 100%;
-      padding: 14px;
-      border: none;
-      border-radius: 10px;
-      background: var(--accent);
-      color: white;
-      font-size: 1rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: background 0.2s ease;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      gap: 8px;
-      text-decoration: none;
-    }
-
-    .btn:hover {
-      background: #1d4ed8;
-    }
-
-    .btn-secondary {
-      background: #475569;
-    }
-
-    .btn-secondary:hover {
-      background: #334155;
-    }
-
-    .grid-buttons {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-    }
-
-    .request-form {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
-
-    select, textarea, input {
-      width: 100%;
-      padding: 12px;
-      border: 1px solid #cbd5e1;
-      border-radius: 8px;
-      font-size: 0.95rem;
-    }
-
-    .status-msg {
-      margin-top: 10px;
-      font-size: 0.9rem;
-      text-align: center;
-      font-weight: 500;
-    }
-
-    .loader {
-      text-align: center;
-      padding: 40px;
-      color: var(--text-muted);
-    }
+    body { font-family: Arial, sans-serif; margin: 0; padding: 15px; background-color: #f4f6f9; }
+    .container { max-width: 500px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    h2 { color: #2c3e50; text-align: center; }
+    .menu-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #eee; }
+    .item-info { flex-grow: 1; }
+    .item-title { font-weight: bold; color: #333; }
+    .item-price { color: #666; font-size: 0.9em; }
+    .qty-controls { display: flex; align-items: center; gap: 8px; }
+    .qty-btn { background: #007bff; color: white; border: none; width: 28px; height: 28px; border-radius: 50%; font-weight: bold; cursor: pointer; }
+    .order-summary { margin-top: 20px; padding-top: 15px; border-top: 2px solid #2c3e50; }
+    .send-btn { width: 100%; background: #28a745; color: white; padding: 12px; border: none; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 15px; }
+    .send-btn:disabled { background: #ccc; }
   </style>
 </head>
 <body>
 
-  <div class="container">
-    <div id="loader" class="loader">Loading guest concierge...</div>
+<div class="container">
+  <h2 id="hotelName">Hotel Concierge</h2>
+  <p><strong>Room Number:</strong> <span id="roomDisplay">--</span></p>
 
-    <div id="app" style="display: none;">
-      <!-- Header -->
-      <div class="header">
-        <h1 id="hotelName">Hotel Concierge</h1>
-        <p id="roomBadge">Room Guest</p>
+  <h3>Food & Beverages Menu</h3>
+  
+  <div id="menuList">
+    <!-- Interactive Menu Items -->
+    <div class="menu-item" data-name="Paneer Tikka" data-price="280">
+      <div class="item-info">
+        <div class="item-title">Paneer Tikka</div>
+        <div class="item-price">₹280</div>
       </div>
-
-      <!-- Digital Menu & Factsheet -->
-      <div class="card">
-        <h2>📖 Hotel Information</h2>
-        <div class="grid-buttons">
-          <button id="menuBtn" class="btn">Digital Menu</button>
-          <button id="factSheetBtn" class="btn btn-secondary">Fact Sheet</button>
-        </div>
+      <div class="qty-controls">
+        <button class="qty-btn" onclick="updateQty('Paneer Tikka', -1)">-</button>
+        <span id="qty-Paneer Tikka">0</span>
+        <button class="qty-btn" onclick="updateQty('Paneer Tikka', 1)">+</button>
       </div>
+    </div>
 
-      <!-- Wi-Fi Details -->
-      <div class="card">
-        <h2>📶 Wi-Fi Network</h2>
-        <div class="wifi-details">
-          <div><strong>Network:</strong> <span id="wifiName">Not configured</span></div>
-          <div><strong>Password:</strong> <span id="wifiPassword">Not configured</span></div>
-        </div>
+    <div class="menu-item" data-name="Dal Makhani" data-price="240">
+      <div class="item-info">
+        <div class="item-title">Dal Makhani</div>
+        <div class="item-price">₹240</div>
       </div>
+      <div class="qty-controls">
+        <button class="qty-btn" onclick="updateQty('Dal Makhani', -1)">-</button>
+        <span id="qty-Dal Makhani">0</span>
+        <button class="qty-btn" onclick="updateQty('Dal Makhani', 1)">+</button>
+      </div>
+    </div>
 
-      <!-- Send Request to Department -->
-      <div class="card">
-        <h2>🛎️ Send Request</h2>
-        <form id="requestForm" class="request-form">
-          <select id="department" required>
-            <option value="frontoffice">Front Office / Reception</option>
-            <option value="housekeeping">Housekeeping</option>
-            <option value="kitchen">In-Room Dining / Kitchen</option>
-          </select>
-          <textarea id="requestItems" rows="3" placeholder="Describe what you need (e.g., 2 extra towels, water bottles)..." required></textarea>
-          <button type="submit" class="btn">Send Request</button>
-        </form>
-        <div id="statusMsg" class="status-msg"></div>
+    <div class="menu-item" data-name="Butter Naan" data-price="50">
+      <div class="item-info">
+        <div class="item-title">Butter Naan</div>
+        <div class="item-price">₹50</div>
+      </div>
+      <div class="qty-controls">
+        <button class="qty-btn" onclick="updateQty('Butter Naan', -1)">-</button>
+        <span id="qty-Butter Naan">0</span>
+        <button class="qty-btn" onclick="updateQty('Butter Naan', 1)">+</button>
       </div>
     </div>
   </div>
 
-  <script>
-    const urlParams = new URLSearchParams(window.location.search);
-    const hotelId = urlParams.get('hotelId');
-    const room = urlParams.get('room') || 'Unassigned';
+  <div class="order-summary">
+    <strong>Total: ₹<span id="totalPrice">0</span></strong>
+    <button class="send-btn" id="orderBtn" onclick="submitOrder()" disabled>Send Room Order</button>
+  </div>
+</div>
 
-    let hotelData = null;
+<script>
+  const urlParams = new URLSearchParams(window.location.search);
+  const hotelId = urlParams.get('hotelId') || 'hotel-kanha-shyam';
+  const room = urlParams.get('room') || '101';
+  document.getElementById('roomDisplay').innerText = room;
 
-    // Load hotel config from backend
-    async function loadHotelDetails() {
-      if (!hotelId) {
-        document.getElementById('loader').innerText = 'Invalid link. Hotel ID is missing.';
-        return;
-      }
+  const cart = {};
+  const prices = { "Paneer Tikka": 280, "Dal Makhani": 240, "Butter Naan": 50 };
 
-      try {
-        const response = await fetch(`/api/hotels/${encodeURIComponent(hotelId)}`);
-        const result = await response.json();
+  function updateQty(item, change) {
+    cart[item] = (cart[item] || 0) + change;
+    if (cart[item] <= 0) delete cart[item];
+    
+    document.getElementById(`qty-${item}`).innerText = cart[item] || 0;
+    calculateTotal();
+  }
 
-        if (result.success && result.hotel) {
-          hotelData = result.hotel;
-          renderUI();
-        } else {
-          document.getElementById('loader').innerText = 'Hotel configuration not found.';
-        }
-      } catch (err) {
-        console.error(err);
-        document.getElementById('loader').innerText = 'Error connecting to service.';
-      }
+  function calculateTotal() {
+    let total = 0;
+    for (let item in cart) {
+      total += cart[item] * prices[item];
     }
+    document.getElementById('totalPrice').innerText = total;
+    document.getElementById('orderBtn').disabled = total === 0;
+  }
 
-    function renderUI() {
-      document.getElementById('loader').style.display = 'none';
-      document.getElementById('app').style.display = 'block';
+  async function submitOrder() {
+    let orderDetails = Object.keys(cart).map(i => `${cart[i]}x ${i}`).join(', ');
+    let total = document.getElementById('totalPrice').innerText;
 
-      document.getElementById('hotelName').innerText = hotelData.hotelName || 'Welcome';
-      document.getElementById('roomBadge').innerText = `Room: ${room}`;
-
-      document.getElementById('wifiName').innerText = hotelData.wifiName || 'Available at Reception';
-      document.getElementById('wifiPassword').innerText = hotelData.wifiPassword || 'None';
-
-      // Digital Menu Button - Direct Supabase Access
-      document.getElementById('menuBtn').addEventListener('click', () => {
-        if (hotelData.menuPdfUrl) {
-          window.open(hotelData.menuPdfUrl, '_blank');
-        } else {
-          alert('Digital Menu is not uploaded yet.');
-        }
-      });
-
-      // Fact Sheet Button - Direct Supabase Access
-      document.getElementById('factSheetBtn').addEventListener('click', () => {
-        if (hotelData.factSheetUrl) {
-          window.open(hotelData.factSheetUrl, '_blank');
-        } else {
-          alert('Fact Sheet is not uploaded yet.');
-        }
-      });
-    }
-
-    // Submit Request to Telegram API
-    document.getElementById('requestForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const statusMsg = document.getElementById('statusMsg');
-      statusMsg.innerText = 'Sending request...';
-      statusMsg.style.color = '#2563eb';
-
-      const department = document.getElementById('department').value;
-      const items = document.getElementById('requestItems').value;
-
-      try {
-        const response = await fetch('/api/requests', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            hotelId,
-            room,
-            department,
-            items
-          })
-        });
-
-        const result = await response.json();
-
-        if (result.success) {
-          statusMsg.innerText = 'Request sent successfully!';
-          statusMsg.style.color = '#16a34a';
-          document.getElementById('requestItems').value = '';
-        } else {
-          statusMsg.innerText = result.message || 'Failed to send request.';
-          statusMsg.style.color = '#dc2626';
-        }
-      } catch (err) {
-        statusMsg.innerText = 'Server error. Please try again.';
-        statusMsg.style.color = '#dc2626';
-      }
+    const response = await fetch('/api/guest-request', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        hotelId,
+        room,
+        department: 'Kitchen',
+        requestText: `Order: ${orderDetails} | Total: ₹${total}`
+      })
     });
 
-    loadHotelDetails();
-  </script>
+    if (response.ok) {
+      alert('Your order for Paneer Tikka / items has been sent directly to the Kitchen!');
+      location.reload();
+    } else {
+      alert('Failed to send order. Please try again.');
+    }
+  }
+</script>
 </body>
 </html>
