@@ -3,224 +3,134 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>HostlyDesk - Hotel Setup Admin</title>
+  <title>HostlyDesk Admin Panel</title>
   <style>
-    :root {
-      --primary: #1a365d;
-      --secondary: #2b6cb0;
-      --bg: #f7fafc;
-      --card: #ffffff;
-      --text: #2d3748;
-      --accent: #38a169;
-    }
-
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-      background-color: var(--bg);
-      color: var(--text);
-      margin: 0;
-      padding: 20px;
-      display: flex;
-      justify-content: center;
-    }
-
-    .admin-card {
-      width: 100%;
-      max-width: 560px;
-      background: var(--card);
-      border-radius: 12px;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-      padding: 28px;
-      box-sizing: border-box;
-    }
-
-    h2 {
-      margin-top: 0;
-      color: var(--primary);
-      border-bottom: 2px solid #edf2f7;
-      padding-bottom: 12px;
-      font-size: 1.4rem;
-    }
-
-    .form-group {
-      margin-bottom: 16px;
-    }
-
-    label {
-      display: block;
-      font-weight: 600;
-      margin-bottom: 6px;
-      font-size: 0.9rem;
-      color: #4a5568;
-    }
-
-    input[type="text"],
-    input[type="password"],
-    input[type="file"] {
-      width: 100%;
-      padding: 10px 12px;
-      border: 1px solid #cbd5e0;
-      border-radius: 6px;
-      box-sizing: border-box;
-      font-size: 0.95rem;
-    }
-
-    input[type="text"]:focus,
-    input[type="password"]:focus {
-      border-color: var(--secondary);
-      outline: none;
-    }
-
-    .section-title {
-      font-size: 1.05rem;
-      font-weight: 700;
-      color: var(--primary);
-      margin: 24px 0 12px 0;
-      padding-top: 12px;
-      border-top: 1px dashed #e2e8f0;
-    }
-
-    .submit-btn {
-      width: 100%;
-      padding: 12px;
-      background-color: var(--secondary);
-      color: white;
-      border: none;
-      border-radius: 6px;
-      font-size: 1rem;
-      font-weight: bold;
-      cursor: pointer;
-      margin-top: 16px;
-      transition: background-color 0.2s;
-    }
-
-    .submit-btn:hover {
-      background-color: var(--primary);
-    }
-
-    .status-msg {
-      margin-top: 16px;
-      padding: 12px;
-      border-radius: 6px;
-      text-align: center;
-      font-size: 0.9rem;
-      display: none;
-    }
-
-    .status-msg.success {
-      display: block;
-      background-color: #f0fff4;
-      color: #276749;
-      border: 1px solid #c6f6d5;
-    }
-
-    .status-msg.error {
-      display: block;
-      background-color: #fff5f5;
-      color: #c53030;
-      border: 1px solid #fed7d7;
-    }
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f4f6f9; margin: 0; padding: 20px; }
+    .card { max-width: 600px; margin: 0 auto; background: #fff; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); }
+    h2 { color: #1e293b; margin-top: 0; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; }
+    .form-group { margin-bottom: 15px; }
+    label { display: block; font-weight: 600; margin-bottom: 5px; color: #475569; }
+    input[type="text"] { width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; }
+    .doc-row { display: flex; gap: 10px; margin-bottom: 10px; align-items: center; background: #f8fafc; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0; }
+    .doc-row input[type="text"] { flex: 1; }
+    .doc-row input[type="file"] { flex: 1.5; }
+    .btn-add { background: #3b82f6; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-weight: 600; margin-bottom: 15px; }
+    .btn-save { background: #10b981; color: white; border: none; width: 100%; padding: 12px; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; }
+    .status { margin-top: 15px; padding: 10px; border-radius: 6px; display: none; text-align: center; font-weight: 600; }
+    .status.success { background: #d1fae5; color: #065f46; display: block; }
+    .status.error { background: #fee2e2; color: #991b1b; display: block; }
   </style>
 </head>
 <body>
 
-  <div class="admin-card">
-    <h2>🏨 HostlyDesk - Hotel Setup</h2>
+<div class="card">
+  <h2>Hotel Configuration & PDF Manager</h2>
+  <form id="adminForm">
+    <div class="form-group">
+      <label>Hotel ID (URL slug):</label>
+      <input type="text" id="hotelId" value="hotel-kanha-shyam" required>
+    </div>
 
-    <form id="adminForm" enctype="multipart/form-data">
+    <div class="form-group">
+      <label>Hotel Display Name:</label>
+      <input type="text" id="hotelName" value="Hotel Kanha Shyam" required>
+    </div>
+
+    <h3>Telegram Department Chat IDs</h3>
+    <div class="form-group">
+      <label>Front Desk Chat ID:</label>
+      <input type="text" id="frontDeskChatId" placeholder="-100xxxxxxxxxx">
+    </div>
+    <div class="form-group">
+      <label>Housekeeping Chat ID:</label>
+      <input type="text" id="housekeepingChatId" placeholder="-100xxxxxxxxxx">
+    </div>
+    <div class="form-group">
+      <label>Kitchen / F&B Chat ID:</label>
+      <input type="text" id="kitchenChatId" value="-1004301094020">
+    </div>
+    <div class="form-group">
+      <label>Maintenance Chat ID:</label>
+      <input type="text" id="maintenanceChatId" placeholder="-100xxxxxxxxxx">
+    </div>
+
+    <h3>Hotel PDF Directories (Multi-Upload)</h3>
+    <div id="pdfContainer">
+      <div class="doc-row">
+        <input type="text" name="title_file_0" placeholder="Doc Name (e.g. Food Menu)" value="Digital Menu PDF">
+        <input type="file" name="file_0" accept="application/pdf">
+      </div>
+    </div>
+
+    <button type="button" class="btn-add" onclick="addPdfRow()">+ Add Another PDF Document</button>
+
+    <button type="submit" class="btn-save">Save Hotel Configuration</button>
+  </form>
+
+  <div id="statusMsg" class="status"></div>
+</div>
+
+<script>
+  let docCount = 1;
+
+  function addPdfRow() {
+    const container = document.getElementById('pdfContainer');
+    const row = document.createElement('div');
+    row.className = 'doc-row';
+    row.innerHTML = `
+      <input type="text" name="title_file_${docCount}" placeholder="Doc Name (e.g. Drink Menu / Fact Sheet)">
+      <input type="file" name="file_${docCount}" accept="application/pdf">
+    `;
+    container.appendChild(row);
+    docCount++;
+  }
+
+  document.getElementById('adminForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const statusMsg = document.getElementById('statusMsg');
+    statusMsg.className = 'status';
+    statusMsg.innerText = 'Uploading documents and saving configuration...';
+    statusMsg.style.display = 'block';
+
+    const formData = new FormData();
+    formData.append('hotelId', document.getElementById('hotelId').value);
+    formData.append('hotelName', document.getElementById('hotelName').value);
+    formData.append('frontDeskChatId', document.getElementById('frontDeskChatId').value);
+    formData.append('housekeepingChatId', document.getElementById('housekeepingChatId').value);
+    formData.append('kitchenChatId', document.getElementById('kitchenChatId').value);
+    formData.append('maintenanceChatId', document.getElementById('maintenanceChatId').value);
+
+    // Attach PDF files and titles dynamically
+    const rows = document.querySelectorAll('.doc-row');
+    rows.forEach((row, idx) => {
+      const titleInput = row.querySelector('input[type="text"]');
+      const fileInput = row.querySelector('input[type="file"]');
       
-      <!-- Stage 1: Basic Hotel & Telegram Configuration -->
-      <div class="form-group">
-        <label for="hotelId">Hotel Unique ID (e.g., kanha-shyam)</label>
-        <input type="text" id="hotelId" name="hotelId" placeholder="hotel-kanha-shyam" required>
-      </div>
-
-      <div class="form-group">
-        <label for="hotelName">Hotel Name</label>
-        <input type="text" id="hotelName" name="hotelName" placeholder="Kanha Shyam Hotel" required>
-      </div>
-
-      <div class="form-group">
-        <label for="wifiName">Guest Wi-Fi Name (SSID)</label>
-        <input type="text" id="wifiName" name="wifiName" placeholder="KanhaShyam_Guest">
-      </div>
-
-      <div class="form-group">
-        <label for="wifiPassword">Guest Wi-Fi Password</label>
-        <input type="text" id="wifiPassword" name="wifiPassword" placeholder="Welcome2026">
-      </div>
-
-      <div class="section-title">📲 Department Telegram Chat IDs</div>
-
-      <div class="form-group">
-        <label for="frontOfficeChatId">Front Office Chat ID</label>
-        <input type="text" id="frontOfficeChatId" name="frontOfficeChatId" placeholder="-1001234567890">
-      </div>
-
-      <div class="form-group">
-        <label for="housekeepingChatId">Housekeeping Chat ID</label>
-        <input type="text" id="housekeepingChatId" name="housekeepingChatId" placeholder="-1001987654321">
-      </div>
-
-      <div class="form-group">
-        <label for="kitchenChatId">Kitchen / F&B Chat ID</label>
-        <input type="text" id="kitchenChatId" name="kitchenChatId" placeholder="-1001122334455">
-      </div>
-
-      <!-- Stage 2: Media & Document Storage -->
-      <div class="section-title">📄 Menus & Fact Sheets (PDF)</div>
-
-      <div class="form-group">
-        <label for="menuPdf">Digital Menu PDF</label>
-        <input type="file" id="menuPdf" name="menuPdf" accept="application/pdf">
-      </div>
-
-      <div class="form-group">
-        <label for="factSheetPdf">Hotel Fact Sheet PDF</label>
-        <input type="file" id="factSheetPdf" name="factSheetPdf" accept="application/pdf">
-      </div>
-
-      <button type="submit" class="submit-btn">Save Hotel Configuration</button>
-    </form>
-
-    <div id="statusMessage" class="status-msg"></div>
-  </div>
-
-  <script>
-    const form = document.getElementById('adminForm');
-    const statusDiv = document.getElementById('statusMessage');
-
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault();
-
-      showStatus("Uploading configuration and files...", "success");
-
-      const formData = new FormData(form);
-
-      try {
-        // Correct fetch without overriding multipart/form-data boundary headers
-        const response = await fetch('/api/hotels', {
-          method: 'POST',
-          body: formData
-        });
-
-        const result = await response.json();
-
-        if (result.success) {
-          showStatus("✓ Setup saved successfully! You can now test guest requests.", "success");
-        } else {
-          showStatus(result.message || "Failed to save settings.", "error");
-        }
-      } catch (err) {
-        console.error("Upload error:", err);
-        showStatus("Failed to connect to server during upload.", "error");
+      if (fileInput.files[0]) {
+        const fieldName = `pdf_doc_${idx}`;
+        formData.append(fieldName, fileInput.files[0]);
+        formData.append(`title_${fieldName}`, titleInput.value || `Document ${idx+1}`);
       }
     });
 
-    function showStatus(text, type) {
-      statusDiv.innerText = text;
-      statusDiv.className = `status-msg ${type}`;
+    try {
+      const res = await fetch('/api/admin/config', {
+        method: 'POST',
+        body: formData
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        statusMsg.className = 'status success';
+        statusMsg.innerText = 'Hotel setup and all PDFs updated successfully!';
+      } else {
+        throw new Error(data.error || 'Server processing error.');
+      }
+    } catch (err) {
+      statusMsg.className = 'status error';
+      statusMsg.innerText = err.message;
     }
-  </script>
+  });
+</script>
 </body>
 </html>
