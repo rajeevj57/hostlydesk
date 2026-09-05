@@ -42,9 +42,10 @@
     .doc-grid { display: grid; grid-template-columns: 1fr; gap: 10px; margin-bottom: 20px; }
     .doc-btn { display: block; background: #f8fafc; color: #475569; border: 1px solid #e2e8f0; padding: 12px; border-radius: 10px; font-weight: 600; text-align: center; text-decoration: none; font-size: 14px; }
 
-    /* Hotel Services */
+    /* Hotel Services Grid */
     .service-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-    .service-card { background: #fafafa; border: 1px solid #e5e7eb; border-radius: 12px; padding: 12px; text-align: center; cursor: pointer; }
+    .service-card { background: #fafafa; border: 1px solid #e5e7eb; border-radius: 12px; padding: 12px; text-align: center; cursor: pointer; transition: transform 0.1s, border-color 0.2s; }
+    .service-card:active { transform: scale(0.98); border-color: #4f46e5; }
     .service-card .icon { font-size: 24px; margin-bottom: 4px; }
     .service-card .title { font-weight: 600; font-size: 13px; color: #1f2937; }
 
@@ -55,10 +56,15 @@
     .cart-total { font-size: 16px; font-weight: 800; }
     .cart-action { background: #ffffff; color: #10b981; padding: 8px 16px; border-radius: 20px; font-weight: 700; font-size: 13px; }
 
+    /* Service Chips Styling */
+    .chip-container { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; margin-bottom: 12px; }
+    .chip-item { background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 20px; padding: 8px 14px; font-size: 13px; font-weight: 600; cursor: pointer; color: #374151; transition: all 0.2s; user-select: none; }
+
     /* Modals */
     .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); align-items: center; justify-content: center; padding: 15px; z-index: 10000; }
     .modal-content { background: white; padding: 20px; border-radius: 14px; width: 100%; max-width: 420px; display: flex; flex-direction: column; gap: 12px; }
-    textarea { width: 100%; height: 80px; padding: 10px; border: 1px solid #ccc; border-radius: 8px; resize: none; font-size: 14px; }
+    textarea { width: 100%; height: 75px; padding: 10px; border: 1px solid #ccc; border-radius: 8px; resize: none; font-size: 14px; outline: none; }
+    textarea:focus { border-color: #4f46e5; }
     .btn-submit { background: #10b981; color: white; border: none; padding: 12px; border-radius: 8px; font-size: 15px; font-weight: bold; cursor: pointer; }
     .btn-close { background: #ef4444; color: white; border: none; padding: 10px; border-radius: 8px; font-size: 14px; cursor: pointer; }
     .order-summary-list { max-height: 180px; overflow-y: auto; border: 1px solid #eee; border-radius: 8px; padding: 10px; background: #f9fafb; font-size: 13px; }
@@ -75,8 +81,10 @@
 
   <div class="section-title">In-Room Dining Menu</div>
 
+  <!-- Real-Time Search Bar -->
   <input type="text" id="menuSearch" class="search-box" oninput="renderMenu()" placeholder="🔍 Search menu (e.g. Chicken, Paneer, Naan)...">
 
+  <!-- Category Scroll Tabs -->
   <div class="category-scroll">
     <div class="cat-tab active" onclick="filterCategory('Starters', this)">Starters</div>
     <div class="cat-tab" onclick="filterCategory('Main Course', this)">Main Course</div>
@@ -85,34 +93,38 @@
     <div class="cat-tab" onclick="filterCategory('All', this)">View All</div>
   </div>
 
+  <!-- Interactive Menu List -->
   <div class="menu-list" id="menuList"></div>
 
+  <!-- PDF Reference Documents -->
   <div class="section-title">Hotel Directory & Information</div>
   <div class="doc-grid" id="docList">
     <p style="color:#999; font-size:13px; text-align:center;">Loading directory documents...</p>
   </div>
 
+  <!-- Express Hotel Services Grid -->
   <div class="section-title">Express Hotel Services</div>
   <div class="service-grid">
-    <div class="service-card" onclick="openRequest('Housekeeping', 'e.g. Extra Towels, Room Cleaning')">
+    <div class="service-card" onclick="openRequest('Housekeeping')">
       <div class="icon">🧹</div>
       <div class="title">Housekeeping</div>
     </div>
-    <div class="service-card" onclick="openRequest('FrontDesk', 'e.g. Luggage Pickup, Wakeup Call')">
+    <div class="service-card" onclick="openRequest('FrontDesk')">
       <div class="icon">🛎️</div>
       <div class="title">Front Desk</div>
     </div>
-    <div class="service-card" onclick="openRequest('Maintenance', 'e.g. AC Repair, Remote Control')">
+    <div class="service-card" onclick="openRequest('Maintenance')">
       <div class="icon">🔧</div>
       <div class="title">Maintenance</div>
     </div>
-    <div class="service-card" onclick="openRequest('Laundry', 'e.g. Express Laundry Pickup')">
+    <div class="service-card" onclick="openRequest('Laundry')">
       <div class="icon">🧺</div>
       <div class="title">Laundry</div>
     </div>
   </div>
 </div>
 
+<!-- Floating Cart Notification Bar -->
 <div class="cart-bar" id="cartBar" onclick="openOrderModal()">
   <div class="cart-info">
     <span class="cart-count" id="cartItemCount">0 Items selected</span>
@@ -121,6 +133,7 @@
   <div class="cart-action">View Order 🛒</div>
 </div>
 
+<!-- Kitchen Order Review Modal -->
 <div id="orderModal" class="modal">
   <div class="modal-content">
     <h3 style="margin:0; font-size:18px;">Confirm Kitchen Order</h3>
@@ -132,12 +145,20 @@
   </div>
 </div>
 
+<!-- Interactive Express Service Request Modal -->
 <div id="requestModal" class="modal">
   <div class="modal-content">
-    <h3 id="modalDeptTitle" style="margin:0; font-size:18px;">Send Request</h3>
-    <label style="font-size:13px; font-weight:600; color:#444;">Instructions:</label>
-    <textarea id="requestNotes"></textarea>
-    <button class="btn-submit" onclick="sendServiceRequest()">Submit Request</button>
+    <h3 id="modalDeptTitle" style="margin:0; font-size:18px;">Housekeeping Request</h3>
+    
+    <label style="font-size:13px; font-weight:600; color:#444;">Tap required items:</label>
+    <div id="serviceChipsContainer" class="chip-container">
+      <!-- Dynamic Preset Chips Rendered Here -->
+    </div>
+
+    <label style="font-size:13px; font-weight:600; color:#444;">Additional Notes (Optional):</label>
+    <textarea id="requestNotes" placeholder="e.g. Please deliver around 5 PM..."></textarea>
+    
+    <button class="btn-submit" onclick="sendServiceRequest()">Send Request</button>
     <button class="btn-close" onclick="closeModal('requestModal')">Cancel</button>
   </div>
 </div>
@@ -151,8 +172,17 @@
   let activeDepartment = '';
   let activeCategory = 'Starters';
   let cart = {};
+  let selectedServiceItems = {};
 
-  // Master Menu List containing Veg & Non-Veg Items
+  // Department Preset Quick-Tap Items
+  const departmentPresets = {
+    Housekeeping: ['Extra Towel', 'Room Cleaning', 'Extra Pillow', 'Blanket', 'Toiletries Kit', 'Bedsheet Change'],
+    FrontDesk: ['Luggage Assistance', 'Wakeup Call', 'Taxi Booking', 'Express Checkout'],
+    Maintenance: ['AC Not Cooling', 'TV / Remote Issue', 'Bathroom Plumbing', 'Geyser / Hot Water'],
+    Laundry: ['Express Laundry Pickup', 'Iron & Ironing Board', 'Dry Cleaning']
+  };
+
+  // Sample Interactive Digital Menu Data
   const menuData = [
     // Starters
     { id: 'm1', name: 'Paneer Tikka Dry', category: 'Starters', price: 280, desc: 'Cottage cheese marinated in spices' },
@@ -194,7 +224,6 @@
     list.innerHTML = '';
 
     const filtered = menuData.filter(item => {
-      // If user is searching, ignore category selection and search across ALL 165+ items
       const matchesCategory = searchQuery !== '' ? true : (activeCategory === 'All' || item.category === activeCategory);
       const matchesSearch = item.name.toLowerCase().includes(searchQuery) || 
                             (item.desc && item.desc.toLowerCase().includes(searchQuery));
@@ -228,7 +257,7 @@
 
   function filterCategory(cat, tabEl) {
     activeCategory = cat;
-    document.getElementById('menuSearch').value = ''; // Clear search when switching tabs
+    document.getElementById('menuSearch').value = '';
     document.querySelectorAll('.cat-tab').forEach(t => t.classList.remove('active'));
     tabEl.classList.add('active');
     renderMenu();
@@ -329,6 +358,67 @@
     }
   }
 
+  function openRequest(dept) {
+    activeDepartment = dept;
+    selectedServiceItems = {};
+    document.getElementById('modalDeptTitle').innerText = `${dept} Service`;
+    document.getElementById('requestNotes').value = '';
+    
+    const container = document.getElementById('serviceChipsContainer');
+    container.innerHTML = '';
+
+    const presets = departmentPresets[dept] || [];
+    presets.forEach(item => {
+      const chip = document.createElement('div');
+      chip.className = 'chip-item';
+      chip.innerText = `+ ${item}`;
+      
+      chip.onclick = () => {
+        if (!selectedServiceItems[item]) {
+          selectedServiceItems[item] = 1;
+          chip.style.background = '#4f46e5';
+          chip.style.color = '#ffffff';
+          chip.style.borderColor = '#4f46e5';
+          chip.innerText = `✓ ${item} (1)`;
+        } else {
+          selectedServiceItems[item] += 1;
+          chip.innerText = `✓ ${item} (${selectedServiceItems[item]})`;
+        }
+      };
+      container.appendChild(chip);
+    });
+
+    document.getElementById('requestModal').style.display = 'flex';
+  }
+
+  async function sendServiceRequest() {
+    const selectedList = Object.entries(selectedServiceItems)
+      .map(([item, qty]) => `${qty}x ${item}`)
+      .join(', ');
+
+    const notes = document.getElementById('requestNotes').value.trim();
+
+    if (!selectedList && !notes) {
+      return alert('Please tap at least one item or enter a note.');
+    }
+
+    let fullText = selectedList ? `REQUESTED: ${selectedList}` : '';
+    if (notes) fullText += (fullText ? `\nNOTES: ${notes}` : `NOTES: ${notes}`);
+
+    const response = await fetch('/api/guest-request', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ hotelId, room, department: activeDepartment, requestText: fullText })
+    });
+
+    if (response.ok) {
+      alert(`Request dispatched to ${activeDepartment}!`);
+      closeModal('requestModal');
+    } else {
+      alert('Failed to send request.');
+    }
+  }
+
   async function loadHotelData() {
     try {
       const res = await fetch(`/api/hotel-config/${hotelId}`);
@@ -357,34 +447,8 @@
     }
   }
 
-  function openRequest(dept, placeholder) {
-    activeDepartment = dept;
-    document.getElementById('modalDeptTitle').innerText = `Request ${dept}`;
-    document.getElementById('requestNotes').placeholder = placeholder;
-    document.getElementById('requestModal').style.display = 'flex';
-  }
-
   function closeModal(modalId) {
     document.getElementById(modalId).style.display = 'none';
-  }
-
-  async function sendServiceRequest() {
-    const text = document.getElementById('requestNotes').value.trim();
-    if (!text) return alert('Please enter request details.');
-
-    const response = await fetch('/api/guest-request', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ hotelId, room, department: activeDepartment, requestText: text })
-    });
-
-    if (response.ok) {
-      alert(`Request sent to ${activeDepartment}!`);
-      document.getElementById('requestNotes').value = '';
-      closeModal('requestModal');
-    } else {
-      alert('Failed to send request.');
-    }
   }
 
   renderMenu();
