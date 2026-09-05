@@ -1,35 +1,137 @@
-<!-- Modal Dialog with Quick Item Selector -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Guest Service - Digital Concierge</title>
+  <style>
+    * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    body { background-color: #f0f2f5; margin: 0; padding: 15px; }
+    .dashboard { max-width: 480px; margin: 0 auto; background: #ffffff; border-radius: 16px; padding: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+    .header { text-align: center; border-bottom: 1px solid #eee; padding-bottom: 15px; margin-bottom: 20px; }
+    .header h1 { margin: 0; font-size: 22px; color: #1a1a1a; }
+    .header p { margin: 5px 0 0; color: #666; font-size: 14px; }
+    .section-title { font-size: 16px; font-weight: 600; color: #333; margin: 20px 0 10px; }
+    
+    /* Dynamic PDF Grid */
+    .doc-grid { display: grid; grid-template-columns: 1fr; gap: 10px; margin-bottom: 20px; }
+    .doc-btn { background: #eef2ff; color: #4f46e5; border: 1px solid #c7d2fe; padding: 12px; border-radius: 10px; font-weight: 600; text-align: center; cursor: pointer; text-decoration: none; display: block; font-size: 14px; }
+    
+    /* Service Cards Grid */
+    .service-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .service-card { background: #fafafa; border: 1px solid #e5e7eb; border-radius: 12px; padding: 15px; text-align: center; cursor: pointer; transition: 0.2s; }
+    .service-card:hover { background: #f3f4f6; border-color: #d1d5db; }
+    .service-card .icon { font-size: 28px; margin-bottom: 6px; }
+    .service-card .title { font-weight: 600; font-size: 14px; color: #1f2937; }
+    
+    /* Fixed Request Modal Layout */
+    .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; padding: 15px; z-index: 1000; }
+    .modal-content { background: white; padding: 20px; border-radius: 12px; width: 100%; max-width: 400px; display: flex; flex-direction: column; gap: 10px; }
+    
+    .chip-container { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 5px; }
+    .chip { background: #e0e7ff; color: #3730a3; padding: 6px 12px; border-radius: 15px; font-size: 12px; font-weight: 600; cursor: pointer; }
+    .chip:hover { background: #c7d2fe; }
+    
+    textarea { width: 100%; height: 90px; padding: 10px; border: 1px solid #ccc; border-radius: 8px; resize: none; font-size: 14px; }
+    .btn-submit { background: #10b981; color: white; border: none; padding: 12px; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; }
+    .btn-close { background: #ef4444; color: white; border: none; padding: 10px; border-radius: 8px; font-size: 14px; cursor: pointer; }
+  </style>
+</head>
+<body>
+
+<div class="dashboard">
+  <div class="header">
+    <h1 id="hotelNameDisplay">Welcome Guest</h1>
+    <p>Room <strong id="roomDisplay">--</strong></p>
+  </div>
+
+  <div class="section-title">Hotel Directory & Menus</div>
+  <div class="doc-grid" id="docList">
+    <p style="color:#999; font-size:14px; text-align:center;">Loading PDF Menus & Info...</p>
+  </div>
+
+  <div class="section-title">Request Hotel Services</div>
+  <div class="service-grid">
+    <div class="service-card" onclick="openRequest('Kitchen', 'e.g. 1x Paneer Tikka, 2x Water Bottles')">
+      <div class="icon">🍽️</div>
+      <div class="title">In-Room Dining</div>
+    </div>
+    <div class="service-card" onclick="openRequest('Housekeeping', 'e.g. Extra Towels, Room Cleaning')">
+      <div class="icon">🧹</div>
+      <div class="title">Housekeeping</div>
+    </div>
+    <div class="service-card" onclick="openRequest('FrontDesk', 'e.g. Wakeup Call, Luggage Assistance')">
+      <div class="icon">🛎️</div>
+      <div class="title">Front Desk</div>
+    </div>
+    <div class="service-card" onclick="openRequest('Maintenance', 'e.g. AC Repair, TV Remote Batteries')">
+      <div class="icon">🔧</div>
+      <div class="title">Maintenance</div>
+    </div>
+  </div>
+</div>
+
 <div id="requestModal" class="modal">
   <div class="modal-content">
-    <h3 id="modalDeptTitle" style="margin-top:0;">Send Request</h3>
+    <h3 id="modalDeptTitle" style="margin:0;">Send Request</h3>
     
-    <!-- Quick Select Chips for F&B -->
-    <div id="quickChips" style="display:none; gap:6px; flex-wrap:wrap; margin-bottom:10px;">
+    <div id="quickChips" class="chip-container" style="display:none;">
       <span class="chip" onclick="addChip('Paneer Tikka')">+ Paneer Tikka</span>
       <span class="chip" onclick="addChip('Dal Makhani')">+ Dal Makhani</span>
       <span class="chip" onclick="addChip('Butter Naan')">+ Butter Naan</span>
       <span class="chip" onclick="addChip('Mineral Water')">+ Water</span>
     </div>
 
-    <label for="requestNotes">Details / Special Instructions:</label>
-    <textarea id="requestNotes" placeholder="Type items or select above..."></textarea>
+    <label for="requestNotes" style="font-size:14px; font-weight:600; color:#444;">Details / Special Instructions:</label>
+    <textarea id="requestNotes"></textarea>
+    
     <button class="btn-submit" onclick="sendServiceRequest()">Send Request to Staff</button>
     <button class="btn-close" onclick="closeModal()">Cancel</button>
   </div>
 </div>
 
-<style>
-  .chip { background: #e0e7ff; color: #3730a3; padding: 5px 10px; border-radius: 15px; font-size: 12px; font-weight: 600; cursor: pointer; display: inline-block; }
-  .chip:hover { background: #c7d2fe; }
-</style>
-
 <script>
+  const urlParams = new URLSearchParams(window.location.search);
+  const hotelId = urlParams.get('hotelId') || 'hotel-kanha-shyam';
+  const room = urlParams.get('room') || '101';
+  document.getElementById('roomDisplay').innerText = room;
+
+  let activeDepartment = '';
+
+  async function loadHotelData() {
+    try {
+      const res = await fetch(`/api/hotel-config/${hotelId}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.hotelName) document.getElementById('hotelNameDisplay').innerText = data.hotelName;
+
+        const docList = document.getElementById('docList');
+        docList.innerHTML = '';
+
+        if (data.documents && data.documents.length > 0) {
+          data.documents.forEach(doc => {
+            const a = document.createElement('a');
+            a.className = 'doc-btn';
+            a.href = doc.url.includes('?') ? `${doc.url}&view=inline` : `${doc.url}#toolbar=1`;
+            a.target = '_blank';
+            a.rel = 'noopener noreferrer';
+            a.innerText = `📄 ${doc.title}`;
+            docList.appendChild(a);
+          });
+        } else {
+          docList.innerHTML = '<p style="color:#888; font-size:13px; text-align:center;">No PDFs uploaded yet.</p>';
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching hotel configuration:', err);
+    }
+  }
+
   function openRequest(dept, placeholder) {
     activeDepartment = dept;
     document.getElementById('modalDeptTitle').innerText = `Request ${dept}`;
     document.getElementById('requestNotes').placeholder = placeholder;
     
-    // Show quick selection chips if Kitchen is selected
     const chips = document.getElementById('quickChips');
     chips.style.display = (dept === 'Kitchen') ? 'flex' : 'none';
     
@@ -44,4 +146,39 @@
       textarea.value += `, 1x ${item}`;
     }
   }
+
+  function closeModal() {
+    document.getElementById('requestModal').style.display = 'none';
+  }
+
+  async function sendServiceRequest() {
+    const text = document.getElementById('requestNotes').value.trim();
+    if (!text) {
+      alert('Please enter your request details before sending.');
+      return;
+    }
+
+    const response = await fetch('/api/guest-request', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        hotelId,
+        room,
+        department: activeDepartment,
+        requestText: text
+      })
+    });
+
+    if (response.ok) {
+      alert(`Your request has been dispatched directly to ${activeDepartment}!`);
+      document.getElementById('requestNotes').value = '';
+      closeModal();
+    } else {
+      alert('Failed to dispatch request. Please check if department Telegram Chat ID is configured.');
+    }
+  }
+
+  loadHotelData();
 </script>
+</body>
+</html>
