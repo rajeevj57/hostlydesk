@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Guest Service - Digital Concierge</title>
-  <!-- Load Mozilla PDF.js viewer engine -->
+  <!-- Mozilla PDF.js Core Engine -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <style>
     * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
@@ -15,30 +15,42 @@
     .header p { margin: 5px 0 0; color: #666; font-size: 14px; }
     .section-title { font-size: 16px; font-weight: 600; color: #333; margin: 20px 0 10px; }
     
+    /* PDF Document Buttons */
     .doc-grid { display: grid; grid-template-columns: 1fr; gap: 10px; margin-bottom: 20px; }
     .doc-btn { background: #eef2ff; color: #4f46e5; border: 1px solid #c7d2fe; padding: 12px; border-radius: 10px; font-weight: 600; text-align: center; cursor: pointer; font-size: 14px; }
     
+    /* Service Cards Grid */
     .service-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
     .service-card { background: #fafafa; border: 1px solid #e5e7eb; border-radius: 12px; padding: 15px; text-align: center; cursor: pointer; transition: 0.2s; }
     .service-card:hover { background: #f3f4f6; border-color: #d1d5db; }
     .service-card .icon { font-size: 28px; margin-bottom: 6px; }
     .service-card .title { font-weight: 600; font-size: 14px; color: #1f2937; }
     
+    /* Base Modals */
     .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); align-items: center; justify-content: center; padding: 10px; z-index: 1000; }
     .modal-content { background: white; padding: 20px; border-radius: 12px; width: 100%; max-width: 420px; display: flex; flex-direction: column; gap: 10px; }
     
     .chip-container { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 5px; }
     .chip { background: #e0e7ff; color: #3730a3; padding: 6px 12px; border-radius: 15px; font-size: 12px; font-weight: 600; cursor: pointer; }
+    .chip:hover { background: #c7d2fe; }
     
     textarea { width: 100%; height: 90px; padding: 10px; border: 1px solid #ccc; border-radius: 8px; resize: none; font-size: 14px; }
     .btn-submit { background: #10b981; color: white; border: none; padding: 12px; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; }
     .btn-close { background: #ef4444; color: white; border: none; padding: 10px; border-radius: 8px; font-size: 14px; cursor: pointer; }
     
-    /* Clean Mobile Viewer Modal */
+    /* Clean PDF Modal & Canvas Container */
     .pdf-modal-content { background: #2a2a2a; border-radius: 12px; width: 100%; max-width: 600px; height: 85vh; display: flex; flex-direction: column; overflow: hidden; }
     .pdf-header { padding: 10px 15px; display: flex; justify-content: space-between; align-items: center; background: #1a1a1a; color: white; border-bottom: 1px solid #333; }
     .pdf-container { flex: 1; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; align-items: center; gap: 15px; }
-    canvas { width: 100% !important; height: auto !important; border-radius: 4px; box-shadow: 0 2px 10px rgba(0,0,0,0.5); }
+    
+    /* Scaled Canvas Rules */
+    .pdf-container canvas {
+      width: 100% !important;
+      max-width: 100% !important;
+      height: auto !important;
+      border-radius: 4px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+    }
   </style>
 </head>
 <body>
@@ -75,7 +87,7 @@
   </div>
 </div>
 
-<!-- Request Modal -->
+<!-- Guest Request Modal -->
 <div id="requestModal" class="modal">
   <div class="modal-content">
     <h3 id="modalDeptTitle" style="margin:0;">Send Request</h3>
@@ -92,7 +104,7 @@
   </div>
 </div>
 
-<!-- Native PDF Canvas Modal -->
+<!-- Inline Native Canvas PDF Viewer -->
 <div id="pdfModal" class="modal">
   <div class="pdf-modal-content">
     <div class="pdf-header">
@@ -152,11 +164,15 @@
       const pdf = await pdfjsLib.getDocument(`/api/view-pdf?url=${encodeURIComponent(url)}`).promise;
       container.innerHTML = '';
 
-      // Render all PDF pages into clean HTML5 canvases
       for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
         const page = await pdf.getPage(pageNum);
-        const viewport = page.getViewport({ scale: 1.5 });
         
+        // Dynamically scale width to fit container width cleanly
+        const unscaledViewport = page.getViewport({ scale: 1.0 });
+        const containerWidth = container.clientWidth - 20; 
+        const scale = containerWidth / unscaledViewport.width;
+        const viewport = page.getViewport({ scale: scale > 0 ? scale : 1.0 });
+
         const canvas = document.createElement('canvas');
         const context = canvas.getContext('2d');
         canvas.height = viewport.height;
