@@ -14,14 +14,14 @@ const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 
-// Multer memory storage for multi-file uploads
+// Multer memory storage
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 
-// In-memory hotel configuration store (can be synced with Supabase DB)
+// In-memory hotel configuration store
 const hotelConfigs = {};
 
-// POST Endpoint: Save Hotel Configuration & Upload Multiple PDFs
+// POST Endpoint: Save Configuration & Upload PDFs with Inline Disposition
 app.post('/api/admin/config', upload.any(), async (req, res) => {
   try {
     const { hotelId, hotelName, frontDeskChatId, housekeepingChatId, kitchenChatId, maintenanceChatId } = req.body;
@@ -30,7 +30,6 @@ app.post('/api/admin/config', upload.any(), async (req, res) => {
       return res.status(400).json({ error: 'Hotel ID is required.' });
     }
 
-    // Initialize or fetch existing hotel config
     if (!hotelConfigs[hotelId]) {
       hotelConfigs[hotelId] = { documents: [] };
     }
@@ -38,19 +37,19 @@ app.post('/api/admin/config', upload.any(), async (req, res) => {
     const existingDocs = req.body.existingDocs ? JSON.parse(req.body.existingDocs) : (hotelConfigs[hotelId].documents || []);
     let updatedDocs = [...existingDocs];
 
-    // Process uploaded PDF files dynamically
+    // Process uploaded PDF files with inline content disposition
     if (req.files && req.files.length > 0) {
       for (const file of req.files) {
-        // Find custom title sent for this file input
         const docTitle = req.body[`title_${file.fieldname}`] || file.originalname.replace(/\.[^/.]+$/, "");
         const sanitizeFileName = `${Date.now()}_${file.originalname.replace(/[^a-zA-Z0-9.-]/g, "_")}`;
         const filePath = `documents/${hotelId}/${sanitizeFileName}`;
 
-        // Upload to Supabase Storage Bucket
+        // Force inline header to prevent forced browser downloads
         const { data, error } = await supabase.storage
           .from('hostlydesk-files')
           .upload(filePath, file.buffer, {
-            contentType: file.mimetype || 'application/pdf',
+            contentType: 'application/pdf',
+            contentDisposition: 'inline',
             upsert: true
           });
 
@@ -67,7 +66,6 @@ app.post('/api/admin/config', upload.any(), async (req, res) => {
       }
     }
 
-    // Update config object
     hotelConfigs[hotelId] = {
       hotelId,
       hotelName: hotelName || 'Hotel Concierge',
@@ -92,7 +90,7 @@ app.post('/api/admin/config', upload.any(), async (req, res) => {
   }
 });
 
-// GET Endpoint: Fetch Hotel Configuration for Guest UI
+// GET Endpoint: Fetch Hotel Config for Guests
 app.get('/api/hotel-config/:hotelId', (req, res) => {
   const { hotelId } = req.params;
   const config = hotelConfigs[hotelId] || {
@@ -109,16 +107,10 @@ app.post('/api/guest-request', async (req, res) => {
   try {
     const { hotelId, room, department, requestText } = req.body;
     const config = hotelConfigs[hotelId];
-
     const chatId = config && config.chatIds ? config.chatIds[department] : null;
-
-    if (!chatId) {
-      console.warn(`No Chat ID configured for department: ${department}`);
-    }
 
     const message = `🔔 *New Guest Request*\n\n🏨 *Hotel:* ${config ? config.hotelName : hotelId}\n🚪 *Room Number:* ${room}\n📋 *Department:* ${department}\n\n📝 *Request Details:*\n${requestText}`;
 
-    // Send notification via Telegram API
     if (TELEGRAM_BOT_TOKEN && chatId) {
       const telegramUrl = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
       await fetch(telegramUrl, {
