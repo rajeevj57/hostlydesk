@@ -45,18 +45,19 @@ app.get('/kitchen', (req, res) => {
   res.sendFile(path.join(__dirname, '../public/food-menu.html'));
 });
 
-// API Endpoints for Orders
+// API Endpoint for Getting Orders/Requests
 app.get('/api/orders', (req, res) => {
   if (!db) return res.status(500).json({ error: 'Database not available' });
   db.all('SELECT * FROM orders ORDER BY id DESC', [], (err, rows) => {
     if (err) {
       res.status(500).json({ error: err.message });
     } else {
-    res.json(rows);
+      res.json(rows);
     }
   });
 });
 
+// API Endpoint for Creating Orders
 app.post('/api/orders', (req, res) => {
   if (!db) return res.status(500).json({ error: 'Database not available' });
   const { room, items } = req.body;
@@ -66,6 +67,21 @@ app.post('/api/orders', (req, res) => {
       res.status(500).json({ error: err.message });
     } else {
       res.json({ success: true, orderId: this.lastID });
+    }
+  });
+});
+
+// API Endpoint for Guest Requests (Housekeeping, Front Office, etc.)
+app.post('/api/requests', (req, res) => {
+  if (!db) return res.status(500).json({ error: 'Database not available' });
+  const { room, requestType, notes } = req.body;
+  const itemSummary = requestType ? `${requestType}: ${notes || ''}` : JSON.stringify(req.body);
+  const query = `INSERT INTO orders (room, items) VALUES (?, ?)`;
+  db.run(query, [room, itemSummary], function(err) {
+    if (err) {
+      res.status(500).json({ error: err.message });
+    } else {
+      res.json({ success: true, id: this.lastID });
     }
   });
 });
