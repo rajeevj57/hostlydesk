@@ -8,7 +8,7 @@ const PORT = process.env.PORT || 10000;
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '../public')));
 
-// Safe Database Setup
+// Safe Database Initialization
 let db = null;
 try {
   const dataDir = path.join(__dirname, '../data');
@@ -32,7 +32,7 @@ try {
     }
   });
 } catch (e) {
-  console.error('SQLite initialization skipped:', e.message);
+  console.warn('Running with memory/mock storage due to missing sqlite3 module:', e.message);
 }
 
 // Page Routes
@@ -76,34 +76,40 @@ app.get('/api/orders', (req, res) => {
 
 // API Endpoint for Creating Orders
 app.post('/api/orders', (req, res) => {
-  const { room, items } = req.body;
+  const room = req.body.room || req.query.room || 'DEMO101';
+  const items = req.body.items ? JSON.stringify(req.body.items) : JSON.stringify(req.body);
+
   if (!db) {
     return res.json({ success: true, orderId: Date.now() });
   }
+
   const query = `INSERT INTO orders (room, items) VALUES (?, ?)`;
-  db.run(query, [room, JSON.stringify(items)], function(err) {
+  db.run(query, [room, items], function(err) {
     if (err) {
-      res.status(500).json({ error: err.message });
-    } else {
-      res.json({ success: true, orderId: this.lastID });
+      console.error('Order insert failed:', err.message);
+      return res.status(500).json({ error: err.message });
     }
+    res.json({ success: true, orderId: this.lastID });
   });
 });
 
 // API Endpoint for Guest Requests
 app.post('/api/requests', (req, res) => {
-  const { room, requestType, notes } = req.body;
+  const room = req.body.room || req.query.room || 'DEMO101';
+  const { requestType, notes } = req.body;
   const itemSummary = requestType ? `${requestType}: ${notes || ''}` : JSON.stringify(req.body);
+
   if (!db) {
     return res.json({ success: true, id: Date.now() });
   }
+
   const query = `INSERT INTO orders (room, items) VALUES (?, ?)`;
   db.run(query, [room, itemSummary], function(err) {
     if (err) {
-      res.status(500).json({ error: err.message });
-    } else {
-      res.json({ success: true, id: this.lastID });
+      console.error('Request insert failed:', err.message);
+      return res.status(500).json({ error: err.message });
     }
+    res.json({ success: true, id: this.lastID });
   });
 });
 
