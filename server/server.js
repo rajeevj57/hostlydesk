@@ -8,6 +8,25 @@ const PORT = process.env.PORT || 10000;
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '../public')));
 
+// Menu Item Prices for Backend Calculation
+const itemPrices = { 1: 150, 2: 100, 3: 250, 4: 350, 5: 550 };
+
+function calculateOrderTotal(body) {
+  if (body.total && !isNaN(body.total)) return Number(body.total);
+  let total = 0;
+  if (body.items) {
+    if (typeof body.items === 'object') {
+      for (let [id, qty] of Object.entries(body.items)) {
+        const numericId = parseInt(id);
+        if (itemPrices[numericId] && typeof qty === 'number') {
+          total += itemPrices[numericId] * qty;
+        }
+      }
+    }
+  }
+  return total;
+}
+
 // Safe Database Initialization
 let db = null;
 try {
@@ -78,7 +97,7 @@ app.get('/api/orders', (req, res) => {
 app.post('/api/orders', (req, res) => {
   const room = req.body.room || req.query.room || 'DEMO101';
   const items = req.body.items ? JSON.stringify(req.body.items) : JSON.stringify(req.body);
-  const total = req.body.total || 0;
+  const total = calculateOrderTotal(req.body);
 
   if (!db) {
     return res.json({ success: true, ok: true, id: Date.now(), orderId: Date.now(), total: total });
@@ -98,7 +117,7 @@ app.post('/api/orders', (req, res) => {
 app.post('/api/food-order', (req, res) => {
   const room = req.body.room || req.query.room || 'DEMO101';
   const items = req.body.items ? JSON.stringify(req.body.items) : JSON.stringify(req.body);
-  const total = req.body.total || 0;
+  const total = calculateOrderTotal(req.body);
 
   if (!db) {
     return res.json({ success: true, ok: true, id: Date.now(), orderId: Date.now(), total: total });
