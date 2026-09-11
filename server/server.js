@@ -78,9 +78,10 @@ app.get('/api/orders', (req, res) => {
 app.post('/api/orders', (req, res) => {
   const room = req.body.room || req.query.room || 'DEMO101';
   const items = req.body.items ? JSON.stringify(req.body.items) : JSON.stringify(req.body);
+  const total = req.body.total || 0;
 
   if (!db) {
-    return res.json({ success: true, ok: true, id: Date.now(), orderId: Date.now() });
+    return res.json({ success: true, ok: true, id: Date.now(), orderId: Date.now(), total: total });
   }
 
   const query = `INSERT INTO orders (room, items) VALUES (?, ?)`;
@@ -89,7 +90,7 @@ app.post('/api/orders', (req, res) => {
       console.error('Order insert failed:', err.message);
       return res.status(500).json({ error: err.message });
     }
-    res.json({ success: true, ok: true, id: this.lastID, orderId: this.lastID });
+    res.json({ success: true, ok: true, id: this.lastID, orderId: this.lastID, total: total });
   });
 });
 
@@ -97,9 +98,10 @@ app.post('/api/orders', (req, res) => {
 app.post('/api/food-order', (req, res) => {
   const room = req.body.room || req.query.room || 'DEMO101';
   const items = req.body.items ? JSON.stringify(req.body.items) : JSON.stringify(req.body);
+  const total = req.body.total || 0;
 
   if (!db) {
-    return res.json({ success: true, ok: true, id: Date.now(), orderId: Date.now() });
+    return res.json({ success: true, ok: true, id: Date.now(), orderId: Date.now(), total: total });
   }
 
   const query = `INSERT INTO orders (room, items) VALUES (?, ?)`;
@@ -108,7 +110,7 @@ app.post('/api/food-order', (req, res) => {
       console.error('Order insert failed:', err.message);
       return res.status(500).json({ error: err.message });
     }
-    res.json({ success: true, ok: true, id: this.lastID, orderId: this.lastID });
+    res.json({ success: true, ok: true, id: this.lastID, orderId: this.lastID, total: total });
   });
 });
 
