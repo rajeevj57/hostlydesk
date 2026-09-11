@@ -8,6 +8,7 @@ const PORT = process.env.PORT || 10000;
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '../public')));
 
+// Database Setup & Table Creation
 let db = null;
 try {
   const dataDir = path.join(__dirname, '../data');
@@ -21,18 +22,52 @@ try {
       console.error('Database connection error:', err.message);
     } else {
       console.log('Connected to the SQLite database.');
+      // Create orders table if it doesn't exist
+      db.run(`CREATE TABLE IF NOT EXISTS orders (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        room TEXT,
+        items TEXT,
+        status TEXT DEFAULT 'Pending',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )`);
     }
   });
 } catch (e) {
-  console.error('SQLite initialization skipped or failed:', e.message);
+  console.error('SQLite initialization failed:', e.message);
 }
 
+// Page Routes
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, '../public/index.html'));
 });
 
 app.get('/kitchen', (req, res) => {
   res.sendFile(path.join(__dirname, '../public/food-menu.html'));
+});
+
+// API Endpoints for Orders
+app.get('/api/orders', (req, res) => {
+  if (!db) return res.status(500).json({ error: 'Database not available' });
+  db.all('SELECT * FROM orders ORDER BY id DESC', [], (err, rows) => {
+    if (err) {
+      res.status(500).json({ error: err.message });
+    } else {
+    res.json(rows);
+    }
+  });
+});
+
+app.post('/api/orders', (req, res) => {
+  if (!db) return res.status(500).json({ error: 'Database not available' });
+  const { room, items } = req.body;
+  const query = `INSERT INTO orders (room, items) VALUES (?, ?)`;
+  db.run(query, [room, JSON.stringify(items)], function(err) {
+    if (err) {
+      res.status(500).json({ error: err.message });
+    } else {
+      res.json({ success: true, orderId: this.lastID });
+    }
+  });
 });
 
 app.listen(PORT, () => {
