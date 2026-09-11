@@ -1,155 +1,101 @@
 const express = require('express');
-const multer = require('multer');
-const { createClient } = require('@supabase/supabase-js');
+const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 
 const app = express();
-app.use(express.json());
-app.use(express.static(path.join(__dirname, '../public')));
-
-// Supabase Initialization
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
-
-const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
-
-// Multer Storage Configuration
-const storage = multer.memoryStorage();
-const upload = multer({ storage: storage });
-
-// In-Memory Hotel Configuration Store
-const hotelConfigs = {};
-
-// GET Endpoint: Proxy PDF streamer to prevent unwanted downloads or gview errors
-app.get('/api/view-pdf', async (req, res) => {
-  try {
-    const fileUrl = req.query.url;
-    if (!fileUrl) return res.status(400).send('URL parameter is required.');
-
-    const response = await fetch(fileUrl);
-    if (!response.ok) throw new Error('Failed to fetch document from storage.');
-
-    const blob = await response.arrayBuffer();
-    const buffer = Buffer.from(blob);
-
-    // Set headers for pure inline browser rendering
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', 'inline; filename="document.pdf"');
-    res.send(buffer);
-  } catch (err) {
-    console.error('PDF Stream Error:', err);
-    res.status(500).send('Error rendering document viewer.');
-  }
-});
-
-// POST Endpoint: Save Configuration & Upload PDFs
-app.post('/api/admin/config', upload.any(), async (req, res) => {
-  try {
-    const { hotelId, hotelName, frontDeskChatId, housekeepingChatId, kitchenChatId, maintenanceChatId } = req.body;
-
-    if (!hotelId) {
-      return res.status(400).json({ error: 'Hotel ID is required.' });
-    }
-
-    if (!hotelConfigs[hotelId]) {
-      hotelConfigs[hotelId] = { documents: [] };
-    }
-
-    const existingDocs = req.body.existingDocs ? JSON.parse(req.body.existingDocs) : (hotelConfigs[hotelId].documents || []);
-    let updatedDocs = [...existingDocs];
-
-    if (req.files && req.files.length > 0) {
-      for (const file of req.files) {
-        const docTitle = req.body[`title_${file.fieldname}`] || file.originalname.replace(/\.[^/.]+$/, "");
-        const sanitizeFileName = `${Date.now()}_${file.originalname.replace(/[^a-zA-Z0-9.-]/g, "_")}`;
-        const filePath = `documents/${hotelId}/${sanitizeFileName}`;
-
-        const { data, error } = await supabase.storage
-          .from('hostlydesk-files')
-          .upload(filePath, file.buffer, {
-            contentType: 'application/pdf',
-            contentDisposition: 'inline',
-            upsert: true
-          });
-
-        if (error) throw error;
-
-        const { data: publicUrlData } = supabase.storage
-          .from('hostlydesk-files')
-          .getPublicUrl(filePath);
-
-        updatedDocs.push({
-          title: docTitle,
-          url: publicUrlData.publicUrl
-        });
-      }
-    }
-
-    hotelConfigs[hotelId] = {
-      hotelId,
-      hotelName: hotelName || 'Hotel Concierge',
-      chatIds: {
-        FrontDesk: frontDeskChatId || '',
-        Housekeeping: housekeepingChatId || '',
-        Kitchen: kitchenChatId || '',
-        Maintenance: maintenanceChatId || ''
-      },
-      documents: updatedDocs
-    };
-
-    res.json({
-      success: true,
-      message: 'Hotel configuration updated successfully!',
-      config: hotelConfigs[hotelId]
-    });
-
-  } catch (err) {
-    console.error('Server Configuration Error:', err);
-    res.status(500).json({ error: 'Server error processing upload or saving config.' });
-  }
-});
-
-// GET Endpoint: Hotel Config for Guest Portal
-app.get('/api/hotel-config/:hotelId', (req, res) => {
-  const { hotelId } = req.params;
-  const config = hotelConfigs[hotelId] || {
-    hotelId,
-    hotelName: 'Hotel Concierge',
-    chatIds: {},
-    documents: []
-  };
-  res.json(config);
-});
-
-// POST Endpoint: Guest Service Request Dispatch
-app.post('/api/guest-request', async (req, res) => {
-  try {
-    const { hotelId, room, department, requestText } = req.body;
-    const config = hotelConfigs[hotelId];
-    const chatId = config && config.chatIds ? config.chatIds[department] : null;
-
-    const message = `🔔 *New Guest Request*\n\n🏨 *Hotel:* ${config ? config.hotelName : hotelId}\n🚪 *Room Number:* ${room}\n📋 *Department:* ${department}\n\n📝 *Request Details:*\n${requestText}`;
-
-    if (TELEGRAM_BOT_TOKEN && chatId) {
-      const telegramUrl = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
-      await fetch(telegramUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          chat_id: chatId,
-          text: message,
-          parse_mode: 'Markdown'
-        })
-      });
-    }
-
-    res.json({ success: true, message: 'Request sent to staff!' });
-  } catch (err) {
-    console.error('Guest Request Dispatch Error:', err);
-    res.status(500).json({ error: 'Failed to dispatch request to Telegram.' });
-  }
-});
-
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`HostlyDesk running on port ${PORT}`));
+
+// Middleware
+app.use(express.json());
+app.use(express.static(__dirname));
+
+// Database Setup (SQLite)
+const dbFile = path.join(__dirname, 'hostlydesk.db');
+const db = new sqlite3.Database(dbFile, (err) => {
+    if (err) {
+        console.error('Error opening database', err.message);
+    } else {
+        console.log('Connected to the SQLite database.');
+        // Create requests table if it doesn't exist
+        db.run(`CREATE TABLE IF NOT EXISTS requests (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            hotel_id TEXT,
+            room TEXT,
+            guest_name TEXT,
+            service_type TEXT,
+            department TEXT,
+            details TEXT,
+            status TEXT DEFAULT 'Pending',
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )`);
+    }
+});
+
+// API: Get services list for the guest portal
+app.get('/api/get-services', (req, res) => {
+    const services = [
+        { id: 'towels', name: 'Extra Towels', department: 'Housekeeping' },
+        { id: 'water', name: 'Drinking Water', department: 'Housekeeping' },
+        { id: 'pillow', name: 'Extra Pillow', department: 'Housekeeping' },
+        { id: 'cleaning', name: 'Room Cleaning', department: 'Housekeeping' },
+        { id: 'food', name: 'Order Food', department: 'Kitchen' },
+        { id: 'coffee', name: 'Tea / Coffee', department: 'Kitchen' },
+        { id: 'wakeup', name: 'Wake-up Call', department: 'Front Office' },
+        { id: 'taxi', name: 'Book a Taxi', department: 'Front Office' },
+        { id: 'checkout', name: 'Checkout Help', department: 'Front Office' }
+    ];
+    res.json(services);
+});
+
+// API: Submit a new request from the guest portal
+app.post('/api/submit-request', (req, res) => {
+    const { hotel_id, room, guest_name, service_type, department, details } = req.body;
+    const query = `INSERT INTO requests (hotel_id, room, guest_name, service_type, department, details) VALUES (?, ?, ?, ?, ?, ?)`;
+    
+    db.run(query, [hotel_id, room, guest_name, service_type, department, details], function(err) {
+        if (err) {
+            console.error(err);
+            res.status(500).json({ success: false, error: err.message });
+        } else {
+            res.json({ success: true, id: this.lastID });
+        }
+    });
+});
+
+// API: Fetch active requests for department dashboards
+app.get('/api/requests', (req, res) => {
+    const hotelId = req.query.hotel_id || 'MAURYA_SHERATON';
+    db.all(`SELECT * FROM requests WHERE hotel_id = ? ORDER BY created_at DESC`, [hotelId], (err, rows) => {
+        if (err) {
+            res.status(500).json({ error: err.message });
+        } else {
+            res.json(rows);
+        }
+    });
+});
+
+// API: Update request status (e.g., mark as Completed)
+app.post('/api/update-status', (req, res) => {
+    const { id, status } = req.body;
+    db.run(`UPDATE requests SET status = ? WHERE id = ?`, [status, id], function(err) {
+        if (err) {
+            res.status(500).json({ success: false, error: err.message });
+        } else {
+            res.json({ success: true });
+        }
+    });
+});
+
+// Route for Guest Portal
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'index.html'));
+});
+
+// Route for Kitchen Dashboard (Points directly to kitchen-dashboard.html)
+app.get('/kitchen', (req, res) => {
+    res.sendFile(path.join(__dirname, 'kitchen-dashboard.html'));
+});
+
+app.listen(PORT, () => {
+    console.log(`HostlyDesk server running on port ${PORT}`);
+});
