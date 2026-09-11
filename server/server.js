@@ -74,13 +74,13 @@ app.get('/api/orders', (req, res) => {
   });
 });
 
-// API Endpoint for Creating Orders
+// API Endpoint for Creating Orders (Standard path)
 app.post('/api/orders', (req, res) => {
   const room = req.body.room || req.query.room || 'DEMO101';
   const items = req.body.items ? JSON.stringify(req.body.items) : JSON.stringify(req.body);
 
   if (!db) {
-    return res.json({ success: true, orderId: Date.now() });
+    return res.json({ success: true, ok: true, id: Date.now(), orderId: Date.now() });
   }
 
   const query = `INSERT INTO orders (room, items) VALUES (?, ?)`;
@@ -89,7 +89,26 @@ app.post('/api/orders', (req, res) => {
       console.error('Order insert failed:', err.message);
       return res.status(500).json({ error: err.message });
     }
-    res.json({ success: true, orderId: this.lastID });
+    res.json({ success: true, ok: true, id: this.lastID, orderId: this.lastID });
+  });
+});
+
+// API Endpoint for Food Orders (Matching frontend fetch path)
+app.post('/api/food-order', (req, res) => {
+  const room = req.body.room || req.query.room || 'DEMO101';
+  const items = req.body.items ? JSON.stringify(req.body.items) : JSON.stringify(req.body);
+
+  if (!db) {
+    return res.json({ success: true, ok: true, id: Date.now(), orderId: Date.now() });
+  }
+
+  const query = `INSERT INTO orders (room, items) VALUES (?, ?)`;
+  db.run(query, [room, items], function(err) {
+    if (err) {
+      console.error('Order insert failed:', err.message);
+      return res.status(500).json({ error: err.message });
+    }
+    res.json({ success: true, ok: true, id: this.lastID, orderId: this.lastID });
   });
 });
 
