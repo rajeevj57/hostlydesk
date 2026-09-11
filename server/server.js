@@ -9,7 +9,6 @@ const PORT = process.env.PORT || 10000;
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '../public')));
 
-// Ensure the data directory exists before opening the database
 const dataDir = path.join(__dirname, '../data');
 if (!fs.existsSync(dataDir)) {
   fs.mkdirSync(dataDir, { recursive: true });
@@ -29,7 +28,7 @@ app.get('/', (req, res) => {
 });
 
 app.get('/kitchen', (req, res) => {
-  res.sendFile(path.join(__dirname, '../public/kitchen.html'));
+  res.sendFile(path.join(__dirname, '../public/food-menu.html'));
 });
 
 app.listen(PORT, () => {
