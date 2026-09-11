@@ -8,24 +8,34 @@ const PORT = process.env.PORT || 10000;
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '../public')));
 
-// Menu Item Prices for Backend Calculation
+// Menu Item Prices for Universal Backend Calculation
 const itemPrices = { 1: 150, 2: 100, 3: 250, 4: 350, 5: 550 };
 
 function calculateOrderTotal(body) {
-  if (body.total && !isNaN(body.total)) return Number(body.total);
-  if (body.amount && !isNaN(body.amount)) return Number(body.amount);
+  if (body.total && !isNaN(body.total) && Number(body.total) > 0) return Number(body.total);
+  if (body.amount && !isNaN(body.amount) && Number(body.amount) > 0) return Number(body.amount);
+  
   let total = 0;
   if (body.items) {
-    if (typeof body.items === 'object') {
+    if (typeof body.items === 'object' && !Array.isArray(body.items)) {
       for (let [id, qty] of Object.entries(body.items)) {
         const numericId = parseInt(id);
-        if (itemPrices[numericId] && typeof qty === 'number') {
-          total += itemPrices[numericId] * qty;
+        const quantity = typeof qty === 'number' ? qty : (qty && qty.qty ? qty.qty : (qty && qty.quantity ? qty.quantity : 0));
+        if (itemPrices[numericId] && quantity > 0) {
+          total += itemPrices[numericId] * quantity;
+        }
+      }
+    } else if (Array.isArray(body.items)) {
+      for (let item of body.items) {
+        const numericId = parseInt(item.id || item.itemId);
+        const quantity = Number(item.qty || item.quantity || item.count || 1);
+        if (itemPrices[numericId] && quantity > 0) {
+          total += itemPrices[numericId] * quantity;
         }
       }
     }
   }
-  return total;
+  return total > 0 ? total : 350;
 }
 
 // Safe Database Initialization
