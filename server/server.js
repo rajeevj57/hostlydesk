@@ -13,6 +13,7 @@ const itemPrices = { 1: 150, 2: 100, 3: 250, 4: 350, 5: 550 };
 
 function calculateOrderTotal(body) {
   if (body.total && !isNaN(body.total)) return Number(body.total);
+  if (body.amount && !isNaN(body.amount)) return Number(body.amount);
   let total = 0;
   if (body.items) {
     if (typeof body.items === 'object') {
@@ -93,14 +94,14 @@ app.get('/api/orders', (req, res) => {
   });
 });
 
-// API Endpoint for Creating Orders (Standard path)
+// API Endpoint for Creating Orders
 app.post('/api/orders', (req, res) => {
   const room = req.body.room || req.query.room || 'DEMO101';
   const items = req.body.items ? JSON.stringify(req.body.items) : JSON.stringify(req.body);
   const total = calculateOrderTotal(req.body);
 
   if (!db) {
-    return res.json({ success: true, ok: true, id: Date.now(), orderId: Date.now(), total: total });
+    return res.json({ success: true, ok: true, id: Date.now(), orderId: Date.now(), total: total, amount: total });
   }
 
   const query = `INSERT INTO orders (room, items) VALUES (?, ?)`;
@@ -109,18 +110,18 @@ app.post('/api/orders', (req, res) => {
       console.error('Order insert failed:', err.message);
       return res.status(500).json({ error: err.message });
     }
-    res.json({ success: true, ok: true, id: this.lastID, orderId: this.lastID, total: total });
+    res.json({ success: true, ok: true, id: this.lastID, orderId: this.lastID, total: total, amount: total });
   });
 });
 
-// API Endpoint for Food Orders (Matching frontend fetch path)
+// API Endpoint for Food Orders
 app.post('/api/food-order', (req, res) => {
   const room = req.body.room || req.query.room || 'DEMO101';
   const items = req.body.items ? JSON.stringify(req.body.items) : JSON.stringify(req.body);
   const total = calculateOrderTotal(req.body);
 
   if (!db) {
-    return res.json({ success: true, ok: true, id: Date.now(), orderId: Date.now(), total: total });
+    return res.json({ success: true, ok: true, id: Date.now(), orderId: Date.now(), total: total, amount: total });
   }
 
   const query = `INSERT INTO orders (room, items) VALUES (?, ?)`;
@@ -129,7 +130,7 @@ app.post('/api/food-order', (req, res) => {
       console.error('Order insert failed:', err.message);
       return res.status(500).json({ error: err.message });
     }
-    res.json({ success: true, ok: true, id: this.lastID, orderId: this.lastID, total: total });
+    res.json({ success: true, ok: true, id: this.lastID, orderId: this.lastID, total: total, amount: total });
   });
 });
 
