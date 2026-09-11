@@ -22,7 +22,6 @@ try {
       console.error('Database connection error:', err.message);
     } else {
       console.log('Connected to the SQLite database.');
-      // Create orders table if it doesn't exist
       db.run(`CREATE TABLE IF NOT EXISTS orders (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         room TEXT,
@@ -45,7 +44,13 @@ app.get('/kitchen', (req, res) => {
   res.sendFile(path.join(__dirname, '../public/food-menu.html'));
 });
 
-// API Endpoint for Getting Orders/Requests
+// API Endpoint for Room Context
+app.get('/api/context', (req, res) => {
+  const room = req.query.room || 'DEMO101';
+  res.json({ room: room });
+});
+
+// API Endpoint for Getting Orders
 app.get('/api/orders', (req, res) => {
   if (!db) return res.status(500).json({ error: 'Database not available' });
   db.all('SELECT * FROM orders ORDER BY id DESC', [], (err, rows) => {
@@ -71,7 +76,7 @@ app.post('/api/orders', (req, res) => {
   });
 });
 
-// API Endpoint for Guest Requests (Housekeeping, Front Office, etc.)
+// API Endpoint for Guest Requests
 app.post('/api/requests', (req, res) => {
   if (!db) return res.status(500).json({ error: 'Database not available' });
   const { room, requestType, notes } = req.body;
