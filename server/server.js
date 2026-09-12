@@ -5,8 +5,8 @@ const fs = require('fs');
 const app = express();
 const PORT = process.env.PORT || 10000;
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '10mb' })); // Increased limit to support PDF uploads
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(express.static(path.join(__dirname, '../public')));
 
 // Ensure data & uploads directories exist safely
@@ -19,7 +19,7 @@ if (!fs.existsSync(uploadsDir)) {
   try { fs.mkdirSync(uploadsDir, { recursive: true }); } catch(e) {}
 }
 
-// Bulletproof Uploads Route that prevents any crashes or 502 errors if a file is missing
+// Bulletproof Uploads Route that serves files or returns a clean fallback
 app.use('/uploads', (req, res) => {
   try {
     const filename = path.basename(req.path);
@@ -29,9 +29,7 @@ app.use('/uploads', (req, res) => {
       return res.sendFile(filePath);
     }
     
-    // Fallback: If the file doesn't exist yet, return a clean message instead of crashing
-    res.status(404);
-    res.setHeader('Content-Type', 'text/html');
+    res.status(404).setHeader('Content-Type', 'text/html');
     res.send(`
       <!DOCTYPE html>
       <html>
@@ -170,6 +168,32 @@ app.get('/api/factsheet', (req, res) => {
   });
 });
 
+// Real Manager File Upload Endpoint (Handles base64 PDF uploads seamlessly)
+app.post('/api/upload-document', (req, res) => {
+  try {
+    const { title, filename, fileData } = req.body;
+    if (!filename || !fileData) {
+      return res.status(400).json({ error: 'Filename and file data are required.' });
+    }
+
+    // Strip base64 header if present
+    const base64Data = fileData.replace(/^data:application\/pdf;base64,/, '');
+    const targetPath = path.join(uploadsDir, filename);
+
+    fs.writeFileSync(targetPath, Buffer.from(base64Data, 'base64'));
+
+    hotelDocuments.menus.push({
+      id: Date.now(),
+      title: title || 'Restaurant Menu',
+      filename: filename
+    });
+
+    res.json({ success: true, message: 'Document uploaded and saved successfully!' });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to save uploaded file.' });
+  }
+});
+
 app.post('/api/upload-factsheet', (req, res) => {
   hotelDocuments.factsheet = req.body.filename || 'FactSheet.pdf';
   res.json({ success: true });
@@ -177,7 +201,7 @@ app.post('/api/upload-factsheet', (req, res) => {
 
 app.post('/api/add-menu', (req, res) => {
   const { title, filename } = req.body;
-  hotelDocuments.menus.push({ id: Date.now(), title: title || 'Menu', filename: filename || 'Menu.pdf' });
+  hotelDocuments.menus.push({ id: Date.now(), title: title || 'Restaurant Menu', filename: filename || 'Menu.pdf' });
   res.json({ success: true, menus: hotelDocuments.menus });
 });
 
