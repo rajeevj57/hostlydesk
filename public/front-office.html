@@ -50,7 +50,10 @@
                 const orders = await res.json();
                 const container = document.getElementById('ordersTableBody');
                 
-                const foOrders = orders.filter(o => (o.department || '').toLowerCase().includes('front') || (o.department || '').toLowerCase().includes('fo'));
+                const foOrders = orders.filter(o => {
+                    const dept = (o.department || '').toLowerCase();
+                    return dept.includes('front') || dept.includes('fo');
+                });
                 
                 if (foOrders.length === 0) {
                     container.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#64748b;">No active front office requests.</td></tr>';
@@ -59,16 +62,33 @@
 
                 container.innerHTML = '';
                 foOrders.forEach(order => {
+                    let formattedItems = '';
+                    try {
+                        let parsed = typeof order.items === 'string' ? JSON.parse(order.items) : order.items;
+                        if (parsed && typeof parsed === 'object') {
+                            if (parsed.items) parsed = parsed.items;
+                        }
+                        if (Array.isArray(parsed)) {
+                            formattedItems = parsed.map(i => typeof i === 'string' ? i : (i.name || JSON.stringify(i))).join(', ');
+                        } else if (parsed && typeof parsed === 'object') {
+                            formattedItems = Object.entries(parsed).map(([k, v]) => `${k}: ${v}`).join(', ');
+                        } else {
+                            formattedItems = String(parsed);
+                        }
+                    } catch(e) { 
+                        formattedItems = order.items; 
+                    }
+
                     const status = order.status || 'Pending';
                     let statusClass = 'status-pending';
-                    if (status === 'In Progress') statusClass = 'status-preparing';
+                    if (status === 'In Progress' || status === 'Preparing') statusClass = 'status-preparing';
                     if (status === 'Completed') statusClass = 'status-completed';
 
                     container.innerHTML += `
                         <tr>
                             <td>#${order.id}</td>
                             <td><span class="room-badge">Room ${order.room || 'DEMO101'}</span></td>
-                            <td>${order.items}</td>
+                            <td>${formattedItems}</td>
                             <td>${order.created_at || 'Just now'}</td>
                             <td><span class="${statusClass}">${status}</span></td>
                             <td>
@@ -82,7 +102,9 @@
                         </tr>
                     `;
                 });
-            } catch (err) { console.error(err); }
+            } catch (err) { 
+                console.error('Error loading Front Office orders:', err); 
+            }
         }
 
         async function updateStatus(id, status) {
