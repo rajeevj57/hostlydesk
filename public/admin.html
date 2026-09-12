@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HostlyDesk Admin & Kitchen Dashboard</title>
+    <title>HostlyDesk Multi-Department Dashboard</title>
     <style>
         body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f8fafc; color: #1e293b; }
-        .container { max-width: 1000px; margin: 0 auto; }
+        .container { max-width: 1100px; margin: 0 auto; }
         h1 { font-size: 24px; margin-bottom: 20px; }
         .card { background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 20px; }
         .form-group { margin-bottom: 15px; }
@@ -14,11 +14,22 @@
         input[type="text"] { width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 4px; box-sizing: border-box; }
         button { background: #10b981; color: white; border: none; padding: 10px 20px; font-weight: bold; border-radius: 4px; cursor: pointer; }
         button:hover { background: #059669; }
+        
+        /* Department Filter Tabs */
+        .tabs { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
+        .tab-btn { background: #e2e8f0; color: #475569; border: none; padding: 8px 16px; border-radius: 20px; font-weight: bold; cursor: pointer; font-size: 13px; }
+        .tab-btn.active { background: #2563eb; color: white; }
+
         table { width: 100%; border-collapse: collapse; margin-top: 10px; }
         th, td { padding: 12px; text-align: left; border-bottom: 1px solid #e2e8f0; font-size: 14px; }
         th { background: #f1f5f9; font-weight: bold; }
         .room-badge { background: #eff6ff; color: #1d4ed8; padding: 4px 8px; border-radius: 4px; font-weight: bold; }
-        .status-pill { background: #fef3c7; color: #d97706; padding: 4px 8px; border-radius: 12px; font-size: 12px; font-weight: bold; }
+        .dept-badge { background: #f3e8ff; color: #7e22ce; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; text-transform: uppercase; }
+        .status-pending { background: #fef3c7; color: #d97706; padding: 4px 8px; border-radius: 12px; font-size: 12px; font-weight: bold; }
+        .status-preparing { background: #e0f2fe; color: #0284c7; padding: 4px 8px; border-radius: 12px; font-size: 12px; font-weight: bold; }
+        .status-completed { background: #d1fae5; color: #065f46; padding: 4px 8px; border-radius: 12px; font-size: 12px; font-weight: bold; }
+        
+        .action-select { padding: 5px; border-radius: 4px; border: 1px solid #cbd5e1; font-size: 12px; cursor: pointer; }
         .alert { padding: 10px; border-radius: 4px; margin-top: 10px; display: none; background: #fee2e2; color: #991b1b; }
     </style>
 </head>
@@ -37,26 +48,34 @@
                     <label for="hotelName">Hotel Display Name:</label>
                     <input type="text" id="hotelName" value="Hotel Kanha Shyam">
                 </div>
-                <div class="form-group">
-                    <label for="kitchenChatId">Kitchen / F&B Chat ID:</label>
-                    <input type="text" id="kitchenChatId" value="-1004301094020">
-                </div>
                 <button type="submit">Save Hotel Configuration</button>
                 <div id="alertBox" class="alert"></div>
             </form>
         </div>
 
         <div class="card">
-            <h3>Live Kitchen Orders</h3>
-            <p style="color: #64748b; font-size: 13px;">Real-time incoming orders from hotel rooms.</p>
+            <h3>Department Request & Order Tracker</h3>
+            <p style="color: #64748b; font-size: 13px; margin-bottom: 15px;">Monitor and update live requests across hotel departments.</p>
+            
+            <!-- Filter Tabs -->
+            <div class="tabs">
+                <button class="tab-btn active" onclick="filterDept('all', this)">All Departments</button>
+                <button class="tab-btn" onclick="filterDept('kitchen', this)">Kitchen / F&B</button>
+                <button class="tab-btn" onclick="filterDept('housekeeping', this)">Housekeeping</button>
+                <button class="tab-btn" onclick="filterDept('maintenance', this)">Maintenance</button>
+                <button class="tab-btn" onclick="filterDept('frontoffice', this)">Front Office</button>
+            </div>
+
             <table class="orders-table">
                 <thead>
                     <tr>
-                        <th>Order ID</th>
-                        <th>Room Number</th>
+                        <th>ID</th>
+                        <th>Room</th>
+                        <th>Department</th>
                         <th>Items / Details</th>
                         <th>Time</th>
                         <th>Status</th>
+                        <th>Action</th>
                     </tr>
                 </thead>
                 <tbody id="ordersTableBody">
@@ -67,14 +86,16 @@
     </div>
 
     <script>
+        let currentFilter = 'all';
+        let allOrdersData = [];
+
         document.getElementById('hotelForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const alertBox = document.getElementById('alertBox');
 
             const hotelData = {
                 hotelId: document.getElementById('hotelId').value.trim().toLowerCase(),
-                hotelName: document.getElementById('hotelName').value.trim(),
-                kitchenChatId: document.getElementById('kitchenChatId').value.trim()
+                hotelName: document.getElementById('hotelName').value.trim()
             };
 
             try {
@@ -99,63 +120,119 @@
             }
         });
 
-        async function loadOrders() {
-            const ordersContainer = document.getElementById('ordersTableBody');
-            if (!ordersContainer) return;
+        function filterDept(dept, btn) {
+            currentFilter = dept;
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            renderOrders();
+        }
 
+        async function loadOrders() {
             try {
                 const res = await fetch('/api/orders');
-                const orders = await res.json();
-
-                if (!Array.isArray(orders) || orders.length === 0) return;
-
-                ordersContainer.innerHTML = '';
-
-                orders.forEach(order => {
-                    let formattedItems = '';
-                    try {
-                        let parsed = order.items;
-                        if (typeof parsed === 'string') {
-                            parsed = JSON.parse(parsed);
-                        }
-
-                        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
-                            if (parsed.items) {
-                                parsed = parsed.items;
-                            }
-                        }
-
-                        if (Array.isArray(parsed)) {
-                            formattedItems = parsed.map(item => {
-                                if (typeof item === 'string') return item;
-                                return `${item.name || 'Item ID ' + item.id} (Qty: ${item.qty || item.quantity || 1})`;
-                            }).join(', ');
-                        } else if (parsed && typeof parsed === 'object') {
-                            formattedItems = Object.entries(parsed).map(([k, v]) => `${k}: ${v}`).join(', ');
-                        } else {
-                            formattedItems = String(parsed);
-                        }
-                    } catch (e) {
-                        formattedItems = order.items;
-                    }
-
-                    const tr = document.createElement('tr');
-                    tr.innerHTML = `
-                        <td>#${order.id}</td>
-                        <td><span class="room-badge">Room ${order.room || 'DEMO101'}</span></td>
-                        <td>${formattedItems}</td>
-                        <td>${order.created_at || 'Just now'}</td>
-                        <td><span class="status-pill">${order.status || 'Pending'}</span></td>
-                    `;
-                    ordersContainer.appendChild(tr);
-                });
+                allOrdersData = await res.json();
+                renderOrders();
             } catch (err) {
                 console.error('Error loading orders:', err);
             }
         }
 
+        function renderOrders() {
+            const ordersContainer = document.getElementById('ordersTableBody');
+            if (!ordersContainer) return;
+
+            if (!Array.isArray(allOrdersData) || allOrdersData.length === 0) {
+                ordersContainer.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#64748b;">No active orders found.</td></tr>';
+                return;
+            }
+
+            const filtered = allOrdersData.filter(order => {
+                if (currentFilter === 'all') return true;
+                const dept = (order.department || 'kitchen').toLowerCase();
+                return dept.includes(currentFilter);
+            });
+
+            if (filtered.length === 0) {
+                ordersContainer.innerHTML = `<tr><td colspan="7" style="text-align:center; color:#64748b;">No orders for this department.</td></tr>`;
+                return;
+            }
+
+            ordersContainer.innerHTML = '';
+
+            filtered.forEach(order => {
+                let formattedItems = '';
+                try {
+                    let parsed = order.items;
+                    if (typeof parsed === 'string') {
+                        parsed = JSON.parse(parsed);
+                    }
+
+                    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+                        if (parsed.items) {
+                            parsed = parsed.items;
+                        }
+                    }
+
+                    if (Array.isArray(parsed)) {
+                        formattedItems = parsed.map(item => {
+                            if (typeof item === 'string') return item;
+                            return `${item.name || 'Item ID ' + item.id} (Qty: ${item.qty || item.quantity || 1})`;
+                        }).join(', ');
+                    } else if (parsed && typeof parsed === 'object') {
+                        formattedItems = Object.entries(parsed).map(([k, v]) => `${k}: ${v}`).join(', ');
+                    } else {
+                        formattedItems = String(parsed);
+                    }
+                } catch (e) {
+                    formattedItems = order.items;
+                }
+
+                const deptName = order.department || 'kitchen';
+                const status = order.status || 'Pending';
+                let statusClass = 'status-pending';
+                if (status === 'Preparing' || status === 'In Progress') statusClass = 'status-preparing';
+                if (status === 'Completed' || status === 'Done') statusClass = 'status-completed';
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>#${order.id}</td>
+                    <td><span class="room-badge">Room ${order.room || 'DEMO101'}</span></td>
+                    <td><span class="dept-badge">${deptName}</span></td>
+                    <td>${formattedItems}</td>
+                    <td>${order.created_at || 'Just now'}</td>
+                    <td><span class="${statusClass}">${status}</span></td>
+                    <td>
+                        <select class="action-select" onchange="updateStatus(${order.id}, this.value)">
+                            <option value="" disabled selected>Update Status...</option>
+                            <option value="Pending">Pending</option>
+                            <option value="Preparing">Preparing / In Progress</option>
+                            <option value="Completed">Completed</option>
+                        </select>
+                    </td>
+                `;
+                ordersContainer.appendChild(tr);
+            });
+        }
+
+        async function updateStatus(orderId, newStatus) {
+            try {
+                const res = await fetch(`/api/orders/${orderId}/status`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status: newStatus })
+                });
+                if (res.ok) {
+                    loadOrders(); // Refresh table instantly
+                } else {
+                    alert('Failed to update status.');
+                }
+            } catch (err) {
+                console.error('Status update error:', err);
+            }
+        }
+
         loadOrders();
-        setInterval(loadOrders, 10000);
+        setInterval(loadOrders, 10000); // Auto-refresh every 10 seconds
     </script>
 </body>
 </html>
