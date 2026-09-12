@@ -3,407 +3,99 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HostlyDesk Multi-Department Management Dashboard</title>
+    <title>Hotel Manager Dashboard - HostlyDesk</title>
     <style>
         body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f8fafc; color: #1e293b; }
-        .container { max-width: 1150px; margin: 0 auto; }
-        h1 { font-size: 24px; margin-bottom: 20px; }
-        .card { background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 20px; }
-        .form-group { margin-bottom: 15px; }
-        label { display: block; font-weight: bold; margin-bottom: 5px; font-size: 14px; }
-        input[type="text"], input[type="file"] { width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 4px; box-sizing: border-box; }
-        button { background: #10b981; color: white; border: none; padding: 10px 20px; font-weight: bold; border-radius: 4px; cursor: pointer; }
-        button:hover { background: #059669; }
+        .container { max-width: 700px; margin: 0 auto; background: #fff; padding: 25px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        h1 { font-size: 22px; margin-bottom: 5px; color: #0f172a; text-align: center; }
+        .subtitle { text-align: center; color: #64748b; font-size: 14px; margin-bottom: 25px; }
         
-        /* Department Filter Tabs */
-        .tabs { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
-        .tab-btn { background: #e2e8f0; color: #475569; border: none; padding: 8px 16px; border-radius: 20px; font-weight: bold; cursor: pointer; font-size: 13px; }
-        .tab-btn.active { background: #2563eb; color: white; }
+        .section-box { background: #f1f5f9; border-radius: 8px; padding: 20px; margin-bottom: 20px; }
+        .section-title { font-weight: bold; font-size: 16px; margin-bottom: 10px; color: #334155; }
+        
+        .form-group { margin-bottom: 15px; text-align: left; }
+        .form-group label { display: block; font-weight: bold; font-size: 13px; margin-bottom: 5px; color: #475569; }
+        .form-control { width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; font-size: 14px; }
+        
+        .upload-btn { background: #2563eb; color: white; border: none; padding: 12px 20px; font-weight: bold; border-radius: 8px; cursor: pointer; font-size: 14px; width: 100%; }
+        .upload-btn:hover { background: #1d4ed8; }
 
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #e2e8f0; font-size: 14px; }
-        th { background: #f1f5f9; font-weight: bold; }
-        .room-badge { background: #eff6ff; color: #1d4ed8; padding: 4px 8px; border-radius: 4px; font-weight: bold; }
-        .dept-badge { background: #f3e8ff; color: #7e22ce; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; text-transform: uppercase; }
-        
-        .status-pending { background: #fee2e2; color: #991b1b; padding: 6px 12px; border-radius: 12px; font-size: 12px; font-weight: bold; display: inline-block; }
-        .status-preparing { background: #fef3c7; color: #d97706; padding: 6px 12px; border-radius: 12px; font-size: 12px; font-weight: bold; display: inline-block; }
-        .status-completed { background: #d1fae5; color: #065f46; padding: 6px 12px; border-radius: 12px; font-size: 12px; font-weight: bold; display: inline-block; }
-        
-        .action-select { padding: 6px 10px; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 13px; font-weight: bold; cursor: pointer; background: #fff; }
-        .alert { padding: 10px; border-radius: 4px; margin-top: 10px; display: none; background: #fee2e2; color: #991b1b; }
-        .menu-slot-box { background: #f8fafc; border: 1px solid #e2e8f0; padding: 15px; border-radius: 6px; margin-bottom: 12px; }
+        .alert { padding: 10px; border-radius: 6px; margin-top: 10px; font-size: 13px; font-weight: bold; text-align: center; display: none; }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>HostlyDesk Management Dashboard</h1>
+        <h1>🏨 Hotel Manager Document Upload</h1>
+        <div class="subtitle">Upload restaurant menus and fact sheets for your guests instantly.</div>
 
-        <!-- Hotel Configuration Card -->
-        <div class="card">
-            <h3>Hotel Configuration</h3>
-            <form id="hotelForm">
-                <div class="form-group">
-                    <label for="hotelId">Hotel ID (URL slug):</label>
-                    <input type="text" id="hotelId" value="hotel-kanha-shyam">
-                </div>
-                <div class="form-group">
-                    <label for="hotelName">Hotel Display Name:</label>
-                    <input type="text" id="hotelName" value="Hotel Kanha Shyam">
-                </div>
-                <button type="submit">Save Hotel Configuration</button>
-                <div id="alertBox" class="alert"></div>
-            </form>
-        </div>
-
-        <!-- Live Menu Item Creator Card -->
-        <div class="card">
-            <h3>🍔 Manage Live Restaurant Menu Items</h3>
-            <p style="color: #64748b; font-size: 13px; margin-bottom: 15px;">Add dishes that will appear instantly on the guest's digital search menu.</p>
-            
-            <form id="menuItemForm">
-                <div style="display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 10px; margin-bottom: 10px;">
-                    <div>
-                        <label>Item Name:</label>
-                        <input type="text" id="itemName" placeholder="e.g., Paneer Tikka Masala" required>
-                    </div>
-                    <div>
-                        <label>Category:</label>
-                        <input type="text" id="itemCategory" placeholder="Main Course" required>
-                    </div>
-                    <div>
-                        <label>Price (₹):</label>
-                        <input type="text" id="itemPrice" placeholder="420" required>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label>Description:</label>
-                    <input type="text" id="itemDesc" placeholder="Cottage cheese chunks in spicy gravy">
-                </div>
-                <button type="submit" style="background: #2563eb;">Add Item to Live Menu</button>
-            </form>
-
-            <h4 style="margin-top: 20px; margin-bottom: 10px; color: #334155;">Current Menu Inventory:</h4>
-            <table>
-                <thead>
-                    <tr style="background: #f1f5f9;">
-                        <th style="padding: 8px; text-align: left;">Item</th>
-                        <th style="padding: 8px; text-align: left;">Category</th>
-                        <th style="padding: 8px; text-align: left;">Price</th>
-                        <th style="padding: 8px; text-align: left;">Action</th>
-                    </tr>
-                </thead>
-                <tbody id="inventoryTableBody">
-                    <tr><td colspan="4" style="text-align:center; color:#64748b;">Loading inventory...</td></tr>
-                </tbody>
-            </table>
-        </div>
-
-        <!-- Dynamic Multi-Menu & Fact Sheet Upload Card -->
-        <div class="card">
-            <h3>📄 Upload Fact Sheet & Multiple Menus (Unlimited Restaurants)</h3>
-            <p style="color: #64748b; font-size: 13px; margin-bottom: 15px;">Upload your general fact sheet, and add as many restaurant menus as your hotel operates.</p>
-            
-            <div class="form-group" style="border-bottom: 1px solid #e2e8f0; padding-bottom: 15px; margin-bottom: 15px;">
-                <label><b>General Fact Sheet Document (PDF):</b></label>
-                <input type="file" id="factSheetFile" accept=".pdf,.doc,.docx">
-                <button type="button" onclick="uploadFactSheet()" style="margin-top: 8px; background: #2563eb;">Upload Fact Sheet</button>
-                <span id="factsheetStatus" style="font-size: 13px; color: #059669; margin-left: 10px; font-weight: bold;"></span>
+        <div class="section-box">
+            <div class="section-title">Upload Menu or Fact Sheet PDF</div>
+            <div class="form-group">
+                <label>Document Title (e.g., Main Restaurant Menu):</label>
+                <input type="text" id="docTitle" class="form-control" value="Main Restaurant Menu">
             </div>
-
-            <h4 style="margin-bottom: 10px; color: #334155;">Restaurant Menus:</h4>
-            <div id="menusContainer">
-                <!-- Dynamically populated menu upload rows -->
+            <div class="form-group">
+                <label>Select PDF File from Computer:</label>
+                <input type="file" id="pdfFile" class="form-control" accept="application/pdf">
             </div>
-
-            <button type="button" onclick="addNewMenuSlot()" style="background: #4f46e5; margin-top: 5px;">+ Add Another Restaurant Menu</button>
-        </div>
-
-        <!-- Department Request & Order Tracker Card -->
-        <div class="card">
-            <h3>Department Request & Order Tracker</h3>
-            <p style="color: #64748b; font-size: 13px; margin-bottom: 15px;">Monitor and update live requests across all hotel departments.</p>
-            
-            <div class="tabs">
-                <button class="tab-btn active" onclick="filterDept('all', this)">All Departments</button>
-                <button class="tab-btn" onclick="filterDept('kitchen', this)">Kitchen</button>
-                <button class="tab-btn" onclick="filterDept('fnb', this)">F&B</button>
-                <button class="tab-btn" onclick="filterDept('housekeeping', this)">Housekeeping</button>
-                <button class="tab-btn" onclick="filterDept('maintenance', this)">Maintenance</button>
-                <button class="tab-btn" onclick="filterDept('front', this)">Front Office</button>
-            </div>
-
-            <table class="orders-table">
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Room</th>
-                        <th>Department</th>
-                        <th>Request / Items Details</th>
-                        <th>Time</th>
-                        <th>Status</th>
-                        <th>Action</th>
-                    </tr>
-                </thead>
-                <tbody id="ordersTableBody">
-                    <tr><td colspan="7" style="text-align:center; color:#64748b;">Loading requests...</td></tr>
-                </tbody>
-            </table>
+            <button type="button" class="upload-btn" onclick="uploadDocument()">Upload & Publish Document</button>
+            <div id="alertBox" class="alert"></div>
         </div>
     </div>
 
     <script>
-        let currentFilter = 'all';
-        let allOrdersData = [];
-
-        document.getElementById('hotelForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
+        async function uploadDocument() {
+            const title = document.getElementById('docTitle').value.trim();
+            const fileInput = document.getElementById('pdfFile');
             const alertBox = document.getElementById('alertBox');
-            alertBox.textContent = 'Hotel property updated successfully!';
-            alertBox.style.background = '#d1fae5';
-            alertBox.style.color = '#065f46';
-            alertBox.style.display = 'block';
-        });
 
-        // Live Menu Item Creator Handler
-        document.getElementById('menuItemForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const payload = {
-                name: document.getElementById('itemName').value,
-                category: document.getElementById('itemCategory').value,
-                price: parseFloat(document.getElementById('itemPrice').value) || 0,
-                description: document.getElementById('itemDesc').value,
-                icon: '🍽️'
+            if (fileInput.files.length === 0) {
+                alertBox.textContent = 'Please select a PDF file first.';
+                alertBox.style.background = '#fee2e2';
+                alertBox.style.color = '#991b1b';
+                alertBox.style.display = 'block';
+                return;
+            }
+
+            const file = fileInput.files[0];
+            const reader = new FileReader();
+
+            reader.onload = async function(event) {
+                const base64Data = event.target.result;
+
+                const payload = {
+                    title: title,
+                    filename: file.name,
+                    fileData: base64Data
+                };
+
+                try {
+                    const res = await fetch('/api/upload-document', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    const result = await res.json();
+                    if (res.ok) {
+                        alertBox.textContent = 'Success! Document uploaded and saved to server.';
+                        alertBox.style.background = '#d1fae5';
+                        alertBox.style.color = '#065f46';
+                        alertBox.style.display = 'block';
+                        fileInput.value = '';
+                    } else {
+                        throw new Error(result.error || 'Upload failed');
+                    }
+                } catch (err) {
+                    alertBox.textContent = 'Failed to upload document to server.';
+                    alertBox.style.background = '#fee2e2';
+                    alertBox.style.color = '#991b1b';
+                    alertBox.style.display = 'block';
+                }
             };
 
-            const res = await fetch('/api/admin/menu-items', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-
-            if (res.ok) {
-                document.getElementById('itemName').value = '';
-                document.getElementById('itemPrice').value = '';
-                document.getElementById('itemDesc').value = '';
-                loadInventory();
-            }
-        });
-
-        async function loadInventory() {
-            try {
-                const res = await fetch('/api/food-items');
-                const items = await res.json();
-                const tbody = document.getElementById('inventoryTableBody');
-                if (items.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#64748b;">No items in menu.</td></tr>';
-                    return;
-                }
-                tbody.innerHTML = '';
-                items.forEach(i => {
-                    tbody.innerHTML += `
-                        <tr>
-                            <td style="padding: 8px; border-bottom: 1px solid #e2e8f0;"><b>${i.name}</b><br><span style="font-size:12px; color:#64748b;">${i.description || ''}</span></td>
-                            <td style="padding: 8px; border-bottom: 1px solid #e2e8f0;">${i.category}</td>
-                            <td style="padding: 8px; border-bottom: 1px solid #e2e8f0;">₹${i.price}</td>
-                            <td style="padding: 8px; border-bottom: 1px solid #e2e8f0;"><button onclick="deleteItem(${i.id})" style="background:#dc2626; padding: 4px 8px; font-size: 12px;">Delete</button></td>
-                        </tr>
-                    `;
-                });
-            } catch(e) {}
+            reader.readAsDataURL(file);
         }
-
-        async function deleteItem(id) {
-            if (!confirm('Are you sure you want to remove this item?')) return;
-            await fetch(`/api/admin/menu-items/${id}`, { method: 'DELETE' });
-            loadInventory();
-        }
-
-        async function uploadFactSheet() {
-            const fileInput = document.getElementById('factSheetFile');
-            const statusSpan = document.getElementById('factsheetStatus');
-            if (fileInput.files.length === 0) { alert('Please select a file first.'); return; }
-            const fileName = fileInput.files[0].name;
-
-            const res = await fetch('/api/upload-factsheet', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ filename: fileName })
-            });
-            if (res.ok) statusSpan.textContent = `✔ Uploaded: ${fileName}`;
-        }
-
-        async function loadFactSheetData() {
-            try {
-                const res = await fetch('/api/factsheet');
-                const data = await res.json();
-                if (data.documents && data.documents.menus) {
-                    const container = document.getElementById('menusContainer');
-                    container.innerHTML = '';
-                    data.documents.menus.forEach(menu => {
-                        renderMenuRow(menu.id, menu.title, menu.filename);
-                    });
-                }
-            } catch(e) {}
-        }
-
-        function renderMenuRow(id, title, filename) {
-            const container = document.getElementById('menusContainer');
-            const box = document.createElement('div');
-            box.className = 'menu-slot-box';
-            box.id = `menuBox_${id}`;
-            box.innerHTML = `
-                <div class="form-group" style="margin-bottom:8px;">
-                    <label>Restaurant / Menu Name:</label>
-                    <input type="text" id="menuTitle_${id}" value="${title}">
-                </div>
-                <div class="form-group" style="margin-bottom:8px;">
-                    <label>Upload Menu File (PDF / CSV):</label>
-                    <input type="file" id="menuFile_${id}" accept=".pdf,.csv,.json">
-                </div>
-                <button type="button" onclick="uploadSpecificMenu(${id})" style="background: #2563eb; padding: 6px 12px; font-size: 13px;">Save & Upload</button>
-                <span id="menuStatus_${id}" style="font-size: 13px; color: #059669; margin-left: 10px; font-weight: bold;">${filename !== 'None uploaded yet' ? '✔ ' + filename : ''}</span>
-            `;
-            container.appendChild(box);
-        }
-
-        async function addNewMenuSlot() {
-            const title = prompt("Enter Restaurant or Menu Name:", "New Restaurant Menu");
-            if (!title) return;
-
-            const res = await fetch('/api/add-menu', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ title, filename: 'Pending Upload' })
-            });
-            if (res.ok) {
-                const data = await res.json();
-                const latestMenu = data.menus[data.menus.length - 1];
-                renderMenuRow(latestMenu.id, latestMenu.title, 'None uploaded yet');
-            }
-        }
-
-        async function uploadSpecificMenu(id) {
-            const fileInput = document.getElementById(`menuFile_${id}`);
-            const titleInput = document.getElementById(`menuTitle_${id}`);
-            const statusSpan = document.getElementById(`menuStatus_${id}`);
-
-            if (fileInput.files.length === 0) { alert('Please select a file to upload.'); return; }
-            const fileName = fileInput.files[0].name;
-
-            const res = await fetch('/api/add-menu', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ title: titleInput.value, filename: fileName })
-            });
-            if (res.ok) {
-                statusSpan.textContent = `✔ Uploaded: ${fileName}`;
-            }
-        }
-
-        function filterDept(dept, btn) {
-            currentFilter = dept;
-            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            renderOrders();
-        }
-
-        async function loadOrders() {
-            try {
-                const res = await fetch('/api/orders');
-                allOrdersData = await res.json();
-                renderOrders();
-            } catch (err) {
-                console.error('Error loading orders:', err);
-            }
-        }
-
-        function renderOrders() {
-            const ordersContainer = document.getElementById('ordersTableBody');
-            if (!ordersContainer) return;
-
-            if (!Array.isArray(allOrdersData) || allOrdersData.length === 0) {
-                ordersContainer.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#64748b;">No active orders found.</td></tr>';
-                return;
-            }
-
-            const filtered = allOrdersData.filter(order => {
-                if (currentFilter === 'all') return true;
-                const dept = (order.department || 'kitchen').toLowerCase();
-                if (currentFilter === 'kitchen') return dept === 'kitchen';
-                if (currentFilter === 'fnb') return dept === 'fnb';
-                return dept.includes(currentFilter);
-            });
-
-            if (filtered.length === 0) {
-                ordersContainer.innerHTML = `<tr><td colspan="7" style="text-align:center; color:#64748b;">No requests for this department.</td></tr>`;
-                return;
-            }
-
-            ordersContainer.innerHTML = '';
-
-            filtered.forEach(order => {
-                let formattedItems = '';
-                try {
-                    let parsed = typeof order.items === 'string' ? JSON.parse(order.items) : order.items;
-                    if (parsed && typeof parsed === 'object') {
-                        if (parsed.items) parsed = parsed.items;
-                    }
-                    if (Array.isArray(parsed)) {
-                        formattedItems = parsed.map(i => typeof i === 'string' ? i : (i.name || JSON.stringify(i))).join(', ');
-                    } else if (parsed && typeof parsed === 'object') {
-                        formattedItems = Object.entries(parsed).map(([k, v]) => `${k}: ${v}`).join(', ');
-                    } else {
-                        formattedItems = String(parsed);
-                    }
-                } catch (e) {
-                    formattedItems = order.items;
-                }
-
-                const deptName = order.department || 'kitchen';
-                const status = order.status || 'Pending';
-                let statusClass = 'status-pending';
-                if (status === 'Preparing' || status === 'In Progress') statusClass = 'status-preparing';
-                if (status === 'Completed') statusClass = 'status-completed';
-
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td>#${order.id}</td>
-                    <td><span class="room-badge">Room ${order.room || 'DEMO101'}</span></td>
-                    <td><span class="dept-badge">${deptName}</span></td>
-                    <td>${formattedItems}</td>
-                    <td>${order.created_at || 'Just now'}</td>
-                    <td><span class="${statusClass}">${status}</span></td>
-                    <td>
-                        <select class="action-select" onchange="updateStatus(${order.id}, this.value)">
-                            <option value="" disabled selected>Update Status...</option>
-                            <option value="Pending">🔴 Pending</option>
-                            <option value="In Progress">🟡 In Progress</option>
-                            <option value="Completed">🟢 Completed</option>
-                        </select>
-                    </td>
-                `;
-                ordersContainer.appendChild(tr);
-            });
-        }
-
-        async function updateStatus(orderId, newStatus) {
-            try {
-                await fetch(`/api/orders/${orderId}/status`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ status: newStatus })
-                });
-                loadOrders();
-            } catch (err) {
-                console.error('Status update error:', err);
-            }
-        }
-
-        loadInventory();
-        loadFactSheetData();
-        loadOrders();
-        setInterval(loadOrders, 10000);
     </script>
 </body>
 </html>
