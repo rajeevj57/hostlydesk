@@ -56,6 +56,50 @@
             </form>
         </div>
 
+        <!-- Live Menu Item Creator Card -->
+        <div class="card">
+            <h3>🍔 Manage Live Restaurant Menu Items</h3>
+            <p style="color: #64748b; font-size: 13px; margin-bottom: 15px;">Add dishes that will appear instantly on the guest's digital search menu.</p>
+            
+            <form id="menuItemForm">
+                <div style="display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+                    <div>
+                        <label>Item Name:</label>
+                        <input type="text" id="itemName" placeholder="e.g., Paneer Tikka Masala" required>
+                    </div>
+                    <div>
+                        <label>Category:</label>
+                        <input type="text" id="itemCategory" placeholder="Main Course" required>
+                    </div>
+                    <div>
+                        <label>Price (₹):</label>
+                        <input type="text" id="itemPrice" placeholder="420" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Description:</label>
+                    <input type="text" id="itemDesc" placeholder="Cottage cheese chunks in spicy gravy">
+                </div>
+                <button type="submit" style="background: #2563eb;">Add Item to Live Menu</button>
+                <div id="menuItemAlert" class="alert"></div>
+            </form>
+
+            <h4 style="margin-top: 20px; margin-bottom: 10px; color: #334155;">Current Menu Inventory:</h4>
+            <table>
+                <thead>
+                    <tr style="background: #f1f5f9;">
+                        <th style="padding: 8px; text-align: left;">Item</th>
+                        <th style="padding: 8px; text-align: left;">Category</th>
+                        <th style="padding: 8px; text-align: left;">Price</th>
+                        <th style="padding: 8px; text-align: left;">Action</th>
+                    </tr>
+                </thead>
+                <tbody id="inventoryTableBody">
+                    <tr><td colspan="4" style="text-align:center; color:#64748b;">Loading inventory...</td></tr>
+                </tbody>
+            </table>
+        </div>
+
         <!-- Dynamic Multi-Menu & Fact Sheet Upload Card -->
         <div class="card">
             <h3>📄 Upload Fact Sheet & Multiple Menus (Unlimited Restaurants)</h3>
@@ -122,6 +166,60 @@
             alertBox.style.display = 'block';
         });
 
+        // Live Menu Item Creator Handler
+        document.getElementById('menuItemForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const payload = {
+                name: document.getElementById('itemName').value,
+                category: document.getElementById('itemCategory').value,
+                price: parseFloat(document.getElementById('itemPrice').value) || 0,
+                description: document.getElementById('itemDesc').value,
+                icon: '🍽️'
+            };
+
+            const res = await fetch('/api/admin/menu-items', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (res.ok) {
+                document.getElementById('itemName').value = '';
+                document.getElementById('itemPrice').value = '';
+                document.getElementById('itemDesc').value = '';
+                loadInventory();
+            }
+        });
+
+        async function loadInventory() {
+            try {
+                const res = await fetch('/api/food-items');
+                const items = await res.json();
+                const tbody = document.getElementById('inventoryTableBody');
+                if (items.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#64748b;">No items in menu.</td></tr>';
+                    return;
+                }
+                tbody.innerHTML = '';
+                items.forEach(i => {
+                    tbody.innerHTML += `
+                        <tr>
+                            <td style="padding: 8px; border-bottom: 1px solid #e2e8f0;"><b>${i.name}</b><br><span style="font-size:12px; color:#64748b;">${i.description || ''}</span></td>
+                            <td style="padding: 8px; border-bottom: 1px solid #e2e8f0;">${i.category}</td>
+                            <td style="padding: 8px; border-bottom: 1px solid #e2e8f0;">₹${i.price}</td>
+                            <td style="padding: 8px; border-bottom: 1px solid #e2e8f0;"><button onclick="deleteItem(${i.id})" style="background:#dc2626; padding: 4px 8px; font-size: 12px;">Delete</button></td>
+                        </tr>
+                    `;
+                });
+            } catch(e) {}
+        }
+
+        async function deleteItem(id) {
+            if (!confirm('Are you sure you want to remove this item?')) return;
+            await fetch(`/api/admin/menu-items/${id}`, { method: 'DELETE' });
+            loadInventory();
+        }
+
         async function uploadFactSheet() {
             const fileInput = document.getElementById('factSheetFile');
             const statusSpan = document.getElementById('factsheetStatus');
@@ -171,7 +269,7 @@
         }
 
         async function addNewMenuSlot() {
-            const title = prompt("Enter Restaurant or Menu Name (e.g., ' rooftop Bar & Grill'):", "New Restaurant Menu");
+            const title = prompt("Enter Restaurant or Menu Name:", "New Restaurant Menu");
             if (!title) return;
 
             const res = await fetch('/api/add-menu', {
@@ -303,6 +401,7 @@
             }
         }
 
+        loadInventory();
         loadFactSheetData();
         loadOrders();
         setInterval(loadOrders, 10000);
