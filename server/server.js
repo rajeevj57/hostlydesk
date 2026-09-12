@@ -21,7 +21,7 @@ if (!fs.existsSync(dataDir)) {
   try { fs.mkdirSync(dataDir, { recursive: true }); } catch(e) {}
 }
 
-// Safe Database Initialization
+// Safe Database Initialization & Automatic Default Seeding
 let db = null;
 try {
   const sqlite3 = require('sqlite3').verbose();
@@ -47,7 +47,25 @@ try {
           price REAL,
           description TEXT,
           icon TEXT DEFAULT '🍽️'
-        )`, () => {});
+        )`, () => {
+          // Auto-seed default interactive menu items if table is empty
+          db.get(`SELECT COUNT(*) as count FROM menu_items`, (err, row) => {
+            if (!err && row && row.count === 0) {
+              const defaultItems = [
+                ['Chicken Tikka', 'Main Course', 450, 'Tandoori spiced roasted chicken chunks', '🍗'],
+                ['Paneer Butter Masala', 'Main Course', 380, 'Cottage cheese in rich tomato gravy', '🧀'],
+                ['Fresh Lime Soda', 'Beverages', 120, 'Refreshing sparkling beverage', '🥤'],
+                ['Cappuccino', 'Beverages', 180, 'Hot brewed espresso with steamed milk', '☕'],
+                ['Dal Makhani', 'Main Course', 340, 'Slow-cooked black lentils with butter and cream', '🍲'],
+                ['Garlic Naan', 'Breads', 75, 'Tandoor-baked flatbread with fresh garlic', '🫓'],
+                ['Chocolate Brownie', 'Desserts', 220, 'Warm chocolate pastry with fudge sauce', '🍰']
+              ];
+              const stmt = db.prepare(`INSERT INTO menu_items (name, category, price, description, icon) VALUES (?, ?, ?, ?, ?)`);
+              defaultItems.forEach(item => stmt.run(item));
+              stmt.finalize();
+            }
+          });
+        });
 
         db.run(`CREATE TABLE IF NOT EXISTS hotel_documents (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -200,7 +218,7 @@ app.post('/api/upload-document', async (req, res) => {
           
           lines.forEach(line => {
             if (line.length < 50 && !line.toLowerCase().includes('page') && !line.toLowerCase().includes('copyright')) {
-              stmt.run(line, 'Chef Selection', 250, 'Imported from designer menu', '🍽️');
+              stmt.run(line, 'Keys Cafe Selection', 300, 'Imported from menu design PDF', '🍽️');
             }
           });
           stmt.finalize();
