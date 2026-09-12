@@ -54,21 +54,27 @@ async function loadOrders() {
       let formattedItems = '';
       
       try {
-        const parsedItems = typeof order.items === 'string' ? JSON.parse(order.items) : order.items;
-        
-        if (Array.isArray(parsedItems)) {
-          formattedItems = parsedItems.map(item => {
+        let parsed = order.items;
+        if (typeof parsed === 'string') {
+          parsed = JSON.parse(parsed);
+        }
+
+        // Handle case where items are wrapped in an object payload e.g. { items: [...] }
+        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+          if (parsed.items) {
+            parsed = parsed.items;
+          }
+        }
+
+        if (Array.isArray(parsed)) {
+          formattedItems = parsed.map(item => {
             if (typeof item === 'string') return item;
             return `${item.name || 'Item ID ' + item.id} (Qty: ${item.qty || item.quantity || 1})`;
           }).join(', ');
-        } else if (parsedItems && typeof parsedItems === 'object') {
-          if (parsedItems.items && Array.isArray(parsedItems.items)) {
-            formattedItems = parsedItems.items.join(', ');
-          } else {
-            formattedItems = JSON.stringify(parsedItems);
-          }
+        } else if (parsed && typeof parsed === 'object') {
+          formattedItems = Object.entries(parsed).map(([k, v]) => `${k}: ${v}`).join(', ');
         } else {
-          formattedItems = order.items;
+          formattedItems = String(parsed);
         }
       } catch (e) {
         formattedItems = order.items;
