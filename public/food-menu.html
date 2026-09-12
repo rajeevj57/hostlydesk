@@ -43,7 +43,7 @@
 
         <!-- Live Search Bar -->
         <div class="search-box">
-            <input type="text" id="searchInput" class="search-input" placeholder="🔍 Search menu items (e.g., coffee, sandwich, fruit)..." oninput="filterMenu()">
+            <input type="text" id="searchInput" class="search-input" placeholder="🔍 Search menu items (e.g., coffee, sandwich, paneer)..." oninput="filterMenu()">
         </div>
 
         <div id="menuContainer" class="menu-grid">
@@ -80,17 +80,17 @@
         function filterMenu() {
             const query = document.getElementById('searchInput').value.toLowerCase().trim();
             const filtered = allFoodItems.filter(item => 
-                item.name.toLowerCase().includes(query) || 
-                item.description.toLowerCase().includes(query) ||
-                item.category.toLowerCase().includes(query)
+                (item.name && item.name.toLowerCase().includes(query)) || 
+                (item.description && item.description.toLowerCase().includes(query)) ||
+                (item.category && item.category.toLowerCase().includes(query))
             );
             renderMenu(filtered);
         }
 
         function renderMenu(items) {
             const container = document.getElementById('menuContainer');
-            if (items.length === 0) {
-                container.innerHTML = '<div style="text-align:center; color:#64748b; padding: 20px;">No matching menu items found.</div>';
+            if (!items || items.length === 0) {
+                container.innerHTML = '<div style="text-align:center; color:#64748b; padding: 20px;">No matching menu items found. Add items from the admin panel!</div>';
                 return;
             }
 
@@ -103,7 +103,7 @@
                             <div class="item-icon">${item.icon || '🍽️'}</div>
                             <div>
                                 <div class="item-name">${item.name}</div>
-                                <div class="item-desc">${item.description}</div>
+                                <div class="item-desc">${item.description || ''}</div>
                                 <div class="item-price">₹${item.price}</div>
                             </div>
                         </div>
@@ -126,10 +126,14 @@
             if (!cart[itemId]) cart[itemId] = 0;
             cart[itemId] += change;
             if (cart[itemId] <= 0) delete cart[itemId];
-            renderMenu(allFoodItems.filter(item => {
-                const query = document.getElementById('searchInput').value.toLowerCase().trim();
-                return item.name.toLowerCase().includes(query) || item.description.toLowerCase().includes(query);
-            }));
+            
+            const query = document.getElementById('searchInput').value.toLowerCase().trim();
+            const filtered = allFoodItems.filter(item => 
+                (item.name && item.name.toLowerCase().includes(query)) || 
+                (item.description && item.description.toLowerCase().includes(query)) ||
+                (item.category && item.category.toLowerCase().includes(query))
+            );
+            renderMenu(filtered);
             updateCartSummary();
         }
 
