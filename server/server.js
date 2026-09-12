@@ -23,7 +23,7 @@ let hotelDocuments = {
   ]
 };
 
-// Safe Database Initialization with Auto-Migration for Columns
+// Safe Database Initialization with Auto-Migration for Columns and Tables
 let db = null;
 try {
   const dataDir = path.join(__dirname, '../data');
@@ -48,6 +48,25 @@ try {
         )`);
         db.run(`ALTER TABLE orders ADD COLUMN department TEXT DEFAULT 'kitchen'`, (err) => {});
         db.run(`ALTER TABLE orders ADD COLUMN status TEXT DEFAULT 'Pending'`, (err) => {});
+
+        // Database Table for Live Menu Items
+        db.run(`CREATE TABLE IF NOT EXISTS menu_items (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          name TEXT,
+          category TEXT,
+          price REAL,
+          description TEXT,
+          icon TEXT DEFAULT '🍽️'
+        )`, (err) => {
+          if (!err) {
+            db.get(`SELECT COUNT(*) as count FROM menu_items`, (e, row) => {
+              if (row && row.count === 0) {
+                db.run(`INSERT INTO menu_items (name, category, price, description, icon) VALUES (?, ?, ?, ?, ?)`, 
+                  ['Espresso', 'Beverages', 150, 'Freshly brewed hot coffee', '☕']);
+              }
+            });
+          }
+        });
       });
     }
   });
@@ -65,16 +84,43 @@ app.get('/api/context', (req, res) => {
   res.json({ room: room });
 });
 
-// API Endpoint for Food Items Menu
+// API Endpoint for Live Food Items Menu from SQLite
 app.get('/api/food-items', (req, res) => {
-  const foodItems = [
-    { id: 1, name: 'Espresso', category: 'Beverages', price: 150, description: 'Freshly brewed hot coffee', icon: '☕' },
-    { id: 2, name: 'Masala Chai', category: 'Beverages', price: 100, description: 'Traditional Indian spiced tea', icon: '🍵' },
-    { id: 3, name: 'Fresh Cut Fruit Platter', category: 'Snacks', price: 250, description: 'Assorted seasonal fresh fruits', icon: '🍉' },
-    { id: 4, name: 'Veg Club Sandwich', category: 'Main Course', price: 350, description: 'Triple-decker sandwich with fries', icon: '🥪' },
-    { id: 5, name: 'Butter Chicken with Naan', category: 'Main Course', price: 550, description: 'Classic rich tomato-butter gravy with 2 butter naans', icon: '🍗' }
-  ];
-  res.json(foodItems);
+  if (!db) return res.json([]);
+  db.all('SELECT * FROM menu_items ORDER BY id DESC', [], (err, rows) => {
+    if (err) {
+      res.json([]);
+    } else {
+      res.json(rows);
+    }
+  });
+});
+
+// Admin endpoint to add a new menu item dynamically
+app.post('/api/admin/menu-items', (req, res) => {
+  const { name, category, price, description, icon } = req.body;
+  if (!db) return res.json({ success: true, id: Date.now() });
+
+  const query = `INSERT INTO menu_items (name, category, price, description, icon) VALUES (?, ?, ?, ?, ?)`;
+  db.run(query, [name, category, price, description, icon || '🍽️'], function(err) {
+    if (err) {
+      return res.status(500).json({ error: err.message });
+    }
+    res.json({ success: true, id: this.lastID });
+  });
+});
+
+// Admin endpoint to delete a menu item
+app.delete('/api/admin/menu-items/:id', (req, res) => {
+  const itemId = req.params.id;
+  if (!db) return res.json({ success: true });
+
+  db.run(`DELETE FROM menu_items WHERE id = ?`, [itemId], function(err) {
+    if (err) {
+      return res.status(500).json({ error: err.message });
+    }
+    res.json({ success: true, deleted: this.changes });
+  });
 });
 
 // Fact Sheet & Dynamic Menus API
