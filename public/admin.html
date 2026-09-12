@@ -11,7 +11,7 @@
         .card { background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 20px; }
         .form-group { margin-bottom: 15px; }
         label { display: block; font-weight: bold; margin-bottom: 5px; font-size: 14px; }
-        input[type="text"] { width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 4px; box-sizing: border-box; }
+        input[type="text"], input[type="file"] { width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 4px; box-sizing: border-box; }
         button { background: #10b981; color: white; border: none; padding: 10px 20px; font-weight: bold; border-radius: 4px; cursor: pointer; }
         button:hover { background: #059669; }
         
@@ -55,38 +55,24 @@
             </form>
         </div>
 
-        <!-- Fact Sheet Manager Card -->
+        <!-- File Upload Card for Menu & Fact Sheet (No Manual Typing Required) -->
         <div class="card">
-            <h3>Hotel Fact Sheet & Amenities Manager</h3>
-            <p style="color: #64748b; font-size: 13px; margin-bottom: 15px;">Configure what details, timings, and amenities appear on the guest's digital fact sheet.</p>
-            <form id="factSheetForm">
-                <div class="form-group">
-                    <label>Wi-Fi Details (Network & Password):</label>
-                    <input type="text" id="wifiDetails" value="Network: Kanha_Guest_WiFi | Password: welcome2026">
-                </div>
-                <div class="form-group">
-                    <label>Breakfast Timing:</label>
-                    <input type="text" id="breakfastTiming" value="07:00 AM - 10:30 AM (Coffee Shop)">
-                </div>
-                <div class="form-group">
-                    <label>Restaurants & Timings:</label>
-                    <input type="text" id="restaurants" value="Spice Court Multi-Cuisine Restaurant (12:00 PM - 11:00 PM)">
-                </div>
-                <div class="form-group">
-                    <label>Bar & Happy Hours:</label>
-                    <input type="text" id="bars" value="Liquid Lounge Bar (5:00 PM - 1:00 AM | Happy Hours: 6:00 PM - 8:00 PM)">
-                </div>
-                <div class="form-group">
-                    <label>Nearby Places & Attractions to Visit:</label>
-                    <input type="text" id="nearbyPlaces" value="Central Market (2 km), City Museum (4 km), Heritage Park (1.5 km)">
-                </div>
-                <div class="form-group">
-                    <label>General Hotel Notes / Pool / Spa Timings:</label>
-                    <input type="text" id="notes" value="Gym & Swimming Pool open daily from 6:00 AM to 9:00 PM.">
-                </div>
-                <button type="submit">Save & Publish Fact Sheet</button>
-                <div id="factSheetAlert" class="alert"></div>
-            </form>
+            <h3>📄 Upload Hotel Menu & Fact Sheet Documents</h3>
+            <p style="color: #64748b; font-size: 13px; margin-bottom: 15px;">Upload your PDF or document files so guests can view them instantly.</p>
+            
+            <div class="form-group">
+                <label>Upload Fact Sheet (PDF / Document):</label>
+                <input type="file" id="factSheetFile" accept=".pdf,.doc,.docx,.txt">
+                <button type="button" onclick="uploadDocument('factsheet')" style="margin-top: 8px; background: #2563eb;">Upload Fact Sheet</button>
+                <span id="factsheetStatus" style="font-size: 13px; color: #059669; margin-left: 10px; font-weight: bold;"></span>
+            </div>
+
+            <div class="form-group" style="margin-top: 20px;">
+                <label>Upload Food & F&B Menu (PDF / CSV):</label>
+                <input type="file" id="menuFile" accept=".pdf,.csv,.json">
+                <button type="button" onclick="uploadDocument('menu')" style="margin-top: 8px; background: #2563eb;">Upload Menu</button>
+                <span id="menuStatus" style="font-size: 13px; color: #059669; margin-left: 10px; font-weight: bold;"></span>
+            </div>
         </div>
 
         <!-- Department Request & Order Tracker Card -->
@@ -130,76 +116,39 @@
         document.getElementById('hotelForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const alertBox = document.getElementById('alertBox');
-
-            const hotelData = {
-                hotelId: document.getElementById('hotelId').value.trim().toLowerCase(),
-                hotelName: document.getElementById('hotelName').value.trim()
-            };
-
-            try {
-                const response = await fetch('/api/config', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(hotelData)
-                });
-
-                if (response.ok) {
-                    alertBox.textContent = 'Hotel property updated successfully!';
-                    alertBox.style.background = '#d1fae5';
-                    alertBox.style.color = '#065f46';
-                    alertBox.style.display = 'block';
-                } else {
-                    throw new Error('Failed to save');
-                }
-            } catch (err) {
-                alertBox.textContent = 'Error saving configuration.';
-                alertBox.className = 'alert';
-                alertBox.style.display = 'block';
-            }
+            alertBox.textContent = 'Hotel property updated successfully!';
+            alertBox.style.background = '#d1fae5';
+            alertBox.style.color = '#065f46';
+            alertBox.style.display = 'block';
         });
 
-        document.getElementById('factSheetForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const alertBox = document.getElementById('factSheetAlert');
-            const data = {
-                wifiDetails: document.getElementById('wifiDetails').value,
-                breakfastTiming: document.getElementById('breakfastTiming').value,
-                restaurants: document.getElementById('restaurants').value,
-                bars: document.getElementById('bars').value,
-                nearbyPlaces: document.getElementById('nearbyPlaces').value,
-                notes: document.getElementById('notes').value
-            };
+        async function uploadDocument(type) {
+            const fileInput = document.getElementById(type === 'factsheet' ? 'factSheetFile' : 'menuFile');
+            const statusSpan = document.getElementById(type === 'factsheet' ? 'factsheetStatus' : 'menuStatus');
+
+            if (fileInput.files.length === 0) {
+                alert('Please select a file first.');
+                return;
+            }
+
+            const fileName = fileInput.files[0].name;
 
             try {
-                const res = await fetch('/api/factsheet', {
+                const endpoint = type === 'factsheet' ? '/api/upload-factsheet' : '/api/upload-menu';
+                const res = await fetch(endpoint, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(data)
+                    body: JSON.stringify({ filename: fileName })
                 });
+
                 if (res.ok) {
-                    alertBox.textContent = 'Fact sheet published live successfully!';
-                    alertBox.style.background = '#d1fae5';
-                    alertBox.style.color = '#065f46';
-                    alertBox.style.display = 'block';
-                    setTimeout(() => { alertBox.style.display = 'none'; }, 4000);
+                    statusSpan.textContent = `✔ Successfully uploaded: ${fileName}`;
+                } else {
+                    alert('Upload failed.');
                 }
             } catch (err) {
-                alertBox.textContent = 'Failed to update.';
-                alertBox.style.display = 'block';
+                console.error('Upload error:', err);
             }
-        });
-
-        async function loadFactSheetAdmin() {
-            try {
-                const res = await fetch('/api/factsheet');
-                const data = await res.json();
-                if (data.wifiDetails) document.getElementById('wifiDetails').value = data.wifiDetails;
-                if (data.breakfastTiming) document.getElementById('breakfastTiming').value = data.breakfastTiming;
-                if (data.restaurants) document.getElementById('restaurants').value = data.restaurants;
-                if (data.bars) document.getElementById('bars').value = data.bars;
-                if (data.nearbyPlaces) document.getElementById('nearbyPlaces').value = data.nearbyPlaces;
-                if (data.notes) document.getElementById('notes').value = data.notes;
-            } catch(e) {}
         }
 
         function filterDept(dept, btn) {
@@ -231,13 +180,8 @@
             const filtered = allOrdersData.filter(order => {
                 if (currentFilter === 'all') return true;
                 const dept = (order.department || 'kitchen').toLowerCase();
-                
-                if (currentFilter === 'kitchen') {
-                    return dept === 'kitchen';
-                }
-                if (currentFilter === 'fnb') {
-                    return dept === 'fnb';
-                }
+                if (currentFilter === 'kitchen') return dept === 'kitchen';
+                if (currentFilter === 'fnb') return dept === 'fnb';
                 return dept.includes(currentFilter);
             });
 
@@ -302,15 +246,12 @@
                 });
                 if (res.ok) {
                     loadOrders();
-                } else {
-                    alert('Failed to update status.');
                 }
             } catch (err) {
                 console.error('Status update error:', err);
             }
         }
 
-        loadFactSheetAdmin();
         loadOrders();
         setInterval(loadOrders, 10000);
     </script>
