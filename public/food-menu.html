@@ -8,21 +8,16 @@
         body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f8fafc; color: #1e293b; }
         .container { max-width: 800px; margin: 0 auto; background: #fff; padding: 25px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
         h1 { font-size: 22px; margin-bottom: 5px; color: #0f172a; text-align: center; }
-        .subtitle { text-align: center; color: #64748b; font-size: 14px; margin-bottom: 20px; }
+        .subtitle { text-align: center; color: #64748b; font-size: 14px; margin-bottom: 15px; }
         
-        /* Chef Specials Section */
-        .specials-section { background: #fffbeb; border: 1px solid #fde68a; border-radius: 10px; padding: 15px; margin-bottom: 25px; }
-        .specials-title { font-weight: bold; font-size: 16px; color: #b45309; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
-        .specials-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; }
-        .special-card { background: #fff; border: 1px solid #fef3c7; padding: 10px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; }
-
+        .room-indicator { background: #eff6ff; color: #1d4ed8; padding: 8px 12px; border-radius: 6px; font-weight: bold; text-align: center; margin-bottom: 20px; font-size: 14px; }
+        
         .search-box { margin-bottom: 20px; }
         .search-input { width: 100%; padding: 12px 15px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 15px; box-sizing: border-box; outline: none; }
         .search-input:focus { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
 
         .menu-grid { display: grid; grid-template-columns: 1fr; gap: 15px; margin-bottom: 25px; }
-        .menu-item { display: flex; justify-content: space-between; align-items: center; padding: 15px; border: 1px solid #e2e8f0; border-radius: 8px; background: #fff; transition: all 0.2s; }
-        .menu-item:hover { border-color: #cbd5e1; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
+        .menu-item { display: flex; justify-content: space-between; align-items: center; padding: 15px; border: 1px solid #e2e8f0; border-radius: 8px; background: #fff; }
         
         .item-info { display: flex; gap: 15px; align-items: center; }
         .item-icon { font-size: 30px; background: #f1f5f9; padding: 10px; border-radius: 8px; }
@@ -37,8 +32,7 @@
         .cart-title { font-weight: bold; font-size: 16px; margin-bottom: 10px; color: #334155; }
         .cart-items { margin-bottom: 15px; font-size: 14px; color: #475569; }
         .checkout-btn { width: 100%; background: #10b981; color: white; border: none; padding: 14px; font-weight: bold; border-radius: 8px; cursor: pointer; font-size: 16px; text-align: center; }
-        .checkout-btn:hover { background: #059669; }
-
+        
         .alert { padding: 12px; border-radius: 6px; margin-top: 15px; display: none; text-align: center; font-weight: bold; font-size: 14px; }
         .back-link { display: block; text-align: center; margin-top: 15px; color: #2563eb; text-decoration: none; font-weight: bold; font-size: 14px; }
     </style>
@@ -46,24 +40,16 @@
 <body>
     <div class="container">
         <h1>🍽️ Digital Food & F&B Menu</h1>
-        <div class="subtitle">Browse Chef's Specials or search items below to place your order.</div>
+        <div class="subtitle">Search or select items to place your order directly to the kitchen.</div>
 
-        <!-- Chef's Specials Highlight Section -->
-        <div class="specials-section">
-            <div class="specials-title">🌟 Chef's Specials & Recommendations</div>
-            <div id="specialsContainer" class="specials-grid">
-                <!-- Dynamically populated specials -->
-            </div>
-        </div>
+        <div class="room-indicator" id="roomIndicator">Ordering for: Room DEMO101</div>
 
-        <!-- Live Search Bar -->
+        <!-- Search Bar -->
         <div class="search-box">
-            <input type="text" id="searchInput" class="search-input" placeholder="🔍 Search full menu (e.g., paneer, coffee, chicken)..." oninput="filterMenu()">
+            <input type="text" id="searchInput" class="search-input" placeholder="🔍 Search menu items (e.g., paneer, coffee, chicken)..." oninput="filterMenu()">
         </div>
 
-        <div id="menuContainer" class="menu-grid">
-            <!-- Dynamically populated items -->
-        </div>
+        <div id="menuContainer" class="menu-grid"></div>
 
         <div class="cart-section">
             <div class="cart-title">Your Order Summary</div>
@@ -72,7 +58,7 @@
         </div>
 
         <div id="alertBox" class="alert"></div>
-        <a href="/factsheet.html" class="back-link">← View Hotel Fact Sheet & Uploaded Menus</a>
+        <a href="/" class="back-link">← Back to Guest Service Portal</a>
     </div>
 
     <script>
@@ -84,39 +70,14 @@
             try {
                 const urlParams = new URLSearchParams(window.location.search);
                 currentRoom = urlParams.get('room') || 'DEMO101';
+                document.getElementById('roomIndicator').textContent = `Ordering for: Room ${currentRoom}`;
 
                 const res = await fetch('/api/food-items');
                 allFoodItems = await res.json();
-                renderChefSpecials(allFoodItems);
                 renderMenu(allFoodItems);
             } catch (err) {
                 console.error('Error loading menu:', err);
             }
-        }
-
-        function renderChefSpecials(items) {
-            const container = document.getElementById('specialsContainer');
-            // Filter items categorized as Special or grab the first 3 items as highlights
-            const specials = items.filter(i => (i.category && i.category.toLowerCase().includes('special')) || i.id <= 3);
-            
-            if (specials.length === 0) {
-                container.innerHTML = '<div style="font-size:13px; color:#b45309;">No chef specials listed yet. Add them from your admin panel.</div>';
-                return;
-            }
-
-            container.innerHTML = '';
-            specials.slice(0, 3).forEach(item => {
-                const qty = cart[item.id] || 0;
-                container.innerHTML += `
-                    <div class="special-card">
-                        <div>
-                            <div style="font-weight:bold; font-size:14px; color:#1e293b;">${item.name}</div>
-                            <div style="font-size:12px; color:#059669; font-weight:bold;">₹${item.price}</div>
-                        </div>
-                        <button class="add-btn" style="padding:4px 10px; font-size:12px;" onclick="updateCart(${item.id}, 1)">${qty === '+Add' || qty === 0 ? 'Add' : qty + ' added'}</button>
-                    </div>
-                `;
-            });
         }
 
         function filterMenu() {
@@ -168,15 +129,7 @@
             if (!cart[itemId]) cart[itemId] = 0;
             cart[itemId] += change;
             if (cart[itemId] <= 0) delete cart[itemId];
-            
-            const query = document.getElementById('searchInput').value.toLowerCase().trim();
-            const filtered = allFoodItems.filter(item => 
-                (item.name && item.name.toLowerCase().includes(query)) || 
-                (item.description && item.description.toLowerCase().includes(query)) ||
-                (item.category && item.category.toLowerCase().includes(query))
-            );
-            renderMenu(filtered);
-            renderChefSpecials(allFoodItems);
+            filterMenu();
             updateCartSummary();
         }
 
@@ -203,7 +156,7 @@
         async function placeOrder() {
             const alertBox = document.getElementById('alertBox');
             if (Object.keys(cart).length === 0) {
-                alertBox.textContent = 'Please add at least one item to your cart before placing an order.';
+                alertBox.textContent = 'Please add at least one item to your cart.';
                 alertBox.style.background = '#fee2e2';
                 alertBox.style.color = '#991b1b';
                 alertBox.style.display = 'block';
@@ -232,7 +185,7 @@
                 });
 
                 if (res.ok) {
-                    alertBox.textContent = 'Order placed successfully! Sent to the kitchen.';
+                    alertBox.textContent = `Order placed successfully for Room ${currentRoom}!`;
                     alertBox.style.background = '#d1fae5';
                     alertBox.style.color = '#065f46';
                     alertBox.style.display = 'block';
@@ -240,13 +193,9 @@
                     updateCartSummary();
                     renderMenu(allFoodItems);
                     setTimeout(() => { alertBox.style.display = 'none'; }, 5000);
-                } else {
-                    throw new Error('Failed');
                 }
             } catch (err) {
-                alertBox.textContent = 'Failed to place order. Please try again.';
-                alertBox.style.background = '#fee2e2';
-                alertBox.style.color = '#991b1b';
+                alertBox.textContent = 'Failed to place order.';
                 alertBox.style.display = 'block';
             }
         }
