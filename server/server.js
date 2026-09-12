@@ -1,157 +1,127 @@
-const express = require('express');
-const path = require('path');
-const fs = require('fs');
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hotel Fact Sheet & Menus - HostlyDesk</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f8fafc; color: #1e293b; }
+        .container { max-width: 800px; margin: 0 auto; background: #fff; padding: 25px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        h1 { font-size: 22px; margin-bottom: 5px; color: #0f172a; text-align: center; }
+        .subtitle { text-align: center; color: #64748b; font-size: 14px; margin-bottom: 25px; }
+        
+        .section-box { background: #f1f5f9; border-radius: 8px; padding: 20px; margin-bottom: 20px; }
+        .section-title { font-weight: bold; font-size: 16px; margin-bottom: 10px; color: #334155; display: flex; align-items: center; gap: 8px; }
+        
+        .info-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 14px; }
+        .info-row:last-child { border-bottom: none; }
+        .label { font-weight: bold; color: #475569; }
+        .value { color: #1e293b; }
 
-const app = express();
-const PORT = process.env.PORT || 10000;
+        .document-list { list-style: none; padding: 0; margin: 0; }
+        .document-item { display: flex; justify-content: space-between; align-items: center; background: #fff; padding: 12px 15px; border: 1px solid #cbd5e1; border-radius: 6px; margin-bottom: 10px; font-size: 14px; }
+        
+        .back-link { display: block; text-align: center; margin-top: 20px; color: #2563eb; text-decoration: none; font-weight: bold; font-size: 14px; }
+        .back-link:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📄 Hotel Fact Sheet & Restaurant Menus</h1>
+        <div class="subtitle" id="roomSubText">Essential information and downloadable menus for your stay.</div>
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-app.use(express.static(path.join(__dirname, '../public')));
+        <div class="section-box">
+            <div class="section-title">📶 Wi-Fi & General Connectivity</div>
+            <div class="info-row">
+                <span class="label">Wi-Fi Network:</span>
+                <span class="value" id="wifiNet">Kanha_Guest_WiFi</span>
+            </div>
+            <div class="info-row">
+                <span class="label">Password:</span>
+                <span class="value" id="wifiPass">welcome2026</span>
+            </div>
+        </div>
 
-// Ensure data & uploads directories exist
-const dataDir = path.join(__dirname, '../data');
-const uploadsDir = path.join(dataDir, 'uploads');
-if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
-if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+        <div class="section-box">
+            <div class="section-title">⏰ Operating Timings</div>
+            <div class="info-row">
+                <span class="label">Breakfast:</span>
+                <span class="value">07:00 AM - 10:30 AM (Coffee Shop)</span>
+            </div>
+            <div class="info-row">
+                <span class="label">In-Room Dining:</span>
+                <span class="value">24 Hours Available</span>
+            </div>
+            <div class="info-row">
+                <span class="label">Checkout Time:</span>
+                <span class="value">11:00 AM</span>
+            </div>
+        </div>
 
-// Serve uploaded documents statically so links work correctly
-app.use('/uploads', express.static(uploadsDir));
+        <div class="section-box">
+            <div class="section-title">📁 Restaurant Menus & Fact Sheet Documents</div>
+            <ul id="documentList" class="document-list">
+                <li class="document-item">
+                    <span><b>Main Restaurant Menu</b> (Default_Menu.pdf)</span>
+                    <a href="javascript:void(0)" onclick="openDocument('Default_Menu.pdf')" style="color: #2563eb; font-weight: bold; text-decoration: none; cursor:pointer;">View Document</a>
+                </li>
+            </ul>
+        </div>
 
-// Storage for Fact Sheet and Dynamic Menus List
-let hotelDocuments = {
-  factsheet: 'None uploaded yet',
-  menus: [
-    { id: 1, title: 'Main Restaurant Menu', filename: 'Default_Menu.pdf' }
-  ]
-};
+        <a id="backPortal" href="/" class="back-link">← Back to Guest Portal</a>
+    </div>
 
-let uploadedMenuInventory = [
-  { id: 1, name: 'Espresso', category: 'Beverages', price: 150, description: 'Freshly brewed hot coffee', icon: '☕' }
-];
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const currentRoom = urlParams.get('room') || '305';
+        document.getElementById('roomSubText').textContent = `Essential information for guests in Room ${currentRoom}.`;
+        document.getElementById('backPortal').href = `/?room=${currentRoom}`;
 
-// Safe Database Initialization
-let db = null;
-try {
-  const sqlite3 = require('sqlite3').verbose();
-  const dbFile = path.join(dataDir, 'hostlydesk.db');
-  db = new sqlite3.Database(dbFile, (err) => {
-    if (!err) {
-      db.serialize(() => {
-        db.run(`CREATE TABLE IF NOT EXISTS orders (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          room TEXT,
-          items TEXT,
-          department TEXT DEFAULT 'housekeeping',
-          status TEXT DEFAULT 'Pending',
-          created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        )`);
-        db.run(`ALTER TABLE orders ADD COLUMN department TEXT DEFAULT 'housekeeping'`, () => {});
-        db.run(`ALTER TABLE orders ADD COLUMN status TEXT DEFAULT 'Pending'`, () => {});
+        function openDocument(filename) {
+            // Check if file exists by trying to fetch its headers first
+            fetch(`/uploads/${filename}`, { method: 'HEAD' })
+                .then(res => {
+                    if (res.ok) {
+                        window.open(`/uploads/${filename}`, '_blank');
+                    } else {
+                        alert(`The document "${filename}" is currently being updated by management and will be available shortly.`);
+                    }
+                })
+                .catch(() => {
+                    alert(`The document "${filename}" is not yet uploaded to the server.`);
+                });
+        }
 
-        db.run(`CREATE TABLE IF NOT EXISTS menu_items (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          name TEXT,
-          category TEXT,
-          price REAL,
-          description TEXT,
-          icon TEXT DEFAULT '🍽️'
-        )`, () => {});
-      });
-    }
-  });
-} catch (e) {
-  console.log('Running on fallback memory storage.');
-}
+        async function loadFactsheetData() {
+            try {
+                const res = await fetch('/api/factsheet');
+                const data = await res.json();
+                if (data.wifiDetails) {
+                    const parts = data.wifiDetails.split('|');
+                    if (parts.length >= 2) {
+                        document.getElementById('wifiNet').textContent = parts[0].replace('Network:', '').trim();
+                        document.getElementById('wifiPass').textContent = parts[1].replace('Password:', '').trim();
+                    }
+                }
 
-// Page Routes
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, '../public/index.html'));
-});
+                if (data.documents && data.documents.menus) {
+                    const listEl = document.getElementById('documentList');
+                    listEl.innerHTML = '';
+                    data.documents.menus.forEach(menu => {
+                        listEl.innerHTML += `
+                            <li class="document-item">
+                                <span><b>${menu.title}</b> (${menu.filename})</span>
+                                <a href="javascript:void(0)" onclick="openDocument('${menu.filename}')" style="color: #2563eb; font-weight: bold; text-decoration: none; cursor:pointer;">View Document</a>
+                            </li>
+                        `;
+                    });
+                }
+            } catch (err) {
+                console.error('Failed to load factsheet info', err);
+            }
+        }
 
-app.get('/kitchen', (req, res) => {
-  res.sendFile(path.join(__dirname, '../public/kitchen.html'));
-});
-
-app.get('/food-menu', (req, res) => {
-  res.sendFile(path.join(__dirname, '../public/food-menu.html'));
-});
-
-app.get('/factsheet.html', (req, res) => {
-  res.sendFile(path.join(__dirname, '../public/factsheet.html'));
-});
-
-app.get('/admin.html', (req, res) => {
-  res.sendFile(path.join(__dirname, '../public/admin.html'));
-});
-
-// API Endpoints
-app.get('/api/context', (req, res) => {
-  res.json({ room: req.query.room || '305' });
-});
-
-app.get('/api/food-items', (req, res) => {
-  if (!db) return res.json(uploadedMenuInventory);
-  db.all('SELECT * FROM menu_items ORDER BY id DESC', [], (err, rows) => {
-    if (err || !rows || rows.length === 0) {
-      res.json(uploadedMenuInventory);
-    } else {
-      res.json(rows);
-    }
-  });
-});
-
-app.post('/api/orders', (req, res) => {
-  const room = req.body.room || req.query.room || '305';
-  const department = req.body.department || 'housekeeping';
-  const items = typeof req.body.items === 'object' ? JSON.stringify(req.body.items) : req.body.items;
-
-  if (!db) {
-    return res.json({ success: true, id: Date.now() });
-  }
-
-  const query = `INSERT INTO orders (room, items, department) VALUES (?, ?, ?)`;
-  db.run(query, [room, items, department], function(err) {
-    if (err) {
-      return res.status(500).json({ error: err.message });
-    }
-    res.json({ success: true, id: this.lastID });
-  });
-});
-
-app.get('/api/orders', (req, res) => {
-  if (!db) return res.json([]);
-  db.all('SELECT * FROM orders ORDER BY id DESC', [], (err, rows) => {
-    res.json(rows || []);
-  });
-});
-
-app.post('/api/orders/:id/status', (req, res) => {
-  if (!db) return res.json({ success: true });
-  db.run(`UPDATE orders SET status = ? WHERE id = ?`, [req.body.status, req.params.id], function(err) {
-    res.json({ success: true, updated: this.changes });
-  });
-});
-
-app.get('/api/factsheet', (req, res) => {
-  res.json({
-    wifiDetails: "Network: Hotel_Guest_WiFi | Password: welcome2026",
-    documents: hotelDocuments
-  });
-});
-
-app.post('/api/upload-factsheet', (req, res) => {
-  hotelDocuments.factsheet = req.body.filename || 'FactSheet.pdf';
-  res.json({ success: true });
-});
-
-app.post('/api/add-menu', (req, res) => {
-  const { title, filename } = req.body;
-  hotelDocuments.menus.push({ id: Date.now(), title: title || 'Menu', filename: filename || 'Menu.pdf' });
-  res.json({ success: true, menus: hotelDocuments.menus });
-});
-
-// Explicit host binding for Render stability
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`HostlyDesk server running on port ${PORT}`);
-});
+        loadFactsheetData();
+    </script>
+</body>
+</html>
