@@ -3,33 +3,53 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HostlyDesk - Kitchen & Admin Dashboard</title>
+    <title>HostlyDesk Admin & Kitchen Dashboard</title>
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f8fafc; color: #1e293b; margin: 0; padding: 20px; }
-        .container { max-width: 900px; margin: 0 auto; background: #fff; padding: 24px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
-        h1, h2 { color: #0f172a; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; margin-top: 0; }
-        .section { margin-bottom: 30px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 12px; }
-        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #e2e8f0; font-size: 14px; }
-        th { background: #f1f5f9; color: #475569; font-weight: 600; }
-        .badge { background: #dbeafe; color: #1e40af; padding: 4px 8px; border-radius: 4px; font-weight: 500; font-size: 12px; }
-        .form-group { margin-bottom: 16px; }
-        label { display: block; font-weight: 500; margin-bottom: 6px; font-size: 14px; }
-        input[type="text"] { width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 14px; box-sizing: border-box; }
-        button { background: #10b981; color: white; border: none; padding: 12px 20px; font-size: 15px; font-weight: 600; border-radius: 6px; cursor: pointer; }
+        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f8fafc; color: #1e293b; }
+        .container { max-width: 1000px; margin: 0 auto; }
+        h1 { font-size: 24px; margin-bottom: 20px; }
+        .card { background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 20px; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; font-weight: bold; margin-bottom: 5px; font-size: 14px; }
+        input[type="text"] { width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 4px; box-sizing: border-box; }
+        button { background: #10b981; color: white; border: none; padding: 10px 20px; font-weight: bold; border-radius: 4px; cursor: pointer; }
         button:hover { background: #059669; }
-        .alert { margin-top: 12px; padding: 10px; border-radius: 6px; font-size: 14px; display: none; }
-        .alert.success { background: #d1fae5; color: #065f46; display: block; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #e2e8f0; font-size: 14px; }
+        th { background: #f1f5f9; font-weight: bold; }
+        .room-badge { background: #eff6ff; color: #1d4ed8; padding: 4px 8px; border-radius: 4px; font-weight: bold; }
+        .status-pill { background: #fef3c7; color: #d97706; padding: 4px 8px; border-radius: 12px; font-size: 12px; font-weight: bold; }
+        .alert { padding: 10px; border-radius: 4px; margin-top: 10px; display: none; background: #fee2e2; color: #991b1b; }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>HostlyDesk Control Panel</h1>
-        
-        <div class="section">
-            <h2>Live Kitchen Orders</h2>
-            <p style="font-size: 14px; color: #64748b;">Real-time incoming orders from hotel rooms.</p>
-            <table>
+        <h1>HostlyDesk Management Dashboard</h1>
+
+        <div class="card">
+            <h3>Hotel Configuration</h3>
+            <form id="hotelForm">
+                <div class="form-group">
+                    <label for="hotelId">Hotel ID (URL slug):</label>
+                    <input type="text" id="hotelId" value="hotel-kanha-shyam">
+                </div>
+                <div class="form-group">
+                    <label for="hotelName">Hotel Display Name:</label>
+                    <input type="text" id="hotelName" value="Hotel Kanha Shyam">
+                </div>
+                <div class="form-group">
+                    <label for="kitchenChatId">Kitchen / F&B Chat ID:</label>
+                    <input type="text" id="kitchenChatId" value="-1004301094020">
+                </div>
+                <button type="submit">Save Hotel Configuration</button>
+                <div id="alertBox" class="alert"></div>
+            </form>
+        </div>
+
+        <div class="card">
+            <h3>Live Kitchen Orders</h3>
+            <p style="color: #64748b; font-size: 13px;">Real-time incoming orders from hotel rooms.</p>
+            <table class="orders-table">
                 <thead>
                     <tr>
                         <th>Order ID</th>
@@ -40,83 +60,37 @@
                     </tr>
                 </thead>
                 <tbody id="ordersTableBody">
-                    <tr><td colspan="5" style="text-align: center; color: #94a3b8;">Loading orders...</td></tr>
+                    <!-- Orders dynamically loaded here -->
                 </tbody>
             </table>
-            <button onclick="loadOrders()" style="margin-top: 12px; background: #3b82f6; font-size: 13px; padding: 8px 14px;">Refresh Orders</button>
-        </div>
-
-        <div class="section">
-            <h2>Hotel Configuration</h2>
-            <form id="configForm">
-                <div class="form-group">
-                    <label>Hotel Display Name:</label>
-                    <input type="text" id="hotelName" value="Hotel Kanha Shyam">
-                </div>
-                <div class="form-group">
-                    <label>Kitchen / F&B Telegram Chat ID:</label>
-                    <input type="text" id="telegramChatId" value="-1004301094020">
-                </div>
-                <button type="submit">Save Hotel Configuration</button>
-                <div id="formAlert" class="alert"></div>
-            </form>
         </div>
     </div>
 
     <script>
-        async function loadOrders() {
-            try {
-                const res = await fetch('/api/orders');
-                const orders = await res.json();
-                const tbody = document.getElementById('ordersTableBody');
-                
-                if (!orders || orders.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #94a3b8;">No orders received yet.</td></tr>';
-                    return;
-                }
-
-                tbody.innerHTML = orders.map(o => {
-                    let parsedItems = o.items;
-                    try {
-                        const parsed = JSON.parse(o.items);
-                        if (Array.isArray(parsed)) {
-                            parsedItems = parsed.map(i => `Item ID ${i.id} (Qty: ${i.qty})`).join(', ');
-                        } else if (typeof parsed === 'object') {
-                            parsedItems = JSON.stringify(parsed);
-                        }
-                    } catch (e) {}
-
-                    return `
-                        <tr>
-                            <td>#${o.id}</td>
-                            <td><span class="badge">Room ${o.room || 'DEMO101'}</span></td>
-                            <td>${parsedItems}</td>
-                            <td>${o.created_at || 'Just now'}</td>
-                            <td>${o.status || 'Pending'}</td>
-                        </tr>
-                    `;
-                }).join('');
-            } catch (err) {
-                console.error('Error loading orders:', err);
-            }
-        }
-
-        document.getElementById('configForm').addEventListener('submit', async (e) => {
+        document.getElementById('hotelForm').addEventListener('submit', async (e) => {
             e.preventDefault();
-            const alertBox = document.getElementById('formAlert');
+            const alertBox = document.getElementById('alertBox');
+
+            const hotelData = {
+                hotelId: document.getElementById('hotelId').value.trim().toLowerCase(),
+                hotelName: document.getElementById('hotelName').value.trim(),
+                kitchenChatId: document.getElementById('kitchenChatId').value.trim()
+            };
+
             try {
-                const res = await fetch('/api/config', {
+                const response = await fetch('/api/config', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        hotelName: document.getElementById('hotelName').value,
-                        telegramChatId: document.getElementById('telegramChatId').value
-                    })
+                    body: JSON.stringify(hotelData)
                 });
-                const data = await res.json();
-                if (data.success) {
-                    alertBox.textContent = 'Configuration saved successfully!';
-                    alertBox.className = 'alert success';
+
+                if (response.ok) {
+                    alertBox.textContent = 'Hotel property updated successfully!';
+                    alertBox.style.background = '#d1fae5';
+                    alertBox.style.color = '#065f46';
+                    alertBox.style.display = 'block';
+                } else {
+                    throw new Error('Failed to save');
                 }
             } catch (err) {
                 alertBox.textContent = 'Error saving configuration.';
@@ -124,6 +98,61 @@
                 alertBox.style.display = 'block';
             }
         });
+
+        async function loadOrders() {
+            const ordersContainer = document.getElementById('ordersTableBody');
+            if (!ordersContainer) return;
+
+            try {
+                const res = await fetch('/api/orders');
+                const orders = await res.json();
+
+                if (!Array.isArray(orders) || orders.length === 0) return;
+
+                ordersContainer.innerHTML = '';
+
+                orders.forEach(order => {
+                    let formattedItems = '';
+                    try {
+                        let parsed = order.items;
+                        if (typeof parsed === 'string') {
+                            parsed = JSON.parse(parsed);
+                        }
+
+                        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+                            if (parsed.items) {
+                                parsed = parsed.items;
+                            }
+                        }
+
+                        if (Array.isArray(parsed)) {
+                            formattedItems = parsed.map(item => {
+                                if (typeof item === 'string') return item;
+                                return `${item.name || 'Item ID ' + item.id} (Qty: ${item.qty || item.quantity || 1})`;
+                            }).join(', ');
+                        } else if (parsed && typeof parsed === 'object') {
+                            formattedItems = Object.entries(parsed).map(([k, v]) => `${k}: ${v}`).join(', ');
+                        } else {
+                            formattedItems = String(parsed);
+                        }
+                    } catch (e) {
+                        formattedItems = order.items;
+                    }
+
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>#${order.id}</td>
+                        <td><span class="room-badge">Room ${order.room || 'DEMO101'}</span></td>
+                        <td>${formattedItems}</td>
+                        <td>${order.created_at || 'Just now'}</td>
+                        <td><span class="status-pill">${order.status || 'Pending'}</span></td>
+                    `;
+                    ordersContainer.appendChild(tr);
+                });
+            } catch (err) {
+                console.error('Error loading orders:', err);
+            }
+        }
 
         loadOrders();
         setInterval(loadOrders, 10000);
