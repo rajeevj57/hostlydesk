@@ -78,9 +78,18 @@ try {
   console.warn('Running with memory/mock storage due to missing sqlite3 module:', e.message);
 }
 
-// Page Routes
-app.get('/', (req, res) => { res.sendFile(path.join(__dirname, '../public/index.html')); });
-app.get('/kitchen', (req, res) => { res.sendFile(path.join(__dirname, '../public/kitchen.html')); });
+// Robust Page Routes with explicit matching to prevent Gateway/Routing errors
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, '../public/index.html'));
+});
+
+app.get('/kitchen', (req, res) => {
+  res.sendFile(path.join(__dirname, '../public/kitchen.html'));
+});
+
+app.get('/food-menu', (req, res) => {
+  res.sendFile(path.join(__dirname, '../public/food-menu.html'));
+});
 
 // API Endpoint for Room Context
 app.get('/api/context', (req, res) => {
@@ -235,7 +244,7 @@ app.post(['/api/config', '/api/settings', '/api/save-config', '/api/admin/config
   res.json({ success: true, ok: true, message: 'Configuration saved successfully!' });
 });
 
-// HTML Page Routes
+// Additional HTML Page Routes
 app.get('/kitchen.html', (req, res) => { res.sendFile(path.join(__dirname, '../public/kitchen.html')); });
 app.get('/fnb.html', (req, res) => { res.sendFile(path.join(__dirname, '../public/fnb.html')); });
 app.get('/housekeeping.html', (req, res) => { res.sendFile(path.join(__dirname, '../public/housekeeping.html')); });
