@@ -39,7 +39,7 @@ function calculateOrderTotal(body) {
   return total > 0 ? total : 350;
 }
 
-// Safe Database Initialization
+// Safe Database Initialization with Department Support
 let db = null;
 try {
   const dataDir = path.join(__dirname, '../data');
@@ -57,6 +57,7 @@ try {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         room TEXT,
         items TEXT,
+        department TEXT DEFAULT 'kitchen',
         status TEXT DEFAULT 'Pending',
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )`);
@@ -105,58 +106,75 @@ app.get('/api/orders', (req, res) => {
   });
 });
 
+// API Endpoint for Updating Order Status
+app.post('/api/orders/:id/status', (req, res) => {
+  const orderId = req.params.id;
+  const { status } = req.body;
+  if (!db) return res.json({ success: true });
+
+  const query = `UPDATE orders SET status = ? WHERE id = ?`;
+  db.run(query, [status, orderId], function(err) {
+    if (err) {
+      console.error('Status update failed:', err.message);
+      return res.status(500).json({ error: err.message });
+    }
+    res.json({ success: true, updated: this.changes });
+  });
+});
+
 // API Endpoint for Creating Orders
 app.post('/api/orders', (req, res) => {
   const room = req.body.room || req.query.room || 'DEMO101';
+  const department = req.body.department || 'kitchen';
   const items = req.body.items ? JSON.stringify(req.body.items) : JSON.stringify(req.body);
-  const total = calculateOrderTotal(req.body);
 
   if (!db) {
-    return res.json({ success: true, ok: true, id: Date.now(), orderId: Date.now(), total: total, amount: total });
+    return res.json({ success: true, ok: true, id: Date.now() });
   }
 
-  const query = `INSERT INTO orders (room, items) VALUES (?, ?)`;
-  db.run(query, [room, items], function(err) {
+  const query = `INSERT INTO orders (room, items, department) VALUES (?, ?, ?)`;
+  db.run(query, [room, items, department], function(err) {
     if (err) {
       console.error('Order insert failed:', err.message);
       return res.status(500).json({ error: err.message });
     }
-    res.json({ success: true, ok: true, id: this.lastID, orderId: this.lastID, total: total, amount: total });
+    res.json({ success: true, ok: true, id: this.lastID });
   });
 });
 
 // API Endpoint for Food Orders
 app.post('/api/food-order', (req, res) => {
   const room = req.body.room || req.query.room || 'DEMO101';
+  const department = req.body.department || 'kitchen';
   const items = req.body.items ? JSON.stringify(req.body.items) : JSON.stringify(req.body);
-  const total = calculateOrderTotal(req.body);
 
   if (!db) {
-    return res.json({ success: true, ok: true, id: Date.now(), orderId: Date.now(), total: total, amount: total });
+    return res.json({ success: true, ok: true, id: Date.now() });
   }
 
-  const query = `INSERT INTO orders (room, items) VALUES (?, ?)`;
-  db.run(query, [room, items], function(err) {
+  const query = `INSERT INTO orders (room, items, department) VALUES (?, ?, ?)`;
+  db.run(query, [room, items, department], function(err) {
     if (err) {
       console.error('Order insert failed:', err.message);
       return res.status(500).json({ error: err.message });
     }
-    res.json({ success: true, ok: true, id: this.lastID, orderId: this.lastID, total: total, amount: total });
+    res.json({ success: true, ok: true, id: this.lastID });
   });
 });
 
 // API Endpoint for Guest Requests
 app.post('/api/requests', (req, res) => {
   const room = req.body.room || req.query.room || 'DEMO101';
-  const { requestType, notes } = req.body;
+  const { requestType, notes, department } = req.body;
+  const dept = department || 'housekeeping';
   const itemSummary = requestType ? `${requestType}: ${notes || ''}` : JSON.stringify(req.body);
 
   if (!db) {
     return res.json({ success: true, id: Date.now() });
   }
 
-  const query = `INSERT INTO orders (room, items) VALUES (?, ?)`;
-  db.run(query, [room, itemSummary], function(err) {
+  const query = `INSERT INTO orders (room, items, department) VALUES (?, ?, ?)`;
+  db.run(query, [room, itemSummary, dept], function(err) {
     if (err) {
       console.error('Request insert failed:', err.message);
       return res.status(500).json({ error: err.message });
@@ -165,8 +183,8 @@ app.post('/api/requests', (req, res) => {
   });
 });
 
-// Catch-all API Endpoints for Admin Configuration / Settings / Save Routes
-app.post(['/api/config', '/api/settings', '/api/save-config', '/api/admin/config', '/config', '/settings'], (req, res) => {
+// Admin Configuration Endpoint
+app.post(['/api/config', '/api/settings', '/api/save-config', '/api/admin/config'], (req, res) => {
   console.log('Admin configuration received:', req.body);
   res.json({ success: true, ok: true, message: 'Configuration saved successfully!' });
 });
