@@ -17,13 +17,19 @@
         .card-sub { font-size: 12px; color: #64748b; margin-bottom: 15px; line-height: 1.4; }
 
         /* Icon Grid */
-        .grid-container { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px; }
-        .service-tile { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px 8px; text-align: center; cursor: pointer; transition: all 0.2s; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 75px; }
+        .grid-container { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 15px; }
+        .service-tile { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 10px 5px; text-align: center; cursor: pointer; transition: all 0.2s; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 75px; box-sizing: border-box; }
         .service-tile:hover { border-color: #cbd5e1; background: #f8fafc; }
         .service-tile.selected { border: 2px solid #2563eb; background: #eff6ff; }
         
-        .tile-icon { font-size: 20px; margin-bottom: 6px; }
-        .tile-label { font-size: 11px; font-weight: bold; color: #334155; line-height: 1.2; }
+        .tile-icon { font-size: 20px; margin-bottom: 4px; }
+        .tile-label { font-size: 11px; font-weight: bold; color: #334155; line-height: 1.1; }
+
+        /* Custom Input Box for unlisted items like heaters */
+        .custom-request-box { margin-bottom: 15px; text-align: left; }
+        .custom-request-box label { font-size: 11px; font-weight: bold; color: #475569; display: block; margin-bottom: 4px; }
+        .custom-input { width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 13px; box-sizing: border-box; outline: none; }
+        .custom-input:focus { border-color: #2563eb; box-shadow: 0 0 0 2px rgba(37,99,235,0.1); }
 
         .send-btn { width: 100%; background: #c2a666; color: #fff; border: none; padding: 14px; font-weight: bold; border-radius: 12px; cursor: pointer; font-size: 15px; text-transform: uppercase; letter-spacing: 0.5px; transition: background 0.2s; }
         .send-btn:hover { background: #b09355; }
@@ -43,7 +49,7 @@
 
         <div class="card-box">
             <div class="card-heading">Need something?</div>
-            <div class="card-sub">Tap what you need. It goes straight to the right team — no typing.</div>
+            <div class="card-sub">Tap what you need or type a custom request below — it goes straight to the team.</div>
 
             <div class="grid-container" id="tileGrid">
                 <div class="service-tile" onclick="toggleService('Extra Towels', 'housekeeping', this)">
@@ -84,6 +90,12 @@
                 </div>
             </div>
 
+            <!-- Custom Request Input for items like Heaters, Extra Blankets, etc. -->
+            <div class="custom-request-box">
+                <label for="customInput">Need something else? (e.g., Room Heater):</label>
+                <input type="text" id="customInput" class="custom-input" placeholder="Type unlisted item here..." oninput="clearTileSelection()">
+            </div>
+
             <button type="button" class="send-btn" onclick="sendSelectedRequest()">Send Request</button>
             <div id="alertBox" class="alert"></div>
         </div>
@@ -111,6 +123,15 @@
             selectedDept = dept;
             selectedElement = element;
             element.classList.add('selected');
+            document.getElementById('customInput').value = ''; // clear custom text if tile clicked
+        }
+
+        function clearTileSelection() {
+            if (selectedElement) {
+                selectedElement.classList.remove('selected');
+                selectedElement = null;
+            }
+            selectedItem = null;
         }
 
         function openFoodMenu() {
@@ -119,8 +140,18 @@
 
         async function sendSelectedRequest() {
             const alertBox = document.getElementById('alertBox');
-            if (!selectedItem) {
-                alertBox.textContent = 'Please tap a service item first.';
+            const customText = document.getElementById('customInput').value.trim();
+
+            let finalItem = selectedItem;
+            let finalDept = selectedDept;
+
+            if (customText) {
+                finalItem = customText;
+                finalDept = 'housekeeping'; // default custom requests to housekeeping/maintenance desk
+            }
+
+            if (!finalItem) {
+                alertBox.textContent = 'Please tap a service tile or type a custom request.';
                 alertBox.style.background = '#fee2e2';
                 alertBox.style.color = '#991b1b';
                 alertBox.style.display = 'block';
@@ -129,8 +160,8 @@
 
             const payload = {
                 room: currentRoom,
-                department: selectedDept,
-                items: selectedItem
+                department: finalDept,
+                items: finalItem
             };
 
             try {
@@ -141,7 +172,7 @@
                 });
 
                 if (res.ok) {
-                    alertBox.textContent = `Success! ${selectedItem} requested for Room ${currentRoom}.`;
+                    alertBox.textContent = `Success! "${finalItem}" requested for Room ${currentRoom}.`;
                     alertBox.style.background = '#d1fae5';
                     alertBox.style.color = '#065f46';
                     alertBox.style.display = 'block';
@@ -149,6 +180,7 @@
                     if (selectedElement) selectedElement.classList.remove('selected');
                     selectedItem = null;
                     selectedElement = null;
+                    document.getElementById('customInput').value = '';
 
                     setTimeout(() => { alertBox.style.display = 'none'; }, 4000);
                 }
