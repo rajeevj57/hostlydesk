@@ -34,8 +34,11 @@
 
         .alert { padding: 12px; border-radius: 6px; margin-top: 15px; display: none; text-align: center; font-weight: bold; font-size: 14px; }
         
-        .menu-link-banner { background: #fef3c7; border: 1px solid #f59e0b; padding: 12px; border-radius: 8px; margin-bottom: 20px; text-align: center; font-size: 14px; }
+        .menu-link-banner { background: #fef3c7; border: 1px solid #f59e0b; padding: 12px; border-radius: 8px; margin-bottom: 12px; text-align: center; font-size: 14px; }
         .menu-link-banner a { color: #d97706; font-weight: bold; text-decoration: underline; }
+
+        .factsheet-link-banner { background: #e0f2fe; border: 1px solid #0284c7; padding: 12px; border-radius: 8px; margin-bottom: 20px; text-align: center; font-size: 14px; }
+        .factsheet-link-banner a { color: #0369a1; font-weight: bold; text-decoration: underline; }
     </style>
 </head>
 <body>
@@ -50,6 +53,10 @@
 
         <div class="menu-link-banner">
             🍔 Looking to order food? <a href="/kitchen">Open Digital Food & F&B Menu</a>
+        </div>
+
+        <div class="factsheet-link-banner">
+            📖 View Hotel Fact Sheet & Restaurant Menus <a href="/factsheet.html">Click Here</a>
         </div>
 
         <div class="section-title">Select Department</div>
@@ -86,7 +93,6 @@
             fnb: ['Ice Bucket', 'Bottled Water', 'Cutlery Set', 'Wine Glasses', 'Snack Plates']
         };
 
-        // Fetch context (Room and Hotel info) on load
         async function loadContext() {
             try {
                 const urlParams = new URLSearchParams(window.location.search);
