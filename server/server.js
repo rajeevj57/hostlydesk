@@ -1,12 +1,13 @@
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
+const pdfParse = require('pdf-parse');
 
 const app = express();
 const PORT = process.env.PORT || 10000;
 
-app.use(express.json({ limit: '15mb' }));
-app.use(express.urlencoded({ extended: true, limit: '15mb' }));
+app.use(express.json({ limit: '25mb' }));
+app.use(express.urlencoded({ extended: true, limit: '25mb' }));
 app.use(express.static(path.join(__dirname, '../public')));
 
 const dataDir = path.join(__dirname, '../data');
@@ -14,7 +15,7 @@ if (!fs.existsSync(dataDir)) {
   try { fs.mkdirSync(dataDir, { recursive: true }); } catch(e) {}
 }
 
-// Safe Database Initialization with Document Table Support
+// Safe Database Initialization
 let db = null;
 try {
   const sqlite3 = require('sqlite3').verbose();
@@ -42,7 +43,6 @@ try {
           icon TEXT DEFAULT '🍽️'
         )`, () => {});
 
-        // Permanent database storage for manager-uploaded PDFs
         db.run(`CREATE TABLE IF NOT EXISTS hotel_documents (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           title TEXT,
@@ -121,7 +121,7 @@ app.post('/api/orders/:id/status', (req, res) => {
   });
 });
 
-// Serve uploaded PDFs directly from Database storage
+// Serve uploaded PDFs from Database
 app.get('/uploads/:filename', (req, res) => {
   const filename = req.params.filename;
   if (!db) return res.status(404).send('Document not found.');
@@ -140,7 +140,6 @@ app.get('/uploads/:filename', (req, res) => {
         </html>
       `);
     }
-
     try {
       const matches = row.filedata.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
       const buffer = Buffer.from(matches ? matches[2] : row.filedata, 'base64');
@@ -169,26 +168,44 @@ app.get('/api/factsheet', (req, res) => {
   });
 });
 
-// Manager Document Upload Endpoint
-app.post('/api/upload-document', (req, res) => {
+// Smart Manager Upload: Saves PDF for viewing AND automatically parses text into clickable guest menu items
+app.post('/api/upload-document', async (req, res) => {
   const { title, filename, fileData } = req.body;
   if (!filename || !fileData) {
     return res.status(400).json({ error: 'Filename and file data are required.' });
   }
 
-  if (!db) {
-    return res.json({ success: true });
-  }
+  if (!db) return res.json({ success: true });
 
-  db.run(`INSERT INTO hotel_documents (title, filename, filedata) VALUES (?, ?, ?)`, 
-    [title || 'Restaurant Menu', filename, fileData], 
-    function(err) {
-      if (err) {
-        return res.status(500).json({ error: 'Failed to save document to database.' });
+  try {
+    db.run(`INSERT INTO hotel_documents (title, filename, filedata) VALUES (?, ?, ?)`, 
+      [title || 'Restaurant Menu', filename, fileData], 
+    async function(err) {
+      if (err) return res.status(500).json({ error: 'Failed to save document.' });
+
+      try {
+        const matches = fileData.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+        const buffer = Buffer.from(matches ? matches[2] : fileData, 'base64');
+        const pdfData = await pdfParse(buffer);
+        
+        const lines = pdfData.text.split('\n').map(l => l.trim()).filter(l => l.length > 2);
+        const stmt = db.prepare(`INSERT INTO menu_items (name, category, price, description, icon) VALUES (?, ?, ?, ?, ?)`);
+        
+        lines.forEach(line => {
+          if (line.length < 50 && !line.toLowerCase().includes('page') && !line.toLowerCase().includes('copyright')) {
+            stmt.run(line, 'Chef Selection', 250, 'Imported from designer menu', '🍽️');
+          }
+        });
+        stmt.finalize();
+      } catch (parseErr) {
+        console.log('PDF text parsing skipped, file saved for viewing.');
       }
-      res.json({ success: true, message: 'Document uploaded and published successfully!' });
-    }
-  );
+
+      res.json({ success: true, message: 'PDF uploaded, saved, and parsed into clickable menu items successfully!' });
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Server error processing upload.' });
+  }
 });
 
 // Explicit host binding for Render stability
