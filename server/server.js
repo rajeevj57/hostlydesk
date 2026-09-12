@@ -1,7 +1,13 @@
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
-const pdfParse = require('pdf-parse');
+
+let pdfParse = null;
+try {
+  pdfParse = require('pdf-parse');
+} catch (e) {
+  console.log('pdf-parse package not found, running in standard mode.');
+}
 
 const app = express();
 const PORT = process.env.PORT || 10000;
@@ -168,7 +174,7 @@ app.get('/api/factsheet', (req, res) => {
   });
 });
 
-// Smart Manager Upload: Saves PDF for viewing AND automatically parses text into clickable guest menu items
+// Manager Upload Endpoint
 app.post('/api/upload-document', async (req, res) => {
   const { title, filename, fileData } = req.body;
   if (!filename || !fileData) {
@@ -183,25 +189,27 @@ app.post('/api/upload-document', async (req, res) => {
     async function(err) {
       if (err) return res.status(500).json({ error: 'Failed to save document.' });
 
-      try {
-        const matches = fileData.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
-        const buffer = Buffer.from(matches ? matches[2] : fileData, 'base64');
-        const pdfData = await pdfParse(buffer);
-        
-        const lines = pdfData.text.split('\n').map(l => l.trim()).filter(l => l.length > 2);
-        const stmt = db.prepare(`INSERT INTO menu_items (name, category, price, description, icon) VALUES (?, ?, ?, ?, ?)`);
-        
-        lines.forEach(line => {
-          if (line.length < 50 && !line.toLowerCase().includes('page') && !line.toLowerCase().includes('copyright')) {
-            stmt.run(line, 'Chef Selection', 250, 'Imported from designer menu', '🍽️');
-          }
-        });
-        stmt.finalize();
-      } catch (parseErr) {
-        console.log('PDF text parsing skipped, file saved for viewing.');
+      if (pdfParse) {
+        try {
+          const matches = fileData.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+          const buffer = Buffer.from(matches ? matches[2] : fileData, 'base64');
+          const pdfData = await pdfParse(buffer);
+          
+          const lines = pdfData.text.split('\n').map(l => l.trim()).filter(l => l.length > 2);
+          const stmt = db.prepare(`INSERT INTO menu_items (name, category, price, description, icon) VALUES (?, ?, ?, ?, ?)`);
+          
+          lines.forEach(line => {
+            if (line.length < 50 && !line.toLowerCase().includes('page') && !line.toLowerCase().includes('copyright')) {
+              stmt.run(line, 'Chef Selection', 250, 'Imported from designer menu', '🍽️');
+            }
+          });
+          stmt.finalize();
+        } catch (parseErr) {
+          console.log('PDF text parsing skipped.');
+        }
       }
 
-      res.json({ success: true, message: 'PDF uploaded, saved, and parsed into clickable menu items successfully!' });
+      res.json({ success: true, message: 'PDF uploaded and saved successfully!' });
     });
   } catch (err) {
     res.status(500).json({ error: 'Server error processing upload.' });
