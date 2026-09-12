@@ -15,10 +15,14 @@ if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
 
-// In-Memory Storage for Uploaded File Status
-let uploadedDocs = {
-  factsheetFile: 'None uploaded yet',
-  menuFile: 'None uploaded yet'
+// Storage for multiple menus and documents
+let hotelDocuments = {
+  factsheet: 'None uploaded yet',
+  menus: [
+    { id: 1, name: 'Main Restaurant Menu', filename: 'None uploaded yet' },
+    { id: 2, name: 'Bar & Lounge Menu', filename: 'None uploaded yet' },
+    { id: 3, name: 'In-Room Dining Menu', filename: 'None uploaded yet' }
+  ]
 };
 
 // Safe Database Initialization with Auto-Migration for Columns
@@ -80,29 +84,31 @@ app.get('/api/food-items', (req, res) => {
   res.json(foodItems);
 });
 
-// Fact Sheet & Menu Upload Status API
+// Fact Sheet & Multi-Menu Status API
 app.get('/api/factsheet', (req, res) => {
   res.json({
     wifiDetails: "Network: Kanha_Guest_WiFi | Password: welcome2026",
     breakfastTiming: "07:00 AM - 10:30 AM (Coffee Shop)",
-    restaurants: "Spice Court Multi-Cuisine Restaurant (12:00 PM - 11:00 PM)",
-    bars: "Liquid Lounge Bar (5:00 PM - 1:00 AM | Happy Hours: 6:00 PM - 8:00 PM)",
-    nearbyPlaces: "Central Market (2 km), City Museum (4 km)",
-    notes: "Pool open 6 AM - 9 PM.",
-    uploadedDocs: uploadedDocs
+    documents: hotelDocuments
   });
 });
 
-// Handle File Upload Simulation / Storage
+// Handle Fact Sheet Upload
 app.post('/api/upload-factsheet', (req, res) => {
-  // Simple simulation of receiving and logging the uploaded document name
-  uploadedDocs.factsheetFile = req.body.filename || 'FactSheet_Document.pdf';
+  hotelDocuments.factsheet = req.body.filename || 'FactSheet.pdf';
   res.json({ success: true, message: 'Fact Sheet uploaded successfully!' });
 });
 
-app.post('/api/upload-menu', (req, res) => {
-  uploadedDocs.menuFile = req.body.filename || 'Hotel_Menu.pdf';
-  res.json({ success: true, message: 'Menu uploaded successfully!' });
+// Handle Multi-Menu Uploads by ID
+app.post('/api/upload-menu-slot', (req, res) => {
+  const { menuId, filename } = req.body;
+  const menuTarget = hotelDocuments.menus.find(m => m.id == menuId);
+  if (menuTarget) {
+    menuTarget.filename = filename;
+    res.json({ success: true, message: 'Menu updated successfully!' });
+  } else {
+    res.status(400).json({ error: 'Invalid menu slot ID' });
+  }
 });
 
 // API Endpoint for Getting Orders
