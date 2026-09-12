@@ -9,17 +9,16 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, '../public')));
 
-// Menu Item Prices for Universal Backend Calculation
-const itemPrices = { 1: 150, 2: 100, 3: 250, 4: 350, 5: 550 };
+// Ensure uploads directory exists
+const uploadsDir = path.join(__dirname, '../data/uploads');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
 
-// In-Memory Storage for Hotel Fact Sheet & Amenities
-let hotelFactSheet = {
-  wifiDetails: "Network: Kanha_Guest_WiFi | Password: welcome2026",
-  breakfastTiming: "07:00 AM - 10:30 AM (Coffee Shop)",
-  restaurants: "Spice Court Multi-Cuisine Restaurant (12:00 PM - 11:00 PM)",
-  bars: "Liquid Lounge Bar (5:00 PM - 1:00 AM | Happy Hours: 6:00 PM - 8:00 PM)",
-  nearbyPlaces: "Central Market (2 km), City Museum (4 km), Heritage Park (1.5 km)",
-  notes: "Gym & Swimming Pool open daily from 6:00 AM to 9:00 PM."
+// In-Memory Storage for Uploaded File Status
+let uploadedDocs = {
+  factsheetFile: 'None uploaded yet',
+  menuFile: 'None uploaded yet'
 };
 
 // Safe Database Initialization with Auto-Migration for Columns
@@ -81,14 +80,29 @@ app.get('/api/food-items', (req, res) => {
   res.json(foodItems);
 });
 
-// Fact Sheet API Endpoints
+// Fact Sheet & Menu Upload Status API
 app.get('/api/factsheet', (req, res) => {
-  res.json(hotelFactSheet);
+  res.json({
+    wifiDetails: "Network: Kanha_Guest_WiFi | Password: welcome2026",
+    breakfastTiming: "07:00 AM - 10:30 AM (Coffee Shop)",
+    restaurants: "Spice Court Multi-Cuisine Restaurant (12:00 PM - 11:00 PM)",
+    bars: "Liquid Lounge Bar (5:00 PM - 1:00 AM | Happy Hours: 6:00 PM - 8:00 PM)",
+    nearbyPlaces: "Central Market (2 km), City Museum (4 km)",
+    notes: "Pool open 6 AM - 9 PM.",
+    uploadedDocs: uploadedDocs
+  });
 });
 
-app.post('/api/factsheet', (req, res) => {
-  hotelFactSheet = { ...hotelFactSheet, ...req.body };
-  res.json({ success: true, message: 'Fact sheet updated successfully!' });
+// Handle File Upload Simulation / Storage
+app.post('/api/upload-factsheet', (req, res) => {
+  // Simple simulation of receiving and logging the uploaded document name
+  uploadedDocs.factsheetFile = req.body.filename || 'FactSheet_Document.pdf';
+  res.json({ success: true, message: 'Fact Sheet uploaded successfully!' });
+});
+
+app.post('/api/upload-menu', (req, res) => {
+  uploadedDocs.menuFile = req.body.filename || 'Hotel_Menu.pdf';
+  res.json({ success: true, message: 'Menu uploaded successfully!' });
 });
 
 // API Endpoint for Getting Orders
@@ -139,7 +153,7 @@ app.post(['/api/orders', '/api/food-order'], (req, res) => {
   });
 });
 
-// API Endpoint for Guest Requests (Housekeeping, Maintenance, Front Office, F&B, etc.)
+// API Endpoint for Guest Requests
 app.post('/api/requests', (req, res) => {
   const room = req.body.room || req.query.room || 'DEMO101';
   const { requestType, notes, department } = req.body;
@@ -162,34 +176,16 @@ app.post('/api/requests', (req, res) => {
 
 // Admin Configuration Endpoint
 app.post(['/api/config', '/api/settings', '/api/save-config', '/api/admin/config'], (req, res) => {
-  console.log('Admin configuration received:', req.body);
   res.json({ success: true, ok: true, message: 'Configuration saved successfully!' });
 });
 
-// Individual Department and Page HTML Routes
-app.get('/kitchen.html', (req, res) => {
-  res.sendFile(path.join(__dirname, '../public/kitchen.html'));
-});
-
-app.get('/fnb.html', (req, res) => {
-  res.sendFile(path.join(__dirname, '../public/fnb.html'));
-});
-
-app.get('/housekeeping.html', (req, res) => {
-  res.sendFile(path.join(__dirname, '../public/housekeeping.html'));
-});
-
-app.get('/maintenance.html', (req, res) => {
-  res.sendFile(path.join(__dirname, '../public/maintenance.html'));
-});
-
-app.get('/front-office.html', (req, res) => {
-  res.sendFile(path.join(__dirname, '../public/front-office.html'));
-});
-
-app.get('/factsheet.html', (req, res) => {
-  res.sendFile(path.join(__dirname, '../public/factsheet.html'));
-});
+// HTML Page Routes
+app.get('/kitchen.html', (req, res) => { res.sendFile(path.join(__dirname, '../public/kitchen.html')); });
+app.get('/fnb.html', (req, res) => { res.sendFile(path.join(__dirname, '../public/fnb.html')); });
+app.get('/housekeeping.html', (req, res) => { res.sendFile(path.join(__dirname, '../public/housekeeping.html')); });
+app.get('/maintenance.html', (req, res) => { res.sendFile(path.join(__dirname, '../public/maintenance.html')); });
+app.get('/front-office.html', (req, res) => { res.sendFile(path.join(__dirname, '../public/front-office.html')); });
+app.get('/factsheet.html', (req, res) => { res.sendFile(path.join(__dirname, '../public/factsheet.html')); });
 
 app.listen(PORT, () => {
   console.log(`HostlyDesk server running on port ${PORT}`);
