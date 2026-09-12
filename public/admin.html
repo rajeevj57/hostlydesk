@@ -21,15 +21,16 @@
         .upload-btn:hover { background: #1d4ed8; }
 
         .alert { padding: 10px; border-radius: 6px; margin-top: 10px; font-size: 13px; font-weight: bold; text-align: center; display: none; }
+        .helper-text { font-size: 11px; color: #64748b; margin-top: 4px; }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>🏨 Hotel Manager Document Upload</h1>
-        <div class="subtitle">Upload restaurant menus and fact sheets for your guests instantly.</div>
+        <h1>🏨 Hotel Manager Control Center</h1>
+        <div class="subtitle">Upload your designer PDF menu. It will automatically be made viewable and searchable for guests!</div>
 
         <div class="section-box">
-            <div class="section-title">Upload Menu or Fact Sheet PDF</div>
+            <div class="section-title">📄 Upload Designer Menu PDF</div>
             <div class="form-group">
                 <label>Document Title (e.g., Main Restaurant Menu):</label>
                 <input type="text" id="docTitle" class="form-control" value="Main Restaurant Menu">
@@ -37,8 +38,9 @@
             <div class="form-group">
                 <label>Select PDF File from Computer:</label>
                 <input type="file" id="pdfFile" class="form-control" accept="application/pdf">
+                <div class="helper-text">This will be saved for guest viewing AND parsed into clickable items automatically.</div>
             </div>
-            <button type="button" class="upload-btn" onclick="uploadDocument()">Upload & Publish Document</button>
+            <button type="button" class="upload-btn" onclick="uploadDocument()">Upload & Auto-Parse Menu</button>
             <div id="alertBox" class="alert"></div>
         </div>
     </div>
@@ -60,6 +62,11 @@
             const file = fileInput.files[0];
             const reader = new FileReader();
 
+            alertBox.textContent = 'Processing and parsing PDF items... Please wait.';
+            alertBox.style.background = '#e0f2fe';
+            alertBox.style.color = '#0369a1';
+            alertBox.style.display = 'block';
+
             reader.onload = async function(event) {
                 const base64Data = event.target.result;
 
@@ -78,7 +85,7 @@
 
                     const result = await res.json();
                     if (res.ok) {
-                        alertBox.textContent = 'Success! Document uploaded and saved to server.';
+                        alertBox.textContent = 'Success! PDF uploaded, saved, and parsed into clickable menu items!';
                         alertBox.style.background = '#d1fae5';
                         alertBox.style.color = '#065f46';
                         alertBox.style.display = 'block';
@@ -87,7 +94,7 @@
                         throw new Error(result.error || 'Upload failed');
                     }
                 } catch (err) {
-                    alertBox.textContent = 'Failed to upload document to server.';
+                    alertBox.textContent = 'Failed to process document.';
                     alertBox.style.background = '#fee2e2';
                     alertBox.style.color = '#991b1b';
                     alertBox.style.display = 'block';
