@@ -39,7 +39,7 @@ function calculateOrderTotal(body) {
   return total > 0 ? total : 350;
 }
 
-// Safe Database Initialization with Department Support
+// Safe Database Initialization with Auto-Migration for Columns
 let db = null;
 try {
   const dataDir = path.join(__dirname, '../data');
@@ -53,14 +53,19 @@ try {
       console.error('Database connection error:', err.message);
     } else {
       console.log('Connected to the SQLite database.');
-      db.run(`CREATE TABLE IF NOT EXISTS orders (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        room TEXT,
-        items TEXT,
-        department TEXT DEFAULT 'kitchen',
-        status TEXT DEFAULT 'Pending',
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-      )`);
+      db.serialize(() => {
+        db.run(`CREATE TABLE IF NOT EXISTS orders (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          room TEXT,
+          items TEXT,
+          department TEXT DEFAULT 'kitchen',
+          status TEXT DEFAULT 'Pending',
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )`);
+        // Safely add columns if an older table version exists without them
+        db.run(`ALTER TABLE orders ADD COLUMN department TEXT DEFAULT 'kitchen'`, (err) => {});
+        db.run(`ALTER TABLE orders ADD COLUMN status TEXT DEFAULT 'Pending'`, (err) => {});
+      });
     }
   });
 } catch (e) {
