@@ -62,8 +62,8 @@
             <div class="section-title">📁 Restaurant Menus & Fact Sheet Documents</div>
             <ul id="documentList" class="document-list">
                 <li class="document-item">
-                    <span><b>Main Restaurant Menu</b> (PDF)</span>
-                    <a href="javascript:void(0)" style="color: #2563eb; font-weight: bold; text-decoration: none;" onclick="alert('Viewing document preview')">View / Download</a>
+                    <span><b>Main Restaurant Menu</b> (Default_Menu.pdf)</span>
+                    <a href="/uploads/Default_Menu.pdf" target="_blank" style="color: #2563eb; font-weight: bold; text-decoration: none;">View Document</a>
                 </li>
             </ul>
         </div>
@@ -75,6 +75,7 @@
         const urlParams = new URLSearchParams(window.location.search);
         const currentRoom = urlParams.get('room') || '305';
         document.getElementById('roomSubText').textContent = `Essential information for guests in Room ${currentRoom}.`;
+        document.getElementById('backPortal.href') = `/?room=${currentRoom}`;
         document.getElementById('backPortal').href = `/?room=${currentRoom}`;
 
         async function loadFactsheetData() {
@@ -93,10 +94,11 @@
                     const listEl = document.getElementById('documentList');
                     listEl.innerHTML = '';
                     data.documents.menus.forEach(menu => {
+                        const fileLink = menu.filename ? `/uploads/${menu.filename}` : '#';
                         listEl.innerHTML += `
                             <li class="document-item">
                                 <span><b>${menu.title}</b> (${menu.filename})</span>
-                                <a href="javascript:void(0)" style="color: #2563eb; font-weight: bold; text-decoration: none;" onclick="alert('Opening ${menu.filename}')">View Document</a>
+                                <a href="${fileLink}" target="_blank" style="color: #2563eb; font-weight: bold; text-decoration: none;">View Document</a>
                             </li>
                         `;
                     });
