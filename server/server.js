@@ -30,7 +30,9 @@ app.use('/uploads', (req, res) => {
     }
     
     // Fallback: If the file doesn't exist yet, return a clean message instead of crashing
-    res.status(404.setHeader('Content-Type', 'text/html')).send(`
+    res.status(404);
+    res.setHeader('Content-Type', 'text/html');
+    res.send(`
       <!DOCTYPE html>
       <html>
       <head><title>Document Not Found</title></head>
