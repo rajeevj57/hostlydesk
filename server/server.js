@@ -5,60 +5,16 @@ const fs = require('fs');
 const app = express();
 const PORT = process.env.PORT || 10000;
 
-app.use(express.json({ limit: '10mb' })); // Increased limit to support PDF uploads
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(express.json({ limit: '15mb' }));
+app.use(express.urlencoded({ extended: true, limit: '15mb' }));
 app.use(express.static(path.join(__dirname, '../public')));
 
-// Ensure data & uploads directories exist safely
 const dataDir = path.join(__dirname, '../data');
-const uploadsDir = path.join(dataDir, 'uploads');
 if (!fs.existsSync(dataDir)) {
   try { fs.mkdirSync(dataDir, { recursive: true }); } catch(e) {}
 }
-if (!fs.existsSync(uploadsDir)) {
-  try { fs.mkdirSync(uploadsDir, { recursive: true }); } catch(e) {}
-}
 
-// Bulletproof Uploads Route that serves files or returns a clean fallback
-app.use('/uploads', (req, res) => {
-  try {
-    const filename = path.basename(req.path);
-    const filePath = path.join(uploadsDir, filename);
-    
-    if (fs.existsSync(filePath)) {
-      return res.sendFile(filePath);
-    }
-    
-    res.status(404).setHeader('Content-Type', 'text/html');
-    res.send(`
-      <!DOCTYPE html>
-      <html>
-      <head><title>Document Not Found</title></head>
-      <body style="font-family: Arial; text-align: center; padding: 50px; background: #f8fafc; color: #1e293b;">
-        <h2>📄 Document Not Uploaded Yet</h2>
-        <p>The file <b>${filename}</b> has not been uploaded to the server storage yet.</p>
-        <p><a href="javascript:window.close()" style="color: #2563eb; font-weight: bold;">Close Window</a></p>
-      </body>
-      </html>
-    `);
-  } catch (err) {
-    res.status(500).send('Server error loading document.');
-  }
-});
-
-// Storage for Fact Sheet and Dynamic Menus List
-let hotelDocuments = {
-  factsheet: 'None uploaded yet',
-  menus: [
-    { id: 1, title: 'Main Restaurant Menu', filename: 'Default_Menu.pdf' }
-  ]
-};
-
-let uploadedMenuInventory = [
-  { id: 1, name: 'Espresso', category: 'Beverages', price: 150, description: 'Freshly brewed hot coffee', icon: '☕' }
-];
-
-// Safe Database Initialization
+// Safe Database Initialization with Document Table Support
 let db = null;
 try {
   const sqlite3 = require('sqlite3').verbose();
@@ -84,6 +40,14 @@ try {
           price REAL,
           description TEXT,
           icon TEXT DEFAULT '🍽️'
+        )`, () => {});
+
+        // Permanent database storage for manager-uploaded PDFs
+        db.run(`CREATE TABLE IF NOT EXISTS hotel_documents (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          title TEXT,
+          filename TEXT,
+          filedata TEXT
         )`, () => {});
       });
     }
@@ -119,13 +83,9 @@ app.get('/api/context', (req, res) => {
 });
 
 app.get('/api/food-items', (req, res) => {
-  if (!db) return res.json(uploadedMenuInventory);
+  if (!db) return res.json([]);
   db.all('SELECT * FROM menu_items ORDER BY id DESC', [], (err, rows) => {
-    if (err || !rows || rows.length === 0) {
-      res.json(uploadedMenuInventory);
-    } else {
-      res.json(rows);
-    }
+    res.json(rows || []);
   });
 });
 
@@ -161,48 +121,74 @@ app.post('/api/orders/:id/status', (req, res) => {
   });
 });
 
-app.get('/api/factsheet', (req, res) => {
-  res.json({
-    wifiDetails: "Network: Hotel_Guest_WiFi | Password: welcome2026",
-    documents: hotelDocuments
+// Serve uploaded PDFs directly from Database storage
+app.get('/uploads/:filename', (req, res) => {
+  const filename = req.params.filename;
+  if (!db) return res.status(404).send('Document not found.');
+
+  db.get(`SELECT filedata FROM hotel_documents WHERE filename = ?`, [filename], (err, row) => {
+    if (err || !row) {
+      return res.status(404).send(`
+        <!DOCTYPE html>
+        <html>
+        <head><title>Document Not Found</title></head>
+        <body style="font-family: Arial; text-align: center; padding: 50px; background: #f8fafc; color: #1e293b;">
+          <h2>📄 Document Not Uploaded Yet</h2>
+          <p>The file <b>${filename}</b> has not been uploaded by management yet.</p>
+          <p><a href="javascript:window.close()" style="color: #2563eb; font-weight: bold;">Close Window</a></p>
+        </body>
+        </html>
+      `);
+    }
+
+    try {
+      const matches = row.filedata.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+      const buffer = Buffer.from(matches ? matches[2] : row.filedata, 'base64');
+      res.setHeader('Content-Type', 'application/pdf');
+      res.send(buffer);
+    } catch (e) {
+      res.status(500).send('Error rendering document.');
+    }
   });
 });
 
-// Real Manager File Upload Endpoint (Handles base64 PDF uploads seamlessly)
-app.post('/api/upload-document', (req, res) => {
-  try {
-    const { title, filename, fileData } = req.body;
-    if (!filename || !fileData) {
-      return res.status(400).json({ error: 'Filename and file data are required.' });
-    }
-
-    // Strip base64 header if present
-    const base64Data = fileData.replace(/^data:application\/pdf;base64,/, '');
-    const targetPath = path.join(uploadsDir, filename);
-
-    fs.writeFileSync(targetPath, Buffer.from(base64Data, 'base64'));
-
-    hotelDocuments.menus.push({
-      id: Date.now(),
-      title: title || 'Restaurant Menu',
-      filename: filename
+app.get('/api/factsheet', (req, res) => {
+  if (!db) {
+    return res.json({
+      wifiDetails: "Network: Hotel_Guest_WiFi | Password: welcome2026",
+      documents: { factsheet: 'None', menus: [{ id: 1, title: 'Main Restaurant Menu', filename: 'Default_Menu.pdf' }] }
     });
-
-    res.json({ success: true, message: 'Document uploaded and saved successfully!' });
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to save uploaded file.' });
   }
+
+  db.all(`SELECT title, filename FROM hotel_documents`, [], (err, rows) => {
+    const menus = (rows && rows.length > 0) ? rows : [{ id: 1, title: 'Main Restaurant Menu', filename: 'Default_Menu.pdf' }];
+    res.json({
+      wifiDetails: "Network: Hotel_Guest_WiFi | Password: welcome2026",
+      documents: { factsheet: 'FactSheet.pdf', menus: menus }
+    });
+  });
 });
 
-app.post('/api/upload-factsheet', (req, res) => {
-  hotelDocuments.factsheet = req.body.filename || 'FactSheet.pdf';
-  res.json({ success: true });
-});
+// Manager Document Upload Endpoint
+app.post('/api/upload-document', (req, res) => {
+  const { title, filename, fileData } = req.body;
+  if (!filename || !fileData) {
+    return res.status(400).json({ error: 'Filename and file data are required.' });
+  }
 
-app.post('/api/add-menu', (req, res) => {
-  const { title, filename } = req.body;
-  hotelDocuments.menus.push({ id: Date.now(), title: title || 'Restaurant Menu', filename: filename || 'Menu.pdf' });
-  res.json({ success: true, menus: hotelDocuments.menus });
+  if (!db) {
+    return res.json({ success: true });
+  }
+
+  db.run(`INSERT INTO hotel_documents (title, filename, filedata) VALUES (?, ?, ?)`, 
+    [title || 'Restaurant Menu', filename, fileData], 
+    function(err) {
+      if (err) {
+        return res.status(500).json({ error: 'Failed to save document to database.' });
+      }
+      res.json({ success: true, message: 'Document uploaded and published successfully!' });
+    }
+  );
 });
 
 // Explicit host binding for Render stability
