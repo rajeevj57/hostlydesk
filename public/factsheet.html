@@ -63,7 +63,7 @@
             <ul id="documentList" class="document-list">
                 <li class="document-item">
                     <span><b>Main Restaurant Menu</b> (Default_Menu.pdf)</span>
-                    <a href="/uploads/Default_Menu.pdf" target="_blank" style="color: #2563eb; font-weight: bold; text-decoration: none;">View Document</a>
+                    <a href="javascript:void(0)" onclick="openDocument('Default_Menu.pdf')" style="color: #2563eb; font-weight: bold; text-decoration: none; cursor:pointer;">View Document</a>
                 </li>
             </ul>
         </div>
@@ -75,8 +75,22 @@
         const urlParams = new URLSearchParams(window.location.search);
         const currentRoom = urlParams.get('room') || '305';
         document.getElementById('roomSubText').textContent = `Essential information for guests in Room ${currentRoom}.`;
-        document.getElementById('backPortal.href') = `/?room=${currentRoom}`;
         document.getElementById('backPortal').href = `/?room=${currentRoom}`;
+
+        function openDocument(filename) {
+            // Check if file exists by trying to fetch its headers first
+            fetch(`/uploads/${filename}`, { method: 'HEAD' })
+                .then(res => {
+                    if (res.ok) {
+                        window.open(`/uploads/${filename}`, '_blank');
+                    } else {
+                        alert(`The document "${filename}" is currently being updated by management and will be available shortly.`);
+                    }
+                })
+                .catch(() => {
+                    alert(`The document "${filename}" is not yet uploaded to the server.`);
+                });
+        }
 
         async function loadFactsheetData() {
             try {
@@ -94,11 +108,10 @@
                     const listEl = document.getElementById('documentList');
                     listEl.innerHTML = '';
                     data.documents.menus.forEach(menu => {
-                        const fileLink = menu.filename ? `/uploads/${menu.filename}` : '#';
                         listEl.innerHTML += `
                             <li class="document-item">
                                 <span><b>${menu.title}</b> (${menu.filename})</span>
-                                <a href="${fileLink}" target="_blank" style="color: #2563eb; font-weight: bold; text-decoration: none;">View Document</a>
+                                <a href="javascript:void(0)" onclick="openDocument('${menu.filename}')" style="color: #2563eb; font-weight: bold; text-decoration: none; cursor:pointer;">View Document</a>
                             </li>
                         `;
                     });
