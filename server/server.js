@@ -122,10 +122,10 @@ app.post('/api/orders/:id/status', (req, res) => {
   });
 });
 
-// API Endpoint for Creating Orders
-app.post('/api/orders', (req, res) => {
+// API Endpoint for Creating Orders / Food
+app.post(['/api/orders', '/api/food-order'], (req, res) => {
   const room = req.body.room || req.query.room || 'DEMO101';
-  const department = req.body.department || 'kitchen';
+  const department = req.body.department || req.query.department || 'kitchen';
   const items = req.body.items ? JSON.stringify(req.body.items) : JSON.stringify(req.body);
 
   if (!db) {
@@ -142,31 +142,11 @@ app.post('/api/orders', (req, res) => {
   });
 });
 
-// API Endpoint for Food Orders
-app.post('/api/food-order', (req, res) => {
-  const room = req.body.room || req.query.room || 'DEMO101';
-  const department = req.body.department || 'kitchen';
-  const items = req.body.items ? JSON.stringify(req.body.items) : JSON.stringify(req.body);
-
-  if (!db) {
-    return res.json({ success: true, ok: true, id: Date.now() });
-  }
-
-  const query = `INSERT INTO orders (room, items, department) VALUES (?, ?, ?)`;
-  db.run(query, [room, items, department], function(err) {
-    if (err) {
-      console.error('Order insert failed:', err.message);
-      return res.status(500).json({ error: err.message });
-    }
-    res.json({ success: true, ok: true, id: this.lastID });
-  });
-});
-
-// API Endpoint for Guest Requests
+// API Endpoint for Guest Requests (Housekeeping, Maintenance, Front Office, etc.)
 app.post('/api/requests', (req, res) => {
   const room = req.body.room || req.query.room || 'DEMO101';
   const { requestType, notes, department } = req.body;
-  const dept = department || 'housekeeping';
+  const dept = department || req.query.department || 'housekeeping';
   const itemSummary = requestType ? `${requestType}: ${notes || ''}` : JSON.stringify(req.body);
 
   if (!db) {
