@@ -6,6 +6,7 @@ const app = express();
 const PORT = process.env.PORT || 10000;
 
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, '../public')));
 
 // Menu Item Prices for Universal Backend Calculation
@@ -164,15 +165,10 @@ app.post('/api/requests', (req, res) => {
   });
 });
 
-// API Endpoints for Saving Hotel Configuration from Admin Panel
-app.post('/api/config', (req, res) => {
-  console.log('Configuration saved:', req.body);
-  res.json({ success: true, message: 'Configuration saved successfully!' });
-});
-
-app.post('/api/settings', (req, res) => {
-  console.log('Settings saved:', req.body);
-  res.json({ success: true, message: 'Settings saved successfully!' });
+// Catch-all API Endpoints for Admin Configuration / Settings / Save Routes
+app.post(['/api/config', '/api/settings', '/api/save-config', '/api/admin/config', '/config', '/settings'], (req, res) => {
+  console.log('Admin configuration received:', req.body);
+  res.json({ success: true, ok: true, message: 'Configuration saved successfully!' });
 });
 
 app.listen(PORT, () => {
