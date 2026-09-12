@@ -1,136 +1,132 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>HostlyDesk Admin Panel</title>
-  <style>
-    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f4f6f9; margin: 0; padding: 20px; }
-    .card { max-width: 600px; margin: 0 auto; background: #fff; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); }
-    h2 { color: #1e293b; margin-top: 0; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; }
-    .form-group { margin-bottom: 15px; }
-    label { display: block; font-weight: 600; margin-bottom: 5px; color: #475569; }
-    input[type="text"] { width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; }
-    .doc-row { display: flex; gap: 10px; margin-bottom: 10px; align-items: center; background: #f8fafc; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0; }
-    .doc-row input[type="text"] { flex: 1; }
-    .doc-row input[type="file"] { flex: 1.5; }
-    .btn-add { background: #3b82f6; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-weight: 600; margin-bottom: 15px; }
-    .btn-save { background: #10b981; color: white; border: none; width: 100%; padding: 12px; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; }
-    .status { margin-top: 15px; padding: 10px; border-radius: 6px; display: none; text-align: center; font-weight: 600; }
-    .status.success { background: #d1fae5; color: #065f46; display: block; }
-    .status.error { background: #fee2e2; color: #991b1b; display: block; }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HostlyDesk - Kitchen & Admin Dashboard</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f8fafc; color: #1e293b; margin: 0; padding: 20px; }
+        .container { max-width: 900px; margin: 0 auto; background: #fff; padding: 24px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+        h1, h2 { color: #0f172a; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; margin-top: 0; }
+        .section { margin-bottom: 30px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #e2e8f0; font-size: 14px; }
+        th { background: #f1f5f9; color: #475569; font-weight: 600; }
+        .badge { background: #dbeafe; color: #1e40af; padding: 4px 8px; border-radius: 4px; font-weight: 500; font-size: 12px; }
+        .form-group { margin-bottom: 16px; }
+        label { display: block; font-weight: 500; margin-bottom: 6px; font-size: 14px; }
+        input[type="text"] { width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 14px; box-sizing: border-box; }
+        button { background: #10b981; color: white; border: none; padding: 12px 20px; font-size: 15px; font-weight: 600; border-radius: 6px; cursor: pointer; }
+        button:hover { background: #059669; }
+        .alert { margin-top: 12px; padding: 10px; border-radius: 6px; font-size: 14px; display: none; }
+        .alert.success { background: #d1fae5; color: #065f46; display: block; }
+    </style>
 </head>
 <body>
+    <div class="container">
+        <h1>HostlyDesk Control Panel</h1>
+        
+        <div class="section">
+            <h2>Live Kitchen Orders</h2>
+            <p style="font-size: 14px; color: #64748b;">Real-time incoming orders from hotel rooms.</p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Order ID</th>
+                        <th>Room Number</th>
+                        <th>Items / Details</th>
+                        <th>Time</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody id="ordersTableBody">
+                    <tr><td colspan="5" style="text-align: center; color: #94a3b8;">Loading orders...</td></tr>
+                </tbody>
+            </table>
+            <button onclick="loadOrders()" style="margin-top: 12px; background: #3b82f6; font-size: 13px; padding: 8px 14px;">Refresh Orders</button>
+        </div>
 
-<div class="card">
-  <h2>Hotel Configuration & PDF Manager</h2>
-  <form id="adminForm">
-    <div class="form-group">
-      <label>Hotel ID (URL slug):</label>
-      <input type="text" id="hotelId" value="hotel-kanha-shyam" required>
+        <div class="section">
+            <h2>Hotel Configuration</h2>
+            <form id="configForm">
+                <div class="form-group">
+                    <label>Hotel Display Name:</label>
+                    <input type="text" id="hotelName" value="Hotel Kanha Shyam">
+                </div>
+                <div class="form-group">
+                    <label>Kitchen / F&B Telegram Chat ID:</label>
+                    <input type="text" id="telegramChatId" value="-1004301094020">
+                </div>
+                <button type="submit">Save Hotel Configuration</button>
+                <div id="formAlert" class="alert"></div>
+            </form>
+        </div>
     </div>
 
-    <div class="form-group">
-      <label>Hotel Display Name:</label>
-      <input type="text" id="hotelName" value="Hotel Kanha Shyam" required>
-    </div>
+    <script>
+        async function loadOrders() {
+            try {
+                const res = await fetch('/api/orders');
+                const orders = await res.json();
+                const tbody = document.getElementById('ordersTableBody');
+                
+                if (!orders || orders.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #94a3b8;">No orders received yet.</td></tr>';
+                    return;
+                }
 
-    <h3>Telegram Department Chat IDs</h3>
-    <div class="form-group">
-      <label>Front Desk Chat ID:</label>
-      <input type="text" id="frontDeskChatId" placeholder="-100xxxxxxxxxx">
-    </div>
-    <div class="form-group">
-      <label>Housekeeping Chat ID:</label>
-      <input type="text" id="housekeepingChatId" placeholder="-100xxxxxxxxxx">
-    </div>
-    <div class="form-group">
-      <label>Kitchen / F&B Chat ID:</label>
-      <input type="text" id="kitchenChatId" value="-1004301094020">
-    </div>
-    <div class="form-group">
-      <label>Maintenance Chat ID:</label>
-      <input type="text" id="maintenanceChatId" placeholder="-100xxxxxxxxxx">
-    </div>
+                tbody.innerHTML = orders.map(o => {
+                    let parsedItems = o.items;
+                    try {
+                        const parsed = JSON.parse(o.items);
+                        if (Array.isArray(parsed)) {
+                            parsedItems = parsed.map(i => `Item ID ${i.id} (Qty: ${i.qty})`).join(', ');
+                        } else if (typeof parsed === 'object') {
+                            parsedItems = JSON.stringify(parsed);
+                        }
+                    } catch (e) {}
 
-    <h3>Hotel PDF Directories (Multi-Upload)</h3>
-    <div id="pdfContainer">
-      <div class="doc-row">
-        <input type="text" name="title_file_0" placeholder="Doc Name (e.g. Food Menu)" value="Digital Menu PDF">
-        <input type="file" name="file_0" accept="application/pdf">
-      </div>
-    </div>
+                    return `
+                        <tr>
+                            <td>#${o.id}</td>
+                            <td><span class="badge">Room ${o.room || 'DEMO101'}</span></td>
+                            <td>${parsedItems}</td>
+                            <td>${o.created_at || 'Just now'}</td>
+                            <td>${o.status || 'Pending'}</td>
+                        </tr>
+                    `;
+                }).join('');
+            } catch (err) {
+                console.error('Error loading orders:', err);
+            }
+        }
 
-    <button type="button" class="btn-add" onclick="addPdfRow()">+ Add Another PDF Document</button>
+        document.getElementById('configForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const alertBox = document.getElementById('formAlert');
+            try {
+                const res = await fetch('/api/config', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        hotelName: document.getElementById('hotelName').value,
+                        telegramChatId: document.getElementById('telegramChatId').value
+                    })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    alertBox.textContent = 'Configuration saved successfully!';
+                    alertBox.className = 'alert success';
+                }
+            } catch (err) {
+                alertBox.textContent = 'Error saving configuration.';
+                alertBox.className = 'alert';
+                alertBox.style.display = 'block';
+            }
+        });
 
-    <button type="submit" class="btn-save">Save Hotel Configuration</button>
-  </form>
-
-  <div id="statusMsg" class="status"></div>
-</div>
-
-<script>
-  let docCount = 1;
-
-  function addPdfRow() {
-    const container = document.getElementById('pdfContainer');
-    const row = document.createElement('div');
-    row.className = 'doc-row';
-    row.innerHTML = `
-      <input type="text" name="title_file_${docCount}" placeholder="Doc Name (e.g. Drink Menu / Fact Sheet)">
-      <input type="file" name="file_${docCount}" accept="application/pdf">
-    `;
-    container.appendChild(row);
-    docCount++;
-  }
-
-  document.getElementById('adminForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const statusMsg = document.getElementById('statusMsg');
-    statusMsg.className = 'status';
-    statusMsg.innerText = 'Uploading documents and saving configuration...';
-    statusMsg.style.display = 'block';
-
-    const formData = new FormData();
-    formData.append('hotelId', document.getElementById('hotelId').value);
-    formData.append('hotelName', document.getElementById('hotelName').value);
-    formData.append('frontDeskChatId', document.getElementById('frontDeskChatId').value);
-    formData.append('housekeepingChatId', document.getElementById('housekeepingChatId').value);
-    formData.append('kitchenChatId', document.getElementById('kitchenChatId').value);
-    formData.append('maintenanceChatId', document.getElementById('maintenanceChatId').value);
-
-    // Attach PDF files and titles dynamically
-    const rows = document.querySelectorAll('.doc-row');
-    rows.forEach((row, idx) => {
-      const titleInput = row.querySelector('input[type="text"]');
-      const fileInput = row.querySelector('input[type="file"]');
-      
-      if (fileInput.files[0]) {
-        const fieldName = `pdf_doc_${idx}`;
-        formData.append(fieldName, fileInput.files[0]);
-        formData.append(`title_${fieldName}`, titleInput.value || `Document ${idx+1}`);
-      }
-    });
-
-    try {
-      const res = await fetch('/api/admin/config', {
-        method: 'POST',
-        body: formData
-      });
-
-      const data = await res.json();
-      if (res.ok) {
-        statusMsg.className = 'status success';
-        statusMsg.innerText = 'Hotel setup and all PDFs updated successfully!';
-      } else {
-        throw new Error(data.error || 'Server processing error.');
-      }
-    } catch (err) {
-      statusMsg.className = 'status error';
-      statusMsg.innerText = err.message;
-    }
-  });
-</script>
+        loadOrders();
+        setInterval(loadOrders, 10000);
+    </script>
 </body>
 </html>
