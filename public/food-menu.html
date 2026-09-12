@@ -3,179 +3,113 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Digital Food & F&B Menu - HostlyDesk</title>
+    <title>HostlyDesk - Instant Food Menu</title>
     <style>
-        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f8fafc; color: #1e293b; }
-        .container { max-width: 800px; margin: 0 auto; background: #fff; padding: 25px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
-        h1 { font-size: 22px; margin-bottom: 5px; color: #0f172a; text-align: center; }
-        .subtitle { text-align: center; color: #64748b; font-size: 14px; margin-bottom: 15px; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 15px; background: #0f172a; color: #fff; display: flex; justify-content: center; }
+        .mobile-container { width: 100%; max-width: 420px; background: #1e293b; border-radius: 24px; padding: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); box-sizing: border-box; }
         
-        .room-indicator { background: #eff6ff; color: #1d4ed8; padding: 8px 12px; border-radius: 6px; font-weight: bold; text-align: center; margin-bottom: 20px; font-size: 14px; }
+        .header-top { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #94a3b8; margin-bottom: 5px; }
+        .room-title { font-size: 28px; font-weight: bold; margin: 0 0 15px 0; color: #f8fafc; }
         
-        .search-box { margin-bottom: 20px; }
-        .search-input { width: 100%; padding: 12px 15px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 15px; box-sizing: border-box; outline: none; }
-        .search-input:focus { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
+        /* Search Bar */
+        .search-box { margin-bottom: 15px; }
+        .search-input { width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 12px; font-size: 14px; box-sizing: border-box; outline: none; background: #fdfbf7; color: #1e293b; }
+        .search-input:focus { border-color: #2563eb; }
 
-        .menu-grid { display: grid; grid-template-columns: 1fr; gap: 15px; margin-bottom: 25px; }
-        .menu-item { display: flex; justify-content: space-between; align-items: center; padding: 15px; border: 1px solid #e2e8f0; border-radius: 8px; background: #fff; }
+        .card-box { background: #fdfbf7; border-radius: 16px; padding: 15px; color: #1e293b; margin-bottom: 15px; max-height: 400px; overflow-y: auto; }
         
-        .item-info { display: flex; gap: 15px; align-items: center; }
-        .item-icon { font-size: 30px; background: #f1f5f9; padding: 10px; border-radius: 8px; }
-        .item-name { font-weight: bold; font-size: 16px; color: #1e293b; margin-bottom: 3px; }
-        .item-desc { color: #64748b; font-size: 13px; margin-bottom: 5px; }
-        .item-price { font-weight: bold; color: #059669; font-size: 14px; }
-
-        .add-btn { background: #2563eb; color: white; border: none; padding: 8px 16px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 14px; }
-        .add-btn:hover { background: #1d4ed8; }
-
-        .cart-section { background: #f1f5f9; padding: 20px; border-radius: 8px; margin-top: 20px; }
-        .cart-title { font-weight: bold; font-size: 16px; margin-bottom: 10px; color: #334155; }
-        .cart-items { margin-bottom: 15px; font-size: 14px; color: #475569; }
-        .checkout-btn { width: 100%; background: #10b981; color: white; border: none; padding: 14px; font-weight: bold; border-radius: 8px; cursor: pointer; font-size: 16px; text-align: center; }
+        /* Food Item Row */
+        .food-item { display: flex; justify-content: space-between; align-items: center; background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px; margin-bottom: 10px; }
+        .food-info { flex-grow: 1; margin-right: 10px; }
+        .food-name { font-size: 14px; font-weight: bold; color: #0f172a; margin-bottom: 3px; }
+        .food-desc { font-size: 11px; color: #64748b; margin-bottom: 4px; }
+        .food-price { font-size: 12px; font-weight: bold; color: #2563eb; }
         
-        .alert { padding: 12px; border-radius: 6px; margin-top: 15px; display: none; text-align: center; font-weight: bold; font-size: 14px; }
-        .back-link { display: block; text-align: center; margin-top: 15px; color: #2563eb; text-decoration: none; font-weight: bold; font-size: 14px; }
+        .order-btn { background: #c2a666; color: #fff; border: none; padding: 8px 12px; font-weight: bold; border-radius: 8px; cursor: pointer; font-size: 12px; text-transform: uppercase; white-space: nowrap; }
+        .order-btn:hover { background: #b09355; }
+
+        .alert { padding: 10px; border-radius: 8px; margin-top: 10px; font-size: 13px; font-weight: bold; text-align: center; display: none; }
+        
+        .back-link { display: block; text-align: center; margin-top: 15px; color: #60a5fa; text-decoration: none; font-weight: bold; font-size: 13px; }
+        .back-link:hover { text-decoration: underline; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>🍽️ Digital Food & F&B Menu</h1>
-        <div class="subtitle">Search or select items to place your order directly to the kitchen.</div>
+    <div class="mobile-container">
+        <div class="header-top">HostlyDesk · Room Dining</div>
+        <div class="room-title" id="roomDisplay">Room 305</div>
 
-        <div class="room-indicator" id="roomIndicator">Ordering for: Room 101</div>
-
-        <!-- Search Bar -->
         <div class="search-box">
-            <input type="text" id="searchInput" class="search-input" placeholder="🔍 Search menu items (e.g., paneer, coffee, chicken)..." oninput="filterMenu()">
+            <input type="text" id="searchInput" class="search-input" placeholder="🔍 Search items (e.g., Chicken Tikka, Coffee)..." oninput="filterItems()">
         </div>
 
-        <div id="menuContainer" class="menu-grid"></div>
-
-        <div class="cart-section">
-            <div class="cart-title">Your Order Summary</div>
-            <div id="cartSummary" class="cart-items">No items selected yet.</div>
-            <button class="checkout-btn" onclick="placeOrder()">Place Food Order</button>
+        <div class="card-box">
+            <div id="menuList">
+                <div style="text-align: center; color: #64748b; padding: 20px;">Loading menu items...</div>
+            </div>
         </div>
 
         <div id="alertBox" class="alert"></div>
-        <a id="backPortalLink" href="/" class="back-link">← Back to Guest Service Portal</a>
+
+        <a id="backPortal" href="/" class="back-link">← Back to Guest Portal</a>
     </div>
 
     <script>
-        let allFoodItems = [];
-        let cart = {};
-        let currentRoom = '101';
+        const urlParams = new URLSearchParams(window.location.search);
+        const currentRoom = urlParams.get('room') || '305';
+        document.getElementById('roomDisplay').textContent = `Room ${currentRoom} Menu`;
+        document.getElementById('backPortal').href = `/?room=${currentRoom}`;
 
-        async function loadMenu() {
+        let allMenuItems = [];
+
+        async function fetchMenu() {
             try {
-                const urlParams = new URLSearchParams(window.location.search);
-                currentRoom = urlParams.get('room') || '101';
-                document.getElementById('roomIndicator').textContent = `Ordering for: Room ${currentRoom}`;
-                document.getElementById('backPortalLink').href = `/?room=${currentRoom}`;
-
                 const res = await fetch('/api/food-items');
-                allFoodItems = await res.json();
-                renderMenu(allFoodItems);
+                allMenuItems = await res.json();
+                renderMenu(allMenuItems);
             } catch (err) {
-                console.error('Error loading menu:', err);
+                document.getElementById('menuList').innerHTML = '<div style="text-align: center; color: #991b1b;">Failed to load menu items.</div>';
             }
         }
 
-        function filterMenu() {
-            const query = document.getElementById('searchInput').value.toLowerCase().trim();
-            const filtered = allFoodItems.filter(item => 
-                (item.name && item.name.toLowerCase().includes(query)) || 
+        function renderMenu(items) {
+            const listEl = document.getElementById('menuList');
+            if (!items || items.length === 0) {
+                listEl.innerHTML = '<div style="text-align: center; color: #64748b; padding: 20px;">No menu items found.</div>';
+                return;
+            }
+
+            listEl.innerHTML = '';
+            items.forEach(item => {
+                listEl.innerHTML += `
+                    <div class="food-item">
+                        <div class="food-info">
+                            <div class="food-name">${item.icon || '🍽️'} ${item.name}</div>
+                            <div class="food-desc">${item.description || ''}</div>
+                            <div class="food-price">₹${item.price || 0}</div>
+                        </div>
+                        <button class="order-btn" onclick="orderFood('${item.name.replace(/'/g, "\\'")}')">Order</button>
+                    </div>
+                `;
+            });
+        }
+
+        function filterItems() {
+            const query = document.getElementById('searchInput').value.toLowerCase();
+            const filtered = allMenuItems.filter(item => 
+                item.name.toLowerCase().includes(query) || 
                 (item.description && item.description.toLowerCase().includes(query)) ||
                 (item.category && item.category.toLowerCase().includes(query))
             );
             renderMenu(filtered);
         }
 
-        function renderMenu(items) {
-            const container = document.getElementById('menuContainer');
-            if (!items || items.length === 0) {
-                container.innerHTML = '<div style="text-align:center; color:#64748b; padding: 20px;">No matching menu items found.</div>';
-                return;
-            }
-
-            container.innerHTML = '';
-            items.forEach(item => {
-                const qty = cart[item.id] || 0;
-                container.innerHTML += `
-                    <div class="menu-item">
-                        <div class="item-info">
-                            <div class="item-icon">${item.icon || '🍽️'}</div>
-                            <div>
-                                <div class="item-name">${item.name}</div>
-                                <div class="item-desc">${item.description || ''}</div>
-                                <div class="item-price">₹${item.price}</div>
-                            </div>
-                        </div>
-                        <div>
-                            ${qty === 0 ? 
-                                `<button class="add-btn" onclick="updateCart(${item.id}, 1)">Add</button>` :
-                                `<div style="display:flex; align-items:center; gap:10px;">
-                                    <button onclick="updateCart(${item.id}, -1)" style="padding:4px 10px; font-weight:bold; cursor:pointer;">-</button>
-                                    <span style="font-weight:bold;">${qty}</span>
-                                    <button onclick="updateCart(${item.id}, 1)" style="padding:4px 10px; font-weight:bold; cursor:pointer;">+</button>
-                                 </div>`
-                            }
-                        </div>
-                    </div>
-                `;
-            });
-        }
-
-        function updateCart(itemId, change) {
-            if (!cart[itemId]) cart[itemId] = 0;
-            cart[itemId] += change;
-            if (cart[itemId] <= 0) delete cart[itemId];
-            filterMenu();
-            updateCartSummary();
-        }
-
-        function updateCartSummary() {
-            const summaryContainer = document.getElementById('cartSummary');
-            const entries = Object.entries(cart);
-            if (entries.length === 0) {
-                summaryContainer.textContent = 'No items selected yet.';
-                return;
-            }
-
-            let text = '';
-            let total = 0;
-            entries.forEach(([id, qty]) => {
-                const item = allFoodItems.find(i => i.id == id);
-                if (item) {
-                    text += `${item.name} (x${qty}) - ₹${item.price * qty}, `;
-                    total += item.price * qty;
-                }
-            });
-            summaryContainer.innerHTML = `<b>Items:</b> ${text.slice(0, -2)} <br><b>Total Amount:</b> ₹${total}`;
-        }
-
-        async function placeOrder() {
+        async function orderFood(itemName) {
             const alertBox = document.getElementById('alertBox');
-            if (Object.keys(cart).length === 0) {
-                alertBox.textContent = 'Please add at least one item to your cart.';
-                alertBox.style.background = '#fee2e2';
-                alertBox.style.color = '#991b1b';
-                alertBox.style.display = 'block';
-                return;
-            }
-
-            const orderedItemsList = [];
-            Object.entries(cart).forEach(([id, qty]) => {
-                const item = allFoodItems.find(i => i.id == id);
-                if (item) {
-                    orderedItemsList.push({ name: item.name, qty: qty, price: item.price });
-                }
-            });
-
             const payload = {
                 room: currentRoom,
-                department: 'kitchen',
-                items: orderedItemsList
+                department: 'fnb',
+                items: itemName
             };
 
             try {
@@ -186,22 +120,21 @@
                 });
 
                 if (res.ok) {
-                    alertBox.textContent = `Order placed successfully from Room ${currentRoom}! Sent to kitchen.`;
+                    alertBox.textContent = `Success! "${itemName}" ordered for Room ${currentRoom}.`;
                     alertBox.style.background = '#d1fae5';
                     alertBox.style.color = '#065f46';
                     alertBox.style.display = 'block';
-                    cart = {};
-                    updateCartSummary();
-                    renderMenu(allFoodItems);
-                    setTimeout(() => { alertBox.style.display = 'none'; }, 5000);
+                    setTimeout(() => { alertBox.style.display = 'none'; }, 4000);
                 }
             } catch (err) {
-                alertBox.textContent = 'Failed to place order.';
+                alertBox.textContent = 'Failed to place order. Try again.';
+                alertBox.style.background = '#fee2e2';
+                alertBox.style.color = '#991b1b';
                 alertBox.style.display = 'block';
             }
         }
 
-        loadMenu();
+        fetchMenu();
     </script>
 </body>
 </html>
