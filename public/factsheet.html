@@ -61,10 +61,7 @@
         <div class="section-box">
             <div class="section-title">📁 Restaurant Menus & Fact Sheet Documents</div>
             <ul id="documentList" class="document-list">
-                <li class="document-item">
-                    <span><b>Main Restaurant Menu</b> (Default_Menu.pdf)</span>
-                    <a href="javascript:void(0)" onclick="openDocument('Default_Menu.pdf')" style="color: #2563eb; font-weight: bold; text-decoration: none; cursor:pointer;">View Document</a>
-                </li>
+                <!-- Dynamically populated from manager uploads -->
             </ul>
         </div>
 
@@ -78,7 +75,6 @@
         document.getElementById('backPortal').href = `/?room=${currentRoom}`;
 
         function openDocument(filename) {
-            // Check if file exists by trying to fetch its headers first
             fetch(`/uploads/${filename}`, { method: 'HEAD' })
                 .then(res => {
                     if (res.ok) {
@@ -96,6 +92,7 @@
             try {
                 const res = await fetch('/api/factsheet');
                 const data = await res.json();
+                
                 if (data.wifiDetails) {
                     const parts = data.wifiDetails.split('|');
                     if (parts.length >= 2) {
@@ -104,9 +101,10 @@
                     }
                 }
 
-                if (data.documents && data.documents.menus) {
-                    const listEl = document.getElementById('documentList');
-                    listEl.innerHTML = '';
+                const listEl = document.getElementById('documentList');
+                listEl.innerHTML = '';
+
+                if (data.documents && data.documents.menus && data.documents.menus.length > 0) {
                     data.documents.menus.forEach(menu => {
                         listEl.innerHTML += `
                             <li class="document-item">
@@ -115,6 +113,8 @@
                             </li>
                         `;
                     });
+                } else {
+                    listEl.innerHTML = '<li class="document-item"><span>No documents published yet.</span></li>';
                 }
             } catch (err) {
                 console.error('Failed to load factsheet info', err);
