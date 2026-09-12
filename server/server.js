@@ -15,13 +15,11 @@ if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
 
-// Storage for multiple menus and documents
+// Storage for Fact Sheet and Dynamic Menus List
 let hotelDocuments = {
   factsheet: 'None uploaded yet',
   menus: [
-    { id: 1, name: 'Main Restaurant Menu', filename: 'None uploaded yet' },
-    { id: 2, name: 'Bar & Lounge Menu', filename: 'None uploaded yet' },
-    { id: 3, name: 'In-Room Dining Menu', filename: 'None uploaded yet' }
+    { id: 1, title: 'Main Restaurant Menu', filename: 'Default_Menu.pdf' }
   ]
 };
 
@@ -58,13 +56,8 @@ try {
 }
 
 // Page Routes
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, '../public/index.html'));
-});
-
-app.get('/kitchen', (req, res) => {
-  res.sendFile(path.join(__dirname, '../public/food-menu.html'));
-});
+app.get('/', (req, res) => { res.sendFile(path.join(__dirname, '../public/index.html')); });
+app.get('/kitchen', (req, res) => { res.sendFile(path.join(__dirname, '../public/food-menu.html')); });
 
 // API Endpoint for Room Context
 app.get('/api/context', (req, res) => {
@@ -84,7 +77,7 @@ app.get('/api/food-items', (req, res) => {
   res.json(foodItems);
 });
 
-// Fact Sheet & Multi-Menu Status API
+// Fact Sheet & Dynamic Menus API
 app.get('/api/factsheet', (req, res) => {
   res.json({
     wifiDetails: "Network: Kanha_Guest_WiFi | Password: welcome2026",
@@ -99,16 +92,12 @@ app.post('/api/upload-factsheet', (req, res) => {
   res.json({ success: true, message: 'Fact Sheet uploaded successfully!' });
 });
 
-// Handle Multi-Menu Uploads by ID
-app.post('/api/upload-menu-slot', (req, res) => {
-  const { menuId, filename } = req.body;
-  const menuTarget = hotelDocuments.menus.find(m => m.id == menuId);
-  if (menuTarget) {
-    menuTarget.filename = filename;
-    res.json({ success: true, message: 'Menu updated successfully!' });
-  } else {
-    res.status(400).json({ error: 'Invalid menu slot ID' });
-  }
+// Handle Adding a New Menu dynamically
+app.post('/api/add-menu', (req, res) => {
+  const { title, filename } = req.body;
+  const newId = hotelDocuments.menus.length > 0 ? Math.max(...hotelDocuments.menus.map(m => m.id)) + 1 : 1;
+  hotelDocuments.menus.push({ id: newId, title: title || `Restaurant Menu ${newId}`, filename: filename || 'Menu.pdf' });
+  res.json({ success: true, menus: hotelDocuments.menus });
 });
 
 // API Endpoint for Getting Orders
