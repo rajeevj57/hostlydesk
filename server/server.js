@@ -19,13 +19,31 @@ if (!fs.existsSync(uploadsDir)) {
   try { fs.mkdirSync(uploadsDir, { recursive: true }); } catch(e) {}
 }
 
-// Safe Static Middleware for Uploads with fallback check
-app.use('/uploads', (req, res, next) => {
-  const filePath = path.join(uploadsDir, req.path);
-  if (fs.existsSync(filePath)) {
-    return express.static(uploadsDir)(req, res, next);
+// Bulletproof Uploads Route that prevents any crashes or 502 errors if a file is missing
+app.use('/uploads', (req, res) => {
+  try {
+    const filename = path.basename(req.path);
+    const filePath = path.join(uploadsDir, filename);
+    
+    if (fs.existsSync(filePath)) {
+      return res.sendFile(filePath);
+    }
+    
+    // Fallback: If the file doesn't exist yet, return a clean message instead of crashing
+    res.status(404.setHeader('Content-Type', 'text/html')).send(`
+      <!DOCTYPE html>
+      <html>
+      <head><title>Document Not Found</title></head>
+      <body style="font-family: Arial; text-align: center; padding: 50px; background: #f8fafc; color: #1e293b;">
+        <h2>📄 Document Not Uploaded Yet</h2>
+        <p>The file <b>${filename}</b> has not been uploaded to the server storage yet.</p>
+        <p><a href="javascript:window.close()" style="color: #2563eb; font-weight: bold;">Close Window</a></p>
+      </body>
+      </html>
+    `);
+  } catch (err) {
+    res.status(500).send('Server error loading document.');
   }
-  res.status(404).send('Document not uploaded yet.');
 });
 
 // Storage for Fact Sheet and Dynamic Menus List
