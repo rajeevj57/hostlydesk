@@ -1,350 +1,186 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>HostlyDesk - Guest Concierge</title>
-  <style>
-    :root {
-      --primary: #1a365d;
-      --secondary: #2b6cb0;
-      --bg: #f7fafc;
-      --card: #ffffff;
-      --text: #2d3748;
-      --accent: #38a169;
-    }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HostlyDesk - Guest Service Portal</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f8fafc; color: #1e293b; }
+        .container { max-width: 600px; margin: 0 auto; background: #fff; padding: 25px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        h1 { font-size: 22px; margin-bottom: 5px; color: #0f172a; text-align: center; }
+        .hotel-subtitle { text-align: center; color: #64748b; font-size: 14px; margin-bottom: 20px; }
+        
+        .room-box { background: #f1f5f9; padding: 12px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; font-weight: bold; }
+        .room-badge { background: #2563eb; color: white; padding: 4px 10px; border-radius: 6px; }
 
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      background-color: var(--bg);
-      color: var(--text);
-      margin: 0;
-      padding: 16px;
-      display: flex;
-      justify-content: center;
-    }
+        .section-title { font-size: 16px; font-weight: bold; margin-bottom: 10px; color: #334155; border-bottom: 2px solid #e2e8f0; padding-bottom: 5px; }
+        
+        /* Department selector buttons */
+        .dept-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 20px; }
+        .dept-btn { padding: 12px; border: 2px solid #cbd5e1; background: #fff; border-radius: 8px; font-weight: bold; cursor: pointer; text-align: center; font-size: 14px; }
+        .dept-btn.active { border-color: #2563eb; background: #eff6ff; color: #1d4ed8; }
 
-    .guest-card {
-      width: 100%;
-      max-width: 480px;
-      background: var(--card);
-      border-radius: 12px;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-      padding: 20px;
-      box-sizing: border-box;
-    }
+        /* Request options */
+        .options-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 15px; }
+        .option-chip { padding: 10px; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; text-align: center; cursor: pointer; font-size: 13px; font-weight: 500; }
+        .option-chip.selected { background: #2563eb; color: white; border-color: #2563eb; }
 
-    .header {
-      text-align: center;
-      border-bottom: 2px solid #edf2f7;
-      padding-bottom: 12px;
-      margin-bottom: 16px;
-    }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; font-weight: bold; margin-bottom: 5px; font-size: 13px; }
+        textarea { width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; font-family: inherit; font-size: 14px; }
+        
+        .submit-btn { width: 100%; background: #10b981; color: white; border: none; padding: 14px; font-weight: bold; border-radius: 8px; cursor: pointer; font-size: 16px; text-align: center; }
+        .submit-btn:hover { background: #059669; }
 
-    .header h2 {
-      margin: 0;
-      color: var(--primary);
-      font-size: 1.3rem;
-    }
-
-    .header p {
-      margin: 4px 0 0 0;
-      color: #718096;
-      font-size: 0.85rem;
-    }
-
-    .pdf-buttons {
-      display: flex;
-      gap: 10px;
-      margin-bottom: 20px;
-    }
-
-    .pdf-btn {
-      flex: 1;
-      padding: 10px;
-      background-color: #edf2f7;
-      color: var(--primary);
-      text-decoration: none;
-      text-align: center;
-      border-radius: 6px;
-      font-weight: 600;
-      font-size: 0.85rem;
-      border: 1px solid #cbd5e0;
-    }
-
-    .pdf-btn.disabled {
-      opacity: 0.5;
-      pointer-events: none;
-      background-color: #e2e8f0;
-    }
-
-    .dept-tabs {
-      display: flex;
-      gap: 8px;
-      margin-bottom: 16px;
-    }
-
-    .tab-btn {
-      flex: 1;
-      padding: 10px 4px;
-      border: 1px solid #cbd5e0;
-      background: #f7fafc;
-      border-radius: 6px;
-      font-weight: bold;
-      font-size: 0.8rem;
-      cursor: pointer;
-      text-align: center;
-    }
-
-    .tab-btn.active {
-      background-color: var(--secondary);
-      color: white;
-      border-color: var(--secondary);
-    }
-
-    .form-group {
-      margin-bottom: 14px;
-    }
-
-    label {
-      display: block;
-      font-weight: 600;
-      margin-bottom: 6px;
-      font-size: 0.85rem;
-    }
-
-    input[type="text"], textarea {
-      width: 100%;
-      padding: 10px;
-      border: 1px solid #cbd5e0;
-      border-radius: 6px;
-      box-sizing: border-box;
-      font-size: 0.9rem;
-    }
-
-    .quick-options {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin-bottom: 12px;
-    }
-
-    .chip {
-      padding: 6px 12px;
-      background: #edf2f7;
-      border-radius: 16px;
-      font-size: 0.8rem;
-      cursor: pointer;
-      user-select: none;
-      border: 1px solid #cbd5e0;
-    }
-
-    .chip.selected {
-      background-color: var(--accent);
-      color: white;
-      border-color: var(--accent);
-    }
-
-    .submit-btn {
-      width: 100%;
-      padding: 12px;
-      background-color: var(--primary);
-      color: white;
-      border: none;
-      border-radius: 6px;
-      font-size: 1rem;
-      font-weight: bold;
-      cursor: pointer;
-    }
-
-    .status-msg {
-      margin-top: 12px;
-      padding: 10px;
-      border-radius: 6px;
-      text-align: center;
-      font-size: 0.85rem;
-      display: none;
-    }
-
-    .status-msg.success { display: block; background: #f0fff4; color: #276749; border: 1px solid #c6f6d5; }
-    .status-msg.error { display: block; background: #fff5f5; color: #c53030; border: 1px solid #fed7d7; }
-  </style>
+        .alert { padding: 12px; border-radius: 6px; margin-top: 15px; display: none; text-align: center; font-weight: bold; font-size: 14px; }
+        
+        .menu-link-banner { background: #fef3c7; border: 1px solid #f59e0b; padding: 12px; border-radius: 8px; margin-bottom: 20px; text-align: center; font-size: 14px; }
+        .menu-link-banner a { color: #d97706; font-weight: bold; text-decoration: underline; }
+    </style>
 </head>
 <body>
+    <div class="container">
+        <h1 id="hotelTitle">HostlyDesk Guest Portal</h1>
+        <div class="hotel-subtitle" id="hotelSubtitle">Welcome! How can we make your stay comfortable?</div>
 
-  <div class="guest-card">
-    <div class="header">
-      <h2 id="hotelNameTitle">Loading Hotel...</h2>
-      <p id="wifiDetails">Wi-Fi: Fetching details...</p>
+        <div class="room-box">
+            <span>Your Current Location:</span>
+            <span class="room-badge" id="displayRoom">Room DEMO101</span>
+        </div>
+
+        <div class="menu-link-banner">
+            🍔 Looking to order food? <a href="/kitchen">Open Digital Food & F&B Menu</a>
+        </div>
+
+        <div class="section-title">Select Department</div>
+        <div class="dept-grid">
+            <button class="dept-btn active" onclick="selectDept('housekeeping', this)">🧹 Housekeeping</button>
+            <button class="dept-btn" onclick="selectDept('maintenance', this)">🛠️ Maintenance</button>
+            <button class="dept-btn" onclick="selectDept('frontoffice', this)">🛎️ Front Office</button>
+            <button class="dept-btn" onclick="selectDept('fnb', this)">🍷 F&B Service</button>
+        </div>
+
+        <div class="section-title">Select Request Type</div>
+        <div id="optionsContainer" class="options-grid">
+            <!-- Dynamically populated options -->
+        </div>
+
+        <div class="form-group">
+            <label for="notes">Additional Instructions / Notes (Optional):</label>
+            <textarea id="notes" rows="3" placeholder="Type specific instructions here..."></textarea>
+        </div>
+
+        <button class="submit-btn" onclick="submitRequest()">Dispatch Request</button>
+        <div id="alertBox" class="alert"></div>
     </div>
 
-    <!-- Menus & Fact Sheets -->
-    <div class="pdf-buttons">
-      <a id="menuLink" href="#" target="_blank" class="pdf-btn disabled">📖 Digital Menu</a>
-      <a id="factSheetLink" href="#" target="_blank" class="pdf-btn disabled">ℹ️ Fact Sheet</a>
-    </div>
+    <script>
+        let currentDept = 'housekeeping';
+        let selectedOptions = [];
+        let currentRoom = 'DEMO101';
 
-    <!-- Department Selection -->
-    <div class="dept-tabs">
-      <button class="tab-btn active" onclick="switchDept('housekeeping')">🧹 Housekeeping</button>
-      <button class="tab-btn" onclick="switchDept('kitchen')">🍽️ Kitchen</button>
-      <button class="tab-btn" onclick="switchDept('frontoffice')">🛎️ Front Office</button>
-    </div>
-
-    <form id="requestForm">
-      <div class="form-group">
-        <label for="roomNumber">Room Number</label>
-        <input type="text" id="roomNumber" placeholder="e.g. 101" required>
-      </div>
-
-      <!-- Quick Chips -->
-      <label>Quick Requests</label>
-      <div id="quickChips" class="quick-options"></div>
-
-      <div class="form-group">
-        <label for="customNotes">Additional Request Notes</label>
-        <textarea id="customNotes" rows="2" placeholder="Type specific instructions..."></textarea>
-      </div>
-
-      <button type="submit" class="submit-btn">Send Request</button>
-    </form>
-
-    <div id="statusMsg" class="status-msg"></div>
-  </div>
-
-  <script>
-    const urlParams = new URLSearchParams(window.location.search);
-    const hotelId = urlParams.get('hotelId') || 'hotel-kanha-shyam';
-    const roomFromUrl = urlParams.get('room');
-
-    let currentDept = 'housekeeping';
-    let selectedChips = new Set();
-
-    const deptOptions = {
-      housekeeping: ['Clear used tray', 'Extra Towels', 'Water Bottle', 'Room Cleaning', 'Extra Pillows'],
-      kitchen: ['Tea / Coffee', 'Fresh Cut Fruit', 'In-Room Dining Order', 'Ice Bucket'],
-      frontoffice: ['Luggage Assistance', 'Wake-up Call', 'Taxi Request', 'Bill Review']
-    };
-
-    if (roomFromUrl) {
-      document.getElementById('roomNumber').value = roomFromUrl;
-    }
-
-    async function loadHotelConfig() {
-      try {
-        const res = await fetch(`/api/hotels/${hotelId}`);
-        const data = await res.json();
-
-        if (data.success && data.hotel) {
-          document.getElementById('hotelNameTitle').innerText = data.hotel.hotelName || 'Welcome Guest';
-          
-          if (data.hotel.wifiName) {
-            document.getElementById('wifiDetails').innerText = `📶 Wi-Fi: ${data.hotel.wifiName} | Pass: ${data.hotel.wifiPassword || 'N/A'}`;
-          } else {
-            document.getElementById('wifiDetails').innerText = 'Welcome to your digital concierge';
-          }
-
-          // PDF Menu Link Fix
-          const menuBtn = document.getElementById('menuLink');
-          if (data.hotel.menuPdfUrl) {
-            menuBtn.href = data.hotel.menuPdfUrl;
-            menuBtn.classList.remove('disabled');
-          } else {
-            menuBtn.innerText = '📖 Menu Not Uploaded';
-          }
-
-          // PDF Fact Sheet Link Fix
-          const factBtn = document.getElementById('factSheetLink');
-          if (data.hotel.factSheetUrl) {
-            factBtn.href = data.hotel.factSheetUrl;
-            factBtn.classList.remove('disabled');
-          } else {
-            factBtn.innerText = 'ℹ️ Fact Sheet Not Uploaded';
-          }
-        }
-      } catch (err) {
-        console.error("Failed to load hotel info:", err);
-      }
-    }
-
-    function switchDept(dept) {
-      currentDept = dept;
-      selectedChips.clear();
-      
-      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-      event.target.classList.add('active');
-
-      renderChips();
-    }
-
-    function renderChips() {
-      const container = document.getElementById('quickChips');
-      container.innerHTML = '';
-
-      deptOptions[currentDept].forEach(opt => {
-        const chip = document.createElement('div');
-        chip.className = `chip ${selectedChips.has(opt) ? 'selected' : ''}`;
-        chip.innerText = opt;
-        chip.onclick = () => {
-          if (selectedChips.has(opt)) selectedChips.delete(opt);
-          else selectedChips.add(opt);
-          renderChips();
+        const deptOptions = {
+            housekeeping: ['Extra Towels', 'Room Cleaning', 'Toiletries Refill', 'Extra Pillows', 'Bed Linen Change'],
+            maintenance: ['AC Not Cooling', 'Plumbing / Tap Leak', 'Lighting Issue', 'TV / Remote Issue', 'Door Lock Issue'],
+            frontoffice: ['Wake-up Call', 'Taxi Request', 'Luggage Assistance', 'Bill Review', 'Airport Transfer'],
+            fnb: ['Ice Bucket', 'Bottled Water', 'Cutlery Set', 'Wine Glasses', 'Snack Plates']
         };
-        container.appendChild(chip);
-      });
-    }
 
-    document.getElementById('requestForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
+        // Fetch context (Room and Hotel info) on load
+        async function loadContext() {
+            try {
+                const urlParams = new URLSearchParams(window.location.search);
+                currentRoom = urlParams.get('room') || 'DEMO101';
+                document.getElementById('displayRoom').textContent = `Room ${currentRoom}`;
 
-      const room = document.getElementById('roomNumber').value;
-      const notes = document.getElementById('customNotes').value;
-      const itemsList = Array.from(selectedChips);
-
-      if (notes) itemsList.push(notes);
-
-      if (itemsList.length === 0) {
-        showStatus('Please select or type a request.', 'error');
-        return;
-      }
-
-      showStatus('Sending request to staff...', 'success');
-
-      try {
-        const res = await fetch('/api/requests', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            hotelId,
-            room,
-            department: currentDept,
-            items: itemsList
-          })
-        });
-
-        const data = await res.json();
-        if (data.success) {
-          showStatus('✓ Request sent directly to staff!', 'success');
-          document.getElementById('customNotes').value = '';
-          selectedChips.clear();
-          renderChips();
-        } else {
-          showStatus(data.message || 'Failed to dispatch request.', 'error');
+                const res = await fetch(`/api/context?room=${currentRoom}`);
+                const data = await res.json();
+                if (data.room) {
+                    currentRoom = data.room;
+                    document.getElementById('displayRoom').textContent = `Room ${currentRoom}`;
+                }
+            } catch (err) {
+                console.error('Context load error:', err);
+            }
+            renderOptions();
         }
-      } catch (err) {
-        showStatus('Network error sending request.', 'error');
-      }
-    });
 
-    function showStatus(msg, type) {
-      const el = document.getElementById('statusMsg');
-      el.innerText = msg;
-      el.className = `status-msg ${type}`;
-    }
+        function selectDept(dept, btn) {
+            currentDept = dept;
+            document.querySelectorAll('.dept-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            selectedOptions = [];
+            renderOptions();
+        }
 
-    // Initialize
-    loadHotelConfig();
-    renderChips();
-  </script>
+        function renderOptions() {
+            const container = document.getElementById('optionsContainer');
+            container.innerHTML = '';
+            const options = deptOptions[currentDept] || [];
+
+            options.forEach(opt => {
+                const chip = document.createElement('div');
+                chip.className = `option-chip ${selectedOptions.includes(opt) ? 'selected' : ''}`;
+                chip.textContent = opt;
+                chip.onclick = () => {
+                    if (selectedOptions.includes(opt)) {
+                        selectedOptions = selectedOptions.filter(item => item !== opt);
+                    } else {
+                        selectedOptions.push(opt);
+                    }
+                    renderOptions();
+                };
+                container.appendChild(chip);
+            });
+        }
+
+        async function submitRequest() {
+            const alertBox = document.getElementById('alertBox');
+            const notes = document.getElementById('notes').value.trim();
+
+            if (selectedOptions.length === 0 && !notes) {
+                alertBox.textContent = 'Please select at least one request option or type a note.';
+                alertBox.style.background = '#fee2e2';
+                alertBox.style.color = '#991b1b';
+                alertBox.style.display = 'block';
+                return;
+            }
+
+            const payload = {
+                room: currentRoom,
+                department: currentDept,
+                items: selectedOptions.length > 0 ? selectedOptions : [notes || 'General Service Request'],
+                notes: notes
+            };
+
+            try {
+                const response = await fetch('/api/requests', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (response.ok) {
+                    alertBox.textContent = 'Request dispatched successfully! Staff has been notified.';
+                    alertBox.style.background = '#d1fae5';
+                    alertBox.style.color = '#065f46';
+                    alertBox.style.display = 'block';
+                    selectedOptions = [];
+                    document.getElementById('notes').value = '';
+                    renderOptions();
+                    setTimeout(() => { alertBox.style.display = 'none'; }, 5000);
+                } else {
+                    throw new Error('Failed to dispatch');
+                }
+            } catch (err) {
+                alertBox.textContent = 'Failed to dispatch request. Please try again.';
+                alertBox.style.background = '#fee2e2';
+                alertBox.style.color = '#991b1b';
+                alertBox.style.display = 'block';
+            }
+        }
+
+        loadContext();
+    </script>
 </body>
 </html>
