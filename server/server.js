@@ -12,32 +12,15 @@ app.use(express.static(path.join(__dirname, '../public')));
 // Menu Item Prices for Universal Backend Calculation
 const itemPrices = { 1: 150, 2: 100, 3: 250, 4: 350, 5: 550 };
 
-function calculateOrderTotal(body) {
-  if (body.total && !isNaN(body.total) && Number(body.total) > 0) return Number(body.total);
-  if (body.amount && !isNaN(body.amount) && Number(body.amount) > 0) return Number(body.amount);
-  
-  let total = 0;
-  if (body.items) {
-    if (typeof body.items === 'object' && !Array.isArray(body.items)) {
-      for (let [id, qty] of Object.entries(body.items)) {
-        const numericId = parseInt(id);
-        const quantity = typeof qty === 'number' ? qty : (qty && qty.qty ? qty.qty : (qty && qty.quantity ? qty.quantity : 0));
-        if (itemPrices[numericId] && quantity > 0) {
-          total += itemPrices[numericId] * quantity;
-        }
-      }
-    } else if (Array.isArray(body.items)) {
-      for (let item of body.items) {
-        const numericId = parseInt(item.id || item.itemId);
-        const quantity = Number(item.qty || item.quantity || item.count || 1);
-        if (itemPrices[numericId] && quantity > 0) {
-          total += itemPrices[numericId] * quantity;
-        }
-      }
-    }
-  }
-  return total > 0 ? total : 350;
-}
+// In-Memory Storage for Hotel Fact Sheet & Amenities
+let hotelFactSheet = {
+  wifiDetails: "Network: Kanha_Guest_WiFi | Password: welcome2026",
+  breakfastTiming: "07:00 AM - 10:30 AM (Coffee Shop)",
+  restaurants: "Spice Court Multi-Cuisine Restaurant (12:00 PM - 11:00 PM)",
+  bars: "Liquid Lounge Bar (5:00 PM - 1:00 AM | Happy Hours: 6:00 PM - 8:00 PM)",
+  nearbyPlaces: "Central Market (2 km), City Museum (4 km), Heritage Park (1.5 km)",
+  notes: "Gym & Swimming Pool open daily from 6:00 AM to 9:00 PM."
+};
 
 // Safe Database Initialization with Auto-Migration for Columns
 let db = null;
@@ -96,6 +79,16 @@ app.get('/api/food-items', (req, res) => {
     { id: 5, name: 'Butter Chicken with Naan', category: 'Main Course', price: 550, description: 'Classic rich tomato-butter gravy with 2 butter naans', icon: '🍗' }
   ];
   res.json(foodItems);
+});
+
+// Fact Sheet API Endpoints
+app.get('/api/factsheet', (req, res) => {
+  res.json(hotelFactSheet);
+});
+
+app.post('/api/factsheet', (req, res) => {
+  hotelFactSheet = { ...hotelFactSheet, ...req.body };
+  res.json({ success: true, message: 'Fact sheet updated successfully!' });
 });
 
 // API Endpoint for Getting Orders
@@ -173,7 +166,7 @@ app.post(['/api/config', '/api/settings', '/api/save-config', '/api/admin/config
   res.json({ success: true, ok: true, message: 'Configuration saved successfully!' });
 });
 
-// Individual Department HTML File Routes
+// Individual Department and Page HTML Routes
 app.get('/kitchen.html', (req, res) => {
   res.sendFile(path.join(__dirname, '../public/kitchen.html'));
 });
@@ -192,6 +185,10 @@ app.get('/maintenance.html', (req, res) => {
 
 app.get('/front-office.html', (req, res) => {
   res.sendFile(path.join(__dirname, '../public/front-office.html'));
+});
+
+app.get('/factsheet.html', (req, res) => {
+  res.sendFile(path.join(__dirname, '../public/factsheet.html'));
 });
 
 app.listen(PORT, () => {
