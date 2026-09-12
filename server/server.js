@@ -23,7 +23,6 @@ let hotelDocuments = {
   ]
 };
 
-// In-Memory Storage for uploaded menu items extracted automatically from files
 let uploadedMenuInventory = [
   { id: 1, name: 'Espresso', category: 'Beverages', price: 150, description: 'Freshly brewed hot coffee', icon: '☕' }
 ];
@@ -81,7 +80,7 @@ try {
 
 // Page Routes
 app.get('/', (req, res) => { res.sendFile(path.join(__dirname, '../public/index.html')); });
-app.get('/kitchen', (req, res) => { res.sendFile(path.join(__dirname, '../public/food-menu.html')); });
+app.get('/kitchen', (req, res) => { res.sendFile(path.join(__dirname, '../public/kitchen.html')); });
 
 // API Endpoint for Room Context
 app.get('/api/context', (req, res) => {
@@ -89,19 +88,23 @@ app.get('/api/context', (req, res) => {
   res.json({ room: room });
 });
 
-// API Endpoint for Food Items Menu (Combines uploaded menu inventory and database items)
+// API Endpoint for Food Items Menu (Combines SQLite database items and memory fallback)
 app.get('/api/food-items', (req, res) => {
-  if (uploadedMenuInventory.length > 1) {
+  if (!db) {
     return res.json(uploadedMenuInventory);
   }
   
-  if (!db) return res.json(uploadedMenuInventory);
   db.all('SELECT * FROM menu_items ORDER BY id DESC', [], (err, rows) => {
-    if (err || !rows || rows.length === 0) {
-      res.json(uploadedMenuInventory);
-    } else {
-      res.json(rows);
+    if (err) {
+      return res.json(uploadedMenuInventory);
     }
+    const combined = [...rows];
+    uploadedMenuInventory.forEach(item => {
+      if (!combined.some(i => i.name.toLowerCase() === item.name.toLowerCase())) {
+        combined.push(item);
+      }
+    });
+    res.json(combined);
   });
 });
 
@@ -150,25 +153,12 @@ app.post('/api/upload-factsheet', (req, res) => {
   res.json({ success: true, message: 'Fact Sheet uploaded successfully!' });
 });
 
-// Handle Uploading a Restaurant Menu & Auto-Extracting Searchable Dishes
+// Handle Uploading a Restaurant Menu
 app.post('/api/add-menu', (req, res) => {
   const { title, filename } = req.body;
-  
-  // Automatically extract/parse sample dishes from the uploaded file for instant guest searchability
-  const extractedDishes = [
-    { id: Date.now() + 1, name: 'Butter Chicken', category: title || 'Main Course', price: 550, description: 'Rich tomato gravy with tender chicken', icon: '🍗' },
-    { id: Date.now() + 2, name: 'Paneer Tikka', category: title || 'Starter', price: 380, description: 'Grilled cottage cheese with spices', icon: '🧀' },
-    { id: Date.now() + 3, name: 'Veg Biryani', category: title || 'Main Course', price: 320, description: 'Fragrant basmati rice with vegetables', icon: '🍚' },
-    { id: Date.now() + 4, name: 'Garlic Naan', category: title || 'Breads', price: 90, description: 'Tandoor-baked flatbread with garlic', icon: '🫓' },
-    { id: Date.now() + 5, name: 'Cold Coffee', category: title || 'Beverages', price: 180, description: 'Blended iced coffee with ice cream', icon: '🥤' }
-  ];
-
-  uploadedMenuInventory.push(...extractedDishes);
-
   const newId = hotelDocuments.menus.length > 0 ? Math.max(...hotelDocuments.menus.map(m => m.id)) + 1 : 1;
   hotelDocuments.menus.push({ id: newId, title: title || `Restaurant Menu ${newId}`, filename: filename || 'Menu.pdf' });
-  
-  res.json({ success: true, menus: hotelDocuments.menus, addedItemsCount: extractedDishes.length });
+  res.json({ success: true, menus: hotelDocuments.menus });
 });
 
 // API Endpoint for Getting Orders
