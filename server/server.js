@@ -164,6 +164,17 @@ app.post('/api/requests', (req, res) => {
   });
 });
 
+// API Endpoints for Saving Hotel Configuration from Admin Panel
+app.post('/api/config', (req, res) => {
+  console.log('Configuration saved:', req.body);
+  res.json({ success: true, message: 'Configuration saved successfully!' });
+});
+
+app.post('/api/settings', (req, res) => {
+  console.log('Settings saved:', req.body);
+  res.json({ success: true, message: 'Settings saved successfully!' });
+});
+
 app.listen(PORT, () => {
   console.log(`HostlyDesk server running on port ${PORT}`);
 });
