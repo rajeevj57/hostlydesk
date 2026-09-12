@@ -32,6 +32,7 @@
         
         .action-select { padding: 6px 10px; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 13px; font-weight: bold; cursor: pointer; background: #fff; }
         .alert { padding: 10px; border-radius: 4px; margin-top: 10px; display: none; background: #fee2e2; color: #991b1b; }
+        .menu-slot-box { background: #f8fafc; border: 1px solid #e2e8f0; padding: 15px; border-radius: 6px; margin-bottom: 12px; }
     </style>
 </head>
 <body>
@@ -55,23 +56,42 @@
             </form>
         </div>
 
-        <!-- File Upload Card for Menu & Fact Sheet (No Manual Typing Required) -->
+        <!-- Multi-Menu & Fact Sheet Upload Card -->
         <div class="card">
-            <h3>📄 Upload Hotel Menu & Fact Sheet Documents</h3>
-            <p style="color: #64748b; font-size: 13px; margin-bottom: 15px;">Upload your PDF or document files so guests can view them instantly.</p>
+            <h3>📄 Upload Fact Sheet & Multiple Menus</h3>
+            <p style="color: #64748b; font-size: 13px; margin-bottom: 15px;">Upload your general hotel fact sheet and up to 3 separate restaurant/bar menus.</p>
             
-            <div class="form-group">
-                <label>Upload Fact Sheet (PDF / Document):</label>
-                <input type="file" id="factSheetFile" accept=".pdf,.doc,.docx,.txt">
-                <button type="button" onclick="uploadDocument('factsheet')" style="margin-top: 8px; background: #2563eb;">Upload Fact Sheet</button>
+            <div class="form-group" style="border-bottom: 1px solid #e2e8f0; padding-bottom: 15px; margin-bottom: 15px;">
+                <label><b>General Fact Sheet Document (PDF):</b></label>
+                <input type="file" id="factSheetFile" accept=".pdf,.doc,.docx">
+                <button type="button" onclick="uploadFactSheet()" style="margin-top: 8px; background: #2563eb;">Upload Fact Sheet</button>
                 <span id="factsheetStatus" style="font-size: 13px; color: #059669; margin-left: 10px; font-weight: bold;"></span>
             </div>
 
-            <div class="form-group" style="margin-top: 20px;">
-                <label>Upload Food & F&B Menu (PDF / CSV):</label>
-                <input type="file" id="menuFile" accept=".pdf,.csv,.json">
-                <button type="button" onclick="uploadDocument('menu')" style="margin-top: 8px; background: #2563eb;">Upload Menu</button>
-                <span id="menuStatus" style="font-size: 13px; color: #059669; margin-left: 10px; font-weight: bold;"></span>
+            <h4 style="margin-bottom: 10px; color: #334155;">Multiple Menus Upload Slots (Up to 3):</h4>
+            
+            <!-- Menu Slot 1 -->
+            <div class="menu-slot-box">
+                <label><b>Menu 1: Main Restaurant Menu</b></label>
+                <input type="file" id="menuFile1" accept=".pdf,.csv,.json">
+                <button type="button" onclick="uploadMenuSlot(1)" style="margin-top: 8px; background: #4f46e5;">Upload Menu 1</button>
+                <span id="menuStatus1" style="font-size: 13px; color: #059669; margin-left: 10px; font-weight: bold;"></span>
+            </div>
+
+            <!-- Menu Slot 2 -->
+            <div class="menu-slot-box">
+                <label><b>Menu 2: Bar & Lounge Menu</b></label>
+                <input type="file" id="menuFile2" accept=".pdf,.csv,.json">
+                <button type="button" onclick="uploadMenuSlot(2)" style="margin-top: 8px; background: #4f46e5;">Upload Menu 2</button>
+                <span id="menuStatus2" style="font-size: 13px; color: #059669; margin-left: 10px; font-weight: bold;"></span>
+            </div>
+
+            <!-- Menu Slot 3 -->
+            <div class="menu-slot-box">
+                <label><b>Menu 3: In-Room Dining / Midnight Menu</b></label>
+                <input type="file" id="menuFile3" accept=".pdf,.csv,.json">
+                <button type="button" onclick="uploadMenuSlot(3)" style="margin-top: 8px; background: #4f46e5;">Upload Menu 3</button>
+                <span id="menuStatus3" style="font-size: 13px; color: #059669; margin-left: 10px; font-weight: bold;"></span>
             </div>
         </div>
 
@@ -80,7 +100,6 @@
             <h3>Department Request & Order Tracker</h3>
             <p style="color: #64748b; font-size: 13px; margin-bottom: 15px;">Monitor and update live requests across all hotel departments.</p>
             
-            <!-- Separate Filter Tabs for Kitchen and F&B -->
             <div class="tabs">
                 <button class="tab-btn active" onclick="filterDept('all', this)">All Departments</button>
                 <button class="tab-btn" onclick="filterDept('kitchen', this)">Kitchen</button>
@@ -122,33 +141,32 @@
             alertBox.style.display = 'block';
         });
 
-        async function uploadDocument(type) {
-            const fileInput = document.getElementById(type === 'factsheet' ? 'factSheetFile' : 'menuFile');
-            const statusSpan = document.getElementById(type === 'factsheet' ? 'factsheetStatus' : 'menuStatus');
-
-            if (fileInput.files.length === 0) {
-                alert('Please select a file first.');
-                return;
-            }
-
+        async function uploadFactSheet() {
+            const fileInput = document.getElementById('factSheetFile');
+            const statusSpan = document.getElementById('factsheetStatus');
+            if (fileInput.files.length === 0) { alert('Please select a file first.'); return; }
             const fileName = fileInput.files[0].name;
 
-            try {
-                const endpoint = type === 'factsheet' ? '/api/upload-factsheet' : '/api/upload-menu';
-                const res = await fetch(endpoint, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ filename: fileName })
-                });
+            const res = await fetch('/api/upload-factsheet', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ filename: fileName })
+            });
+            if (res.ok) statusSpan.textContent = `✔ Uploaded: ${fileName}`;
+        }
 
-                if (res.ok) {
-                    statusSpan.textContent = `✔ Successfully uploaded: ${fileName}`;
-                } else {
-                    alert('Upload failed.');
-                }
-            } catch (err) {
-                console.error('Upload error:', err);
-            }
+        async function uploadMenuSlot(menuId) {
+            const fileInput = document.getElementById(`menuFile${menuId}`);
+            const statusSpan = document.getElementById(`menuStatus${menuId}`);
+            if (fileInput.files.length === 0) { alert('Please select a file first.'); return; }
+            const fileName = fileInput.files[0].name;
+
+            const res = await fetch('/api/upload-menu-slot', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ menuId, filename: fileName })
+            });
+            if (res.ok) statusSpan.textContent = `✔ Uploaded: ${fileName}`;
         }
 
         function filterDept(dept, btn) {
@@ -239,14 +257,12 @@
 
         async function updateStatus(orderId, newStatus) {
             try {
-                const res = await fetch(`/api/orders/${orderId}/status`, {
+                await fetch(`/api/orders/${orderId}/status`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ status: newStatus })
                 });
-                if (res.ok) {
-                    loadOrders();
-                }
+                loadOrders();
             } catch (err) {
                 console.error('Status update error:', err);
             }
