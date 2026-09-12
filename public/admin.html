@@ -58,10 +58,11 @@
             <h3>Department Request & Order Tracker</h3>
             <p style="color: #64748b; font-size: 13px; margin-bottom: 15px;">Monitor and update live requests across all hotel departments.</p>
             
-            <!-- Filter Tabs including Maintenance -->
+            <!-- Separate Filter Tabs for Kitchen and F&B -->
             <div class="tabs">
                 <button class="tab-btn active" onclick="filterDept('all', this)">All Departments</button>
-                <button class="tab-btn" onclick="filterDept('kitchen', this)">Kitchen / F&B</button>
+                <button class="tab-btn" onclick="filterDept('kitchen', this)">Kitchen</button>
+                <button class="tab-btn" onclick="filterDept('fnb', this)">F&B</button>
                 <button class="tab-btn" onclick="filterDept('housekeeping', this)">Housekeeping</button>
                 <button class="tab-btn" onclick="filterDept('maintenance', this)">Maintenance</button>
                 <button class="tab-btn" onclick="filterDept('front', this)">Front Office</button>
@@ -150,6 +151,14 @@
             const filtered = allOrdersData.filter(order => {
                 if (currentFilter === 'all') return true;
                 const dept = (order.department || 'kitchen').toLowerCase();
+                
+                // Strict check to keep Kitchen and F&B separate
+                if (currentFilter === 'kitchen') {
+                    return dept === 'kitchen';
+                }
+                if (currentFilter === 'fnb') {
+                    return dept === 'fnb';
+                }
                 return dept.includes(currentFilter);
             });
 
