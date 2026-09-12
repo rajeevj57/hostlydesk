@@ -42,7 +42,7 @@
         <h1>🍽️ Digital Food & F&B Menu</h1>
         <div class="subtitle">Search or select items to place your order directly to the kitchen.</div>
 
-        <div class="room-indicator" id="roomIndicator">Ordering for: Room DEMO101</div>
+        <div class="room-indicator" id="roomIndicator">Ordering for: Room 101</div>
 
         <!-- Search Bar -->
         <div class="search-box">
@@ -58,19 +58,20 @@
         </div>
 
         <div id="alertBox" class="alert"></div>
-        <a href="/" class="back-link">← Back to Guest Service Portal</a>
+        <a id="backPortalLink" href="/" class="back-link">← Back to Guest Service Portal</a>
     </div>
 
     <script>
         let allFoodItems = [];
         let cart = {};
-        let currentRoom = 'DEMO101';
+        let currentRoom = '101';
 
         async function loadMenu() {
             try {
                 const urlParams = new URLSearchParams(window.location.search);
-                currentRoom = urlParams.get('room') || 'DEMO101';
+                currentRoom = urlParams.get('room') || '101';
                 document.getElementById('roomIndicator').textContent = `Ordering for: Room ${currentRoom}`;
+                document.getElementById('backPortalLink').href = `/?room=${currentRoom}`;
 
                 const res = await fetch('/api/food-items');
                 allFoodItems = await res.json();
@@ -185,7 +186,7 @@
                 });
 
                 if (res.ok) {
-                    alertBox.textContent = `Order placed successfully for Room ${currentRoom}!`;
+                    alertBox.textContent = `Order placed successfully from Room ${currentRoom}! Sent to kitchen.`;
                     alertBox.style.background = '#d1fae5';
                     alertBox.style.color = '#065f46';
                     alertBox.style.display = 'block';
