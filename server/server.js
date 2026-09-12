@@ -62,7 +62,6 @@ try {
           status TEXT DEFAULT 'Pending',
           created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )`);
-        // Safely add columns if an older table version exists without them
         db.run(`ALTER TABLE orders ADD COLUMN department TEXT DEFAULT 'kitchen'`, (err) => {});
         db.run(`ALTER TABLE orders ADD COLUMN status TEXT DEFAULT 'Pending'`, (err) => {});
       });
@@ -127,7 +126,7 @@ app.post('/api/orders/:id/status', (req, res) => {
   });
 });
 
-// API Endpoint for Creating Orders / Food
+// API Endpoint for Creating Orders / Food / F&B
 app.post(['/api/orders', '/api/food-order'], (req, res) => {
   const room = req.body.room || req.query.room || 'DEMO101';
   const department = req.body.department || req.query.department || 'kitchen';
@@ -147,7 +146,7 @@ app.post(['/api/orders', '/api/food-order'], (req, res) => {
   });
 });
 
-// API Endpoint for Guest Requests (Housekeeping, Maintenance, Front Office, etc.)
+// API Endpoint for Guest Requests (Housekeeping, Maintenance, Front Office, F&B, etc.)
 app.post('/api/requests', (req, res) => {
   const room = req.body.room || req.query.room || 'DEMO101';
   const { requestType, notes, department } = req.body;
@@ -172,6 +171,27 @@ app.post('/api/requests', (req, res) => {
 app.post(['/api/config', '/api/settings', '/api/save-config', '/api/admin/config'], (req, res) => {
   console.log('Admin configuration received:', req.body);
   res.json({ success: true, ok: true, message: 'Configuration saved successfully!' });
+});
+
+// Individual Department HTML File Routes
+app.get('/kitchen.html', (req, res) => {
+  res.sendFile(path.join(__dirname, '../public/kitchen.html'));
+});
+
+app.get('/fnb.html', (req, res) => {
+  res.sendFile(path.join(__dirname, '../public/fnb.html'));
+});
+
+app.get('/housekeeping.html', (req, res) => {
+  res.sendFile(path.join(__dirname, '../public/housekeeping.html'));
+});
+
+app.get('/maintenance.html', (req, res) => {
+  res.sendFile(path.join(__dirname, '../public/maintenance.html'));
+});
+
+app.get('/front-office.html', (req, res) => {
+  res.sendFile(path.join(__dirname, '../public/front-office.html'));
 });
 
 app.listen(PORT, () => {
