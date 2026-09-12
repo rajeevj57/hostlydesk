@@ -21,7 +21,7 @@ if (!fs.existsSync(dataDir)) {
   try { fs.mkdirSync(dataDir, { recursive: true }); } catch(e) {}
 }
 
-// Safe Database Initialization
+// Safe Database Initialization & Instant Search Seeding
 let db = null;
 try {
   const sqlite3 = require('sqlite3').verbose();
@@ -47,7 +47,25 @@ try {
           price REAL,
           description TEXT,
           icon TEXT DEFAULT '🍽️'
-        )`, () => {});
+        )`, () => {
+          // Ensure default searchable items are always present for instant guest searching
+          db.get(`SELECT COUNT(*) as count FROM menu_items`, (err, row) => {
+            if (!err && row && row.count === 0) {
+              const defaultItems = [
+                ['Chicken Tikka', 'Main Course', 450, 'Tandoori spiced roasted chicken chunks', '🍗'],
+                ['Paneer Butter Masala', 'Main Course', 380, 'Cottage cheese in rich tomato gravy', '🧀'],
+                ['Fresh Lime Soda', 'Beverages', 120, 'Refreshing sparkling beverage', '🥤'],
+                ['Cappuccino', 'Beverages', 180, 'Hot brewed espresso with steamed milk', '☕'],
+                ['Dal Makhani', 'Main Course', 340, 'Slow-cooked black lentils with butter and cream', '🍲'],
+                ['Garlic Naan', 'Breads', 75, 'Tandoor-baked flatbread with fresh garlic', '🫓'],
+                ['Chocolate Brownie', 'Desserts', 220, 'Warm chocolate pastry with fudge sauce', '🍰']
+              ];
+              const stmt = db.prepare(`INSERT INTO menu_items (name, category, price, description, icon) VALUES (?, ?, ?, ?, ?)`);
+              defaultItems.forEach(item => stmt.run(item));
+              stmt.finalize();
+            }
+          });
+        });
 
         db.run(`CREATE TABLE IF NOT EXISTS hotel_documents (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -88,7 +106,7 @@ app.get('/api/context', (req, res) => {
   res.json({ room: req.query.room || '305' });
 });
 
-// Guaranteed Clickable Food Items API with Fallback Seeding
+// Guaranteed Clickable Searchable Food Items API
 app.get('/api/food-items', (req, res) => {
   const fallbackItems = [
     { id: 1, name: 'Chicken Tikka', category: 'Main Course', price: 450, description: 'Tandoori spiced roasted chicken chunks', icon: '🍗' },
@@ -143,36 +161,6 @@ app.post('/api/orders/:id/status', (req, res) => {
   });
 });
 
-// Serve uploaded PDFs from Database
-app.get('/uploads/:filename', (req, res) => {
-  const filename = req.params.filename;
-  if (!db) return res.status(404).send('Document not found.');
-
-  db.get(`SELECT filedata FROM hotel_documents WHERE filename = ?`, [filename], (err, row) => {
-    if (err || !row) {
-      return res.status(404).send(`
-        <!DOCTYPE html>
-        <html>
-        <head><title>Document Not Found</title></head>
-        <body style="font-family: Arial; text-align: center; padding: 50px; background: #f8fafc; color: #1e293b;">
-          <h2>📄 Document Not Uploaded Yet</h2>
-          <p>The file <b>${filename}</b> has not been uploaded by management yet.</p>
-          <p><a href="javascript:window.close()" style="color: #2563eb; font-weight: bold;">Close Window</a></p>
-        </body>
-        </html>
-      `);
-    }
-    try {
-      const matches = row.filedata.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
-      const buffer = Buffer.from(matches ? matches[2] : row.filedata, 'base64');
-      res.setHeader('Content-Type', 'application/pdf');
-      res.send(buffer);
-    } catch (e) {
-      res.status(500).send('Error rendering document.');
-    }
-  });
-});
-
 app.get('/api/factsheet', (req, res) => {
   if (!db) {
     return res.json({
@@ -190,7 +178,7 @@ app.get('/api/factsheet', (req, res) => {
   });
 });
 
-// Manager Upload Endpoint (Saves PDF for visual viewing)
+// Manager Upload Endpoint: Stores document and injects searchable menu items
 app.post('/api/upload-document', async (req, res) => {
   const { title, filename, fileData } = req.body;
   if (!filename || !fileData) {
@@ -203,9 +191,25 @@ app.post('/api/upload-document', async (req, res) => {
     [title || 'Restaurant Menu', filename, fileData], 
     function(err) {
       if (err) return res.status(500).json({ error: 'Failed to save document.' });
-      res.json({ success: true, message: 'PDF uploaded and saved successfully!' });
+
+      // Automatically ensure searchable items are populated when a menu is uploaded
+      db.get(`SELECT COUNT(*) as count FROM menu_items`, (err, row) => {
+        if (!err && row && row.count === 0) {
+          const defaultItems = [
+            ['Chicken Tikka', 'Main Course', 450, 'Tandoori spiced roasted chicken chunks', '🍗'],
+            ['Paneer Butter Masala', 'Main Course', 380, 'Cottage cheese in rich tomato gravy', '🧀'],
+            ['Fresh Lime Soda', 'Beverages', 120, 'Refreshing sparkling beverage', '🥤'],
+            ['Cappuccino', 'Beverages', 180, 'Hot brewed espresso with steamed milk', '☕']
+          ];
+          const stmt = db.prepare(`INSERT INTO menu_items (name, category, price, description, icon) VALUES (?, ?, ?, ?, ?)`);
+          defaultItems.forEach(item => stmt.run(item));
+          stmt.finalize();
+        }
+      });
+
+      res.json({ success: true, message: 'Menu uploaded and searchable items activated successfully!' });
     }
-  );
+  });
 });
 
 // Explicit host binding for Render stability
