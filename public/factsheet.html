@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hotel Fact Sheet & Guide - HostlyDesk</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f8fafc; color: #1e293b; }
+        .container { max-width: 600px; margin: 0 auto; background: #fff; padding: 25px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        h1 { font-size: 22px; margin-bottom: 5px; color: #0f172a; text-align: center; }
+        .subtitle { text-align: center; color: #64748b; font-size: 14px; margin-bottom: 25px; }
+        
+        .section-card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px; margin-bottom: 15px; }
+        .section-title { font-weight: bold; font-size: 15px; color: #2563eb; margin-bottom: 5px; display: flex; align-items: center; gap: 8px; }
+        .section-content { color: #475569; font-size: 14px; line-height: 1.5; }
+
+        .back-link { display: block; text-align: center; margin-top: 20px; color: #2563eb; text-decoration: none; font-weight: bold; font-size: 14px; }
+        .back-link:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📖 Hotel Fact Sheet & Guide</h1>
+        <div class="subtitle">Everything you need to know for a wonderful stay with us.</div>
+
+        <div id="factsheetContainer">
+            <div style="text-align:center; color:#64748b; padding:20px;">Loading hotel information...</div>
+        </div>
+
+        <a href="/" class="back-link">← Back to Guest Service Portal</a>
+    </div>
+
+    <script>
+        async function loadFactSheet() {
+            try {
+                const res = await fetch('/api/factsheet');
+                const data = await res.json();
+                const container = document.getElementById('factsheetContainer');
+
+                container.innerHTML = `
+                    <div class="section-card">
+                        <div class="section-title">📶 Wi-Fi Access</div>
+                        <div class="section-content">${data.wifiDetails || 'Not specified'}</div>
+                    </div>
+                    <div class="section-card">
+                        <div class="section-title">☕ Breakfast Timings</div>
+                        <div class="section-content">${data.breakfastTiming || 'Not specified'}</div>
+                    </div>
+                    <div class="section-card">
+                        <div class="section-title">🍽️ Restaurants & Dining</div>
+                        <div class="section-content">${data.restaurants || 'Not specified'}</div>
+                    </div>
+                    <div class="section-card">
+                        <div class="section-title">🍷 Bar & Happy Hours</div>
+                        <div class="section-content">${data.bars || 'Not specified'}</div>
+                    </div>
+                    <div class="section-card">
+                        <div class="section-title">📍 Nearby Places to Visit</div>
+                        <div class="section-content">${data.nearbyPlaces || 'Not specified'}</div>
+                    </div>
+                    <div class="section-card">
+                        <div class="section-title">ℹ️ General Amenities & Rules</div>
+                        <div class="section-content">${data.notes || 'Not specified'}</div>
+                    </div>
+                `;
+            } catch (err) {
+                console.error('Error loading factsheet:', err);
+            }
+        }
+
+        loadFactSheet();
+    </script>
+</body>
+</html>
