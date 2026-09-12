@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Maintenance Dashboard - HostlyDesk</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f8fafc; color: #1e293b; }
+        .container { max-width: 1100px; margin: 0 auto; }
+        h1 { font-size: 24px; margin-bottom: 5px; color: #dc2626; }
+        .card { background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-top: 20px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #e2e8f0; font-size: 14px; }
+        th { background: #fee2e2; font-weight: bold; color: #991b1b; }
+        .room-badge { background: #eff6ff; color: #1d4ed8; padding: 4px 8px; border-radius: 4px; font-weight: bold; }
+        .status-pending { background: #fee2e2; color: #991b1b; padding: 6px 12px; border-radius: 12px; font-size: 12px; font-weight: bold; display: inline-block; }
+        .status-preparing { background: #fef3c7; color: #d97706; padding: 6px 12px; border-radius: 12px; font-size: 12px; font-weight: bold; display: inline-block; }
+        .status-completed { background: #d1fae5; color: #065f46; padding: 6px 12px; border-radius: 12px; font-size: 12px; font-weight: bold; display: inline-block; }
+        .action-select { padding: 6px 10px; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 13px; font-weight: bold; cursor: pointer; background: #fff; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🛠️ Maintenance Live Dashboard</h1>
+        <p style="color: #64748b; font-size: 14px;">Real-time engineering and repair requests.</p>
+
+        <div class="card">
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Room</th>
+                        <th>Issue Details</th>
+                        <th>Time</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="ordersTableBody">
+                    <tr><td colspan="6" style="text-align:center; color:#64748b;">Loading maintenance tasks...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        async function loadOrders() {
+            try {
+                const res = await fetch('/api/orders');
+                const orders = await res.json();
+                const container = document.getElementById('ordersTableBody');
+                
+                const maintOrders = orders.filter(o => (o.department || '').toLowerCase().includes('maintenance'));
+                
+                if (maintOrders.length === 0) {
+                    container.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#64748b;">No active maintenance issues.</td></tr>';
+                    return;
+                }
+
+                container.innerHTML = '';
+                maintOrders.forEach(order => {
+                    const status = order.status || 'Pending';
+                    let statusClass = 'status-pending';
+                    if (status === 'In Progress') statusClass = 'status-preparing';
+                    if (status === 'Completed') statusClass = 'status-completed';
+
+                    container.innerHTML += `
+                        <tr>
+                            <td>#${order.id}</td>
+                            <td><span class="room-badge">Room ${order.room || 'DEMO101'}</span></td>
+                            <td>${order.items}</td>
+                            <td>${order.created_at || 'Just now'}</td>
+                            <td><span class="${statusClass}">${status}</span></td>
+                            <td>
+                                <select class="action-select" onchange="updateStatus(${order.id}, this.value)">
+                                    <option value="" disabled selected>Update Status...</option>
+                                    <option value="Pending">🔴 Pending</option>
+                                    <option value="In Progress">🟡 In Progress</option>
+                                    <option value="Completed">🟢 Completed</option>
+                                </select>
+                            </td>
+                        </tr>
+                    `;
+                });
+            } catch (err) { console.error(err); }
+        }
+
+        async function updateStatus(id, status) {
+            await fetch(`/api/orders/${id}/status`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status })
+            });
+            loadOrders();
+        }
+
+        loadOrders();
+        setInterval(loadOrders, 10000);
+    </script>
+</body>
+</html>
