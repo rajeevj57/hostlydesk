@@ -8,41 +8,149 @@
         body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f8fafc; color: #1e293b; }
         .container { max-width: 600px; margin: 0 auto; background: #fff; padding: 25px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); text-align: center; }
         h1 { font-size: 24px; margin-bottom: 5px; color: #0f172a; }
-        .subtitle { color: #64748b; font-size: 14px; margin-bottom: 25px; }
+        .subtitle { color: #64748b; font-size: 14px; margin-bottom: 20px; }
         
-        .room-badge-box { background: #eff6ff; color: #1d4ed8; padding: 12px; border-radius: 8px; font-weight: bold; font-size: 16px; margin-bottom: 25px; display: inline-block; }
+        .room-badge-box { background: #eff6ff; color: #1d4ed8; padding: 10px 15px; border-radius: 8px; font-weight: bold; font-size: 15px; margin-bottom: 20px; display: inline-block; }
         
-        .nav-card { background: #f1f5f9; border: 1px solid #cbd5e1; padding: 15px; border-radius: 8px; margin-bottom: 15px; text-decoration: none; display: block; color: #1e293b; font-weight: bold; font-size: 16px; transition: all 0.2s; }
-        .nav-card:hover { background: #e2e8f0; border-color: #94a3b8; }
-        .nav-card span { font-size: 20px; margin-right: 8px; }
+        .section-title { font-size: 15px; font-weight: bold; color: #475569; margin: 20px 0 10px 0; text-align: left; border-bottom: 2px solid #f1f5f9; padding-bottom: 5px; }
+        
+        .dept-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
+        .dept-card { background: #f8fafc; border: 1px solid #cbd5e1; padding: 15px; border-radius: 8px; text-decoration: none; color: #1e293b; font-weight: bold; font-size: 14px; transition: all 0.2s; display: flex; flex-direction: column; align-items: center; gap: 5px; }
+        .dept-card:hover { background: #f1f5f9; border-color: #2563eb; color: #2563eb; }
+        .dept-card span { font-size: 24px; }
+
+        .request-type-box { background: #f8fafc; border: 1px solid #e2e8f0; padding: 15px; border-radius: 8px; margin-bottom: 15px; text-align: left; }
+        .request-type-box label { display: block; font-weight: bold; font-size: 13px; margin-bottom: 5px; color: #334155; }
+        .request-type-box select, .request-type-box input { width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; margin-bottom: 10px; font-size: 14px; }
+        
+        .submit-btn { width: 100%; background: #2563eb; color: white; border: none; padding: 12px; font-weight: bold; border-radius: 8px; cursor: pointer; font-size: 15px; }
+        .submit-btn:hover { background: #1d4ed8; }
+
+        .alert { padding: 10px; border-radius: 6px; margin-top: 10px; display: none; font-size: 13px; font-weight: bold; text-align: center; }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>HostlyDesk Guest Portal</h1>
-        <div class="subtitle">Welcome! How can we make your stay comfortable?</div>
+        <div class="subtitle">Welcome! Select a service department below.</div>
 
         <div>
             <div class="room-badge-box" id="roomBadge">Your Current Location: Room 101</div>
         </div>
 
-        <a id="foodMenuLink" href="/food-menu" class="nav-card">
-            <span>🍔</span> Open Digital Food & F&B Menu
-        </a>
+        <div class="section-title">Select Department</div>
+        <div class="dept-grid">
+            <a href="javascript:void(0)" onclick="selectDept('kitchen', 'Digital Food & F&B Menu')" class="dept-card">
+                <span>🍔</span> Kitchen / F&B
+            </a>
+            <a href="javascript:void(0)" onclick="selectDept('housekeeping', 'Housekeeping Requests')" class="dept-card">
+                <span>🧹</span> Housekeeping
+            </a>
+            <a href="javascript:void(0)" onclick="selectDept('maintenance', 'Maintenance / Engineering')" class="dept-card">
+                <span>🔧</span> Maintenance
+            </a>
+            <a href="javascript:void(0)" onclick="selectDept('front', 'Front Office Services')" class="dept-card">
+                <span>🛎️</span> Front Office
+            </a>
+        </div>
 
-        <a id="factsheetLink" href="/factsheet.html" class="nav-card">
-            <span>📄</span> View Hotel Fact Sheet & Restaurant Menus
-        </a>
+        <div class="request-type-box">
+            <div id="activeDeptTitle" style="font-weight: bold; color: #2563eb; margin-bottom: 10px; font-size: 14px;">Selected: Kitchen / F&B</div>
+            
+            <div id="kitchenOptions">
+                <label>Quick F&B Option / Search Item:</label>
+                <input type="text" id="foodSearchInput" placeholder="e.g., Paneer Tikka, Coffee, Water...">
+            </div>
+
+            <div id="generalOptions" style="display:none;">
+                <label>Select Request Type:</label>
+                <select id="requestTypeSelect">
+                    <option value="Extra Towels">Extra Towels</option>
+                    <option value="Room Cleaning">Room Cleaning</option>
+                    <option value="Water Bottles">Water Bottles</option>
+                    <option value="Toiletries">Toiletries Refill</option>
+                </select>
+            </div>
+
+            <label>Additional Notes (Optional):</label>
+            <input type="text" id="requestNotes" placeholder="e.g., Please deliver urgently">
+
+            <button type="button" class="submit-btn" onclick="submitGuestRequest()">Submit Service Request</button>
+            <div id="alertBox" class="alert"></div>
+        </div>
     </div>
 
     <script>
         const urlParams = new URLSearchParams(window.location.search);
         const room = urlParams.get('room') || '101';
-        
-        // Dynamically bind room numbers to ensure seamless navigation across pages
         document.getElementById('roomBadge').textContent = `Your Current Location: Room ${room}`;
-        document.getElementById('foodMenuLink').href = `/food-menu?room=${room}`;
-        document.getElementById('factsheetLink').href = `/factsheet.html?room=${room}`;
+
+        let currentDept = 'kitchen';
+
+        function selectDept(dept, titleName) {
+            currentDept = dept;
+            document.getElementById('activeDeptTitle').textContent = `Selected: ${titleName}`;
+            
+            if (dept === 'kitchen') {
+                document.getElementById('kitchenOptions').style.display = 'block';
+                document.getElementById('generalOptions').style.display = 'none';
+            } else {
+                document.getElementById('kitchenOptions').style.display = 'none';
+                document.getElementById('generalOptions').style.display = 'block';
+            }
+        }
+
+        async function submitGuestRequest() {
+            const alertBox = document.getElementById('alertBox');
+            let itemSummary = '';
+
+            if (currentDept === 'kitchen') {
+                const query = document.getElementById('foodSearchInput').value.trim();
+                if (!query) {
+                    alertBox.textContent = 'Please enter a food or beverage item name.';
+                    alertBox.style.background = '#fee2e2';
+                    alertBox.style.color = '#991b1b';
+                    alertBox.style.display = 'block';
+                    return;
+                }
+                itemSummary = `Food Order: ${query}`;
+            } else {
+                const reqType = document.getElementById('requestTypeSelect').value;
+                itemSummary = reqType;
+            }
+
+            const notes = document.getElementById('requestNotes').value.trim();
+            if (notes) itemSummary += ` (Notes: ${notes})`;
+
+            const payload = {
+                room: room,
+                department: currentDept,
+                items: itemSummary
+            };
+
+            try {
+                const res = await fetch('/api/orders', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (res.ok) {
+                    alertBox.textContent = `Request submitted successfully from Room ${room}!`;
+                    alertBox.style.background = '#d1fae5';
+                    alertBox.style.color = '#065f46';
+                    alertBox.style.display = 'block';
+                    document.getElementById('requestNotes').value = '';
+                    if (document.getElementById('foodSearchInput')) document.getElementById('foodSearchInput').value = '';
+                    setTimeout(() => { alertBox.style.display = 'none'; }, 5000);
+                }
+            } catch (e) {
+                alertBox.textContent = 'Failed to submit request.';
+                alertBox.style.background = '#fee2e2';
+                alertBox.style.color = '#991b1b';
+                alertBox.style.display = 'block';
+            }
+        }
     </script>
 </body>
 </html>
