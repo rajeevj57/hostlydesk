@@ -3,129 +3,134 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HostlyDesk Guest Portal</title>
+    <title>HostlyDesk - Digital Key & Service Portal</title>
     <style>
-        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f8fafc; color: #1e293b; }
-        .container { max-width: 600px; margin: 0 auto; background: #fff; padding: 25px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); text-align: center; }
-        h1 { font-size: 24px; margin-bottom: 5px; color: #0f172a; }
-        .subtitle { color: #64748b; font-size: 14px; margin-bottom: 20px; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 15px; background: #0f172a; color: #fff; display: flex; justify-content: center; }
+        .mobile-container { width: 100%; max-width: 420px; background: #1e293b; border-radius: 24px; padding: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); box-sizing: border-box; }
         
-        .room-badge-box { background: #eff6ff; color: #1d4ed8; padding: 10px 15px; border-radius: 8px; font-weight: bold; font-size: 15px; margin-bottom: 20px; display: inline-block; }
+        .header-top { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #94a3b8; margin-bottom: 5px; }
+        .room-title { font-size: 32px; font-weight: bold; margin: 0 0 5px 0; color: #f8fafc; }
+        .welcome-text { font-size: 14px; color: #94a3b8; margin-bottom: 20px; }
         
-        .section-title { font-size: 15px; font-weight: bold; color: #475569; margin: 20px 0 10px 0; text-align: left; border-bottom: 2px solid #f1f5f9; padding-bottom: 5px; }
-        
-        .dept-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
-        .dept-card { background: #f8fafc; border: 1px solid #cbd5e1; padding: 15px; border-radius: 8px; text-decoration: none; color: #1e293b; font-weight: bold; font-size: 14px; transition: all 0.2s; display: flex; flex-direction: column; align-items: center; gap: 5px; }
-        .dept-card:hover { background: #f1f5f9; border-color: #2563eb; color: #2563eb; }
-        .dept-card span { font-size: 24px; }
+        .card-box { background: #fdfbf7; border-radius: 16px; padding: 20px; color: #1e293b; margin-bottom: 15px; }
+        .card-heading { font-size: 18px; font-weight: bold; margin-bottom: 5px; color: #0f172a; }
+        .card-sub { font-size: 12px; color: #64748b; margin-bottom: 15px; line-height: 1.4; }
 
-        .request-type-box { background: #f8fafc; border: 1px solid #e2e8f0; padding: 15px; border-radius: 8px; margin-bottom: 15px; text-align: left; }
-        .request-type-box label { display: block; font-weight: bold; font-size: 13px; margin-bottom: 5px; color: #334155; }
-        .request-type-box select, .request-type-box input { width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; margin-bottom: 10px; font-size: 14px; }
+        /* Icon Grid */
+        .grid-container { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px; }
+        .service-tile { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px 8px; text-align: center; cursor: pointer; transition: all 0.2s; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 75px; }
+        .service-tile:hover { border-color: #cbd5e1; background: #f8fafc; }
+        .service-tile.selected { border: 2px solid #2563eb; background: #eff6ff; }
         
-        .submit-btn { width: 100%; background: #2563eb; color: white; border: none; padding: 12px; font-weight: bold; border-radius: 8px; cursor: pointer; font-size: 15px; }
-        .submit-btn:hover { background: #1d4ed8; }
+        .tile-icon { font-size: 20px; margin-bottom: 6px; }
+        .tile-label { font-size: 11px; font-weight: bold; color: #334155; line-height: 1.2; }
 
-        .alert { padding: 10px; border-radius: 6px; margin-top: 10px; display: none; font-size: 13px; font-weight: bold; text-align: center; }
+        .send-btn { width: 100%; background: #c2a666; color: #fff; border: none; padding: 14px; font-weight: bold; border-radius: 12px; cursor: pointer; font-size: 15px; text-transform: uppercase; letter-spacing: 0.5px; transition: background 0.2s; }
+        .send-btn:hover { background: #b09355; }
+
+        .alert { padding: 10px; border-radius: 8px; margin-top: 12px; font-size: 13px; font-weight: bold; text-align: center; display: none; }
+        
+        .footer-links { margin-top: 15px; text-align: center; font-size: 13px; }
+        .footer-links a { color: #60a5fa; text-decoration: none; font-weight: bold; }
+        .footer-links a:hover { text-decoration: underline; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>HostlyDesk Guest Portal</h1>
-        <div class="subtitle">Welcome! Select a service department below.</div>
+    <div class="mobile-container">
+        <div class="header-top">HostlyDesk · Digital Key</div>
+        <div class="room-title" id="roomDisplay">Room 305</div>
+        <div class="welcome-text">Welcome, Guest</div>
 
-        <div>
-            <div class="room-badge-box" id="roomBadge">Your Current Location: Room 101</div>
-        </div>
+        <div class="card-box">
+            <div class="card-heading">Need something?</div>
+            <div class="card-sub">Tap what you need. It goes straight to the right team — no typing.</div>
 
-        <div class="section-title">Select Department</div>
-        <div class="dept-grid">
-            <a href="javascript:void(0)" onclick="selectDept('kitchen', 'Digital Food & F&B Menu')" class="dept-card">
-                <span>🍔</span> Kitchen / F&B
-            </a>
-            <a href="javascript:void(0)" onclick="selectDept('housekeeping', 'Housekeeping Requests')" class="dept-card">
-                <span>🧹</span> Housekeeping
-            </a>
-            <a href="javascript:void(0)" onclick="selectDept('maintenance', 'Maintenance / Engineering')" class="dept-card">
-                <span>🔧</span> Maintenance
-            </a>
-            <a href="javascript:void(0)" onclick="selectDept('front', 'Front Office Services')" class="dept-card">
-                <span>🛎️</span> Front Office
-            </a>
-        </div>
-
-        <div class="request-type-box">
-            <div id="activeDeptTitle" style="font-weight: bold; color: #2563eb; margin-bottom: 10px; font-size: 14px;">Selected: Kitchen / F&B</div>
-            
-            <div id="kitchenOptions">
-                <label>Quick F&B Option / Search Item:</label>
-                <input type="text" id="foodSearchInput" placeholder="e.g., Paneer Tikka, Coffee, Water...">
+            <div class="grid-container" id="tileGrid">
+                <div class="service-tile" onclick="toggleService('Extra Towels', 'housekeeping', this)">
+                    <div class="tile-icon">🚿</div>
+                    <div class="tile-label">Extra Towels</div>
+                </div>
+                <div class="service-tile" onclick="toggleService('Drinking Water', 'housekeeping', this)">
+                    <div class="tile-icon">💧</div>
+                    <div class="tile-label">Drinking Water</div>
+                </div>
+                <div class="service-tile" onclick="toggleService('Extra Pillow', 'housekeeping', this)">
+                    <div class="tile-icon">💤</div>
+                    <div class="tile-label">Extra Pillow</div>
+                </div>
+                <div class="service-tile" onclick="toggleService('Room Cleaning', 'housekeeping', this)">
+                    <div class="tile-icon">🧹</div>
+                    <div class="tile-label">Room Cleaning</div>
+                </div>
+                <div class="service-tile" onclick="openFoodMenu()">
+                    <div class="tile-icon">🍽️</div>
+                    <div class="tile-label">Order Food</div>
+                </div>
+                <div class="service-tile" onclick="toggleService('Tea / Coffee', 'fnb', this)">
+                    <div class="tile-icon">☕</div>
+                    <div class="tile-label">Tea / Coffee</div>
+                </div>
+                <div class="service-tile" onclick="toggleService('Wake-up Call', 'front', this)">
+                    <div class="tile-icon">⏰</div>
+                    <div class="tile-label">Wake-up Call</div>
+                </div>
+                <div class="service-tile" onclick="toggleService('Book a Taxi', 'front', this)">
+                    <div class="tile-icon">🚕</div>
+                    <div class="tile-label">Book a Taxi</div>
+                </div>
+                <div class="service-tile" onclick="toggleService('Checkout Help', 'front', this)">
+                    <div class="tile-icon">🛎️</div>
+                    <div class="tile-label">Checkout Help</div>
+                </div>
             </div>
 
-            <div id="generalOptions" style="display:none;">
-                <label>Select Request Type:</label>
-                <select id="requestTypeSelect">
-                    <option value="Extra Towels">Extra Towels</option>
-                    <option value="Room Cleaning">Room Cleaning</option>
-                    <option value="Water Bottles">Water Bottles</option>
-                    <option value="Toiletries">Toiletries Refill</option>
-                </select>
-            </div>
-
-            <label>Additional Notes (Optional):</label>
-            <input type="text" id="requestNotes" placeholder="e.g., Please deliver urgently">
-
-            <button type="button" class="submit-btn" onclick="submitGuestRequest()">Submit Service Request</button>
+            <button type="button" class="send-btn" onclick="sendSelectedRequest()">Send Request</button>
             <div id="alertBox" class="alert"></div>
+        </div>
+
+        <div class="footer-links">
+            <a id="factsheetLink" href="/factsheet.html">📄 View Hotel Fact Sheet & Menus</a>
         </div>
     </div>
 
     <script>
         const urlParams = new URLSearchParams(window.location.search);
-        const room = urlParams.get('room') || '101';
-        document.getElementById('roomBadge').textContent = `Your Current Location: Room ${room}`;
+        const currentRoom = urlParams.get('room') || '305';
+        document.getElementById('roomDisplay').textContent = `Room ${currentRoom}`;
+        document.getElementById('factsheetLink').href = `/factsheet.html?room=${currentRoom}`;
 
-        let currentDept = 'kitchen';
+        let selectedItem = null;
+        let selectedDept = 'housekeeping';
+        let selectedElement = null;
 
-        function selectDept(dept, titleName) {
-            currentDept = dept;
-            document.getElementById('activeDeptTitle').textContent = `Selected: ${titleName}`;
-            
-            if (dept === 'kitchen') {
-                document.getElementById('kitchenOptions').style.display = 'block';
-                document.getElementById('generalOptions').style.display = 'none';
-            } else {
-                document.getElementById('kitchenOptions').style.display = 'none';
-                document.getElementById('generalOptions').style.display = 'block';
+        function toggleService(itemName, dept, element) {
+            if (selectedElement) {
+                selectedElement.classList.remove('selected');
             }
+            selectedItem = itemName;
+            selectedDept = dept;
+            selectedElement = element;
+            element.classList.add('selected');
         }
 
-        async function submitGuestRequest() {
-            const alertBox = document.getElementById('alertBox');
-            let itemSummary = '';
+        function openFoodMenu() {
+            window.location.href = `/food-menu?room=${currentRoom}`;
+        }
 
-            if (currentDept === 'kitchen') {
-                const query = document.getElementById('foodSearchInput').value.trim();
-                if (!query) {
-                    alertBox.textContent = 'Please enter a food or beverage item name.';
-                    alertBox.style.background = '#fee2e2';
-                    alertBox.style.color = '#991b1b';
-                    alertBox.style.display = 'block';
-                    return;
-                }
-                itemSummary = `Food Order: ${query}`;
-            } else {
-                const reqType = document.getElementById('requestTypeSelect').value;
-                itemSummary = reqType;
+        async function sendSelectedRequest() {
+            const alertBox = document.getElementById('alertBox');
+            if (!selectedItem) {
+                alertBox.textContent = 'Please tap a service item first.';
+                alertBox.style.background = '#fee2e2';
+                alertBox.style.color = '#991b1b';
+                alertBox.style.display = 'block';
+                return;
             }
 
-            const notes = document.getElementById('requestNotes').value.trim();
-            if (notes) itemSummary += ` (Notes: ${notes})`;
-
             const payload = {
-                room: room,
-                department: currentDept,
-                items: itemSummary
+                room: currentRoom,
+                department: selectedDept,
+                items: selectedItem
             };
 
             try {
@@ -136,16 +141,19 @@
                 });
 
                 if (res.ok) {
-                    alertBox.textContent = `Request submitted successfully from Room ${room}!`;
+                    alertBox.textContent = `Success! ${selectedItem} requested for Room ${currentRoom}.`;
                     alertBox.style.background = '#d1fae5';
                     alertBox.style.color = '#065f46';
                     alertBox.style.display = 'block';
-                    document.getElementById('requestNotes').value = '';
-                    if (document.getElementById('foodSearchInput')) document.getElementById('foodSearchInput').value = '';
-                    setTimeout(() => { alertBox.style.display = 'none'; }, 5000);
+                    
+                    if (selectedElement) selectedElement.classList.remove('selected');
+                    selectedItem = null;
+                    selectedElement = null;
+
+                    setTimeout(() => { alertBox.style.display = 'none'; }, 4000);
                 }
-            } catch (e) {
-                alertBox.textContent = 'Failed to submit request.';
+            } catch (err) {
+                alertBox.textContent = 'Failed to send request. Try again.';
                 alertBox.style.background = '#fee2e2';
                 alertBox.style.color = '#991b1b';
                 alertBox.style.display = 'block';
