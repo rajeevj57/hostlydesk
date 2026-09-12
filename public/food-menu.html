@@ -10,6 +10,12 @@
         h1 { font-size: 22px; margin-bottom: 5px; color: #0f172a; text-align: center; }
         .subtitle { text-align: center; color: #64748b; font-size: 14px; margin-bottom: 20px; }
         
+        /* Chef Specials Section */
+        .specials-section { background: #fffbeb; border: 1px solid #fde68a; border-radius: 10px; padding: 15px; margin-bottom: 25px; }
+        .specials-title { font-weight: bold; font-size: 16px; color: #b45309; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
+        .specials-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; }
+        .special-card { background: #fff; border: 1px solid #fef3c7; padding: 10px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; }
+
         .search-box { margin-bottom: 20px; }
         .search-input { width: 100%; padding: 12px 15px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 15px; box-sizing: border-box; outline: none; }
         .search-input:focus { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
@@ -34,16 +40,25 @@
         .checkout-btn:hover { background: #059669; }
 
         .alert { padding: 12px; border-radius: 6px; margin-top: 15px; display: none; text-align: center; font-weight: bold; font-size: 14px; }
+        .back-link { display: block; text-align: center; margin-top: 15px; color: #2563eb; text-decoration: none; font-weight: bold; font-size: 14px; }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>🍽️ Digital Food & F&B Menu</h1>
-        <div class="subtitle">Search or select items to place your order directly to the kitchen.</div>
+        <div class="subtitle">Browse Chef's Specials or search items below to place your order.</div>
+
+        <!-- Chef's Specials Highlight Section -->
+        <div class="specials-section">
+            <div class="specials-title">🌟 Chef's Specials & Recommendations</div>
+            <div id="specialsContainer" class="specials-grid">
+                <!-- Dynamically populated specials -->
+            </div>
+        </div>
 
         <!-- Live Search Bar -->
         <div class="search-box">
-            <input type="text" id="searchInput" class="search-input" placeholder="🔍 Search menu items (e.g., coffee, sandwich, paneer)..." oninput="filterMenu()">
+            <input type="text" id="searchInput" class="search-input" placeholder="🔍 Search full menu (e.g., paneer, coffee, chicken)..." oninput="filterMenu()">
         </div>
 
         <div id="menuContainer" class="menu-grid">
@@ -57,6 +72,7 @@
         </div>
 
         <div id="alertBox" class="alert"></div>
+        <a href="/factsheet.html" class="back-link">← View Hotel Fact Sheet & Uploaded Menus</a>
     </div>
 
     <script>
@@ -71,10 +87,36 @@
 
                 const res = await fetch('/api/food-items');
                 allFoodItems = await res.json();
+                renderChefSpecials(allFoodItems);
                 renderMenu(allFoodItems);
             } catch (err) {
                 console.error('Error loading menu:', err);
             }
+        }
+
+        function renderChefSpecials(items) {
+            const container = document.getElementById('specialsContainer');
+            // Filter items categorized as Special or grab the first 3 items as highlights
+            const specials = items.filter(i => (i.category && i.category.toLowerCase().includes('special')) || i.id <= 3);
+            
+            if (specials.length === 0) {
+                container.innerHTML = '<div style="font-size:13px; color:#b45309;">No chef specials listed yet. Add them from your admin panel.</div>';
+                return;
+            }
+
+            container.innerHTML = '';
+            specials.slice(0, 3).forEach(item => {
+                const qty = cart[item.id] || 0;
+                container.innerHTML += `
+                    <div class="special-card">
+                        <div>
+                            <div style="font-weight:bold; font-size:14px; color:#1e293b;">${item.name}</div>
+                            <div style="font-size:12px; color:#059669; font-weight:bold;">₹${item.price}</div>
+                        </div>
+                        <button class="add-btn" style="padding:4px 10px; font-size:12px;" onclick="updateCart(${item.id}, 1)">${qty === '+Add' || qty === 0 ? 'Add' : qty + ' added'}</button>
+                    </div>
+                `;
+            });
         }
 
         function filterMenu() {
@@ -90,7 +132,7 @@
         function renderMenu(items) {
             const container = document.getElementById('menuContainer');
             if (!items || items.length === 0) {
-                container.innerHTML = '<div style="text-align:center; color:#64748b; padding: 20px;">No matching menu items found. Add items from the admin panel!</div>';
+                container.innerHTML = '<div style="text-align:center; color:#64748b; padding: 20px;">No matching menu items found.</div>';
                 return;
             }
 
@@ -134,6 +176,7 @@
                 (item.category && item.category.toLowerCase().includes(query))
             );
             renderMenu(filtered);
+            renderChefSpecials(allFoodItems);
             updateCartSummary();
         }
 
