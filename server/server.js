@@ -8,7 +8,7 @@ const PORT = process.env.PORT || 3000;
 
 // Middleware
 app.use(cors());
-app.use(express.json({ limit: '50mb' })); // Large limit to handle PDF base64 uploads
+app.use(express.json({ limit: '50mb' }));
 app.use(express.static(path.join(__dirname, '../public')));
 
 // Initialize SQLite Database
@@ -37,6 +37,17 @@ db.serialize(() => {
     documents TEXT
   )`);
 
+  // Table to store structured menu items for instant guest search
+  db.run(`CREATE TABLE IF NOT EXISTS menu_items (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    menu_title TEXT,
+    name TEXT,
+    category TEXT,
+    price REAL,
+    description TEXT,
+    icon TEXT
+  )`);
+
   // Initialize factsheet row if empty
   db.get(`SELECT id FROM factsheet WHERE id = 1`, (err, row) => {
     if (!row) {
@@ -63,7 +74,7 @@ app.get('/api/factsheet', (req, res) => {
 
 // 2. Upload PDF Menu or Document
 app.post('/api/upload-document', (req, res) => {
-  const { title, filename, fileData } = req.body;
+  const { title, filename } = req.body;
   if (!title || !filename) {
     return res.status(400).json({ error: 'Title and filename required' });
   }
@@ -75,7 +86,6 @@ app.post('/api/upload-document', (req, res) => {
       let docs = JSON.parse(row ? row.documents : '{"menus":[]}');
       if (!docs.menus) docs.menus = [];
 
-      // Add new menu to array
       docs.menus.push({ title, filename, uploadedAt: new Date().toISOString() });
 
       db.run(`UPDATE factsheet SET documents = ? WHERE id = 1`, [JSON.stringify(docs)], (updateErr) => {
@@ -110,7 +120,36 @@ app.post('/api/delete-document', (req, res) => {
   });
 });
 
-// 4. Submit Order / Service Request
+// 4. Publish Structured Menu Items from Manager Dashboard
+app.post('/api/upload-menu-items', (req, res) => {
+  const { menuTitle, items } = req.body;
+  if (!menuTitle || !items || !Array.isArray(items)) {
+    return res.status(400).json({ error: 'Invalid menu data' });
+  }
+
+  db.run(`DELETE FROM menu_items WHERE menu_title = ?`, [menuTitle], (err) => {
+    if (err) return res.status(500).json({ error: 'Database error' });
+
+    const stmt = db.prepare(`INSERT INTO menu_items (menu_title, name, category, price, description, icon) VALUES (?, ?, ?, ?, ?, ?)`);
+    items.forEach(item => {
+      stmt.run(menuTitle, item.name, item.category || 'General', item.price || 0, item.description || '', item.icon || '🍽️');
+    });
+    stmt.finalize((finalizeErr) => {
+      if (finalizeErr) return res.status(500).json({ error: 'Failed to save items' });
+      res.json({ success: true, message: 'Menu items published successfully' });
+    });
+  });
+});
+
+// 5. Fetch Menu Items for Guests
+app.get('/api/food-items', (req, res) => {
+  db.all(`SELECT * FROM menu_items`, [], (err, rows) => {
+    if (err) return res.status(500).json({ error: 'Failed to fetch menu items' });
+    res.json(rows);
+  });
+});
+
+// 6. Submit Order / Service Request
 app.post('/api/orders', (req, res) => {
   const { room, department, items } = req.body;
   if (!room || !department || !items) {
@@ -124,7 +163,7 @@ app.post('/api/orders', (req, res) => {
   });
 });
 
-// 5. Fetch Pending Orders for Dashboards
+// 7. Fetch Pending Orders for Dashboards
 app.get('/api/orders', (req, res) => {
   db.all(`SELECT * FROM orders ORDER BY timestamp DESC`, [], (err, rows) => {
     if (err) return res.status(500).json({ error: 'Failed to fetch orders' });
@@ -132,7 +171,7 @@ app.get('/api/orders', (req, res) => {
   });
 });
 
-// 6. Update Order Status (Fulfill/Complete)
+// 8. Update Order Status
 app.post('/api/orders/:id/status', (req, res) => {
   const orderId = req.params.id;
   const { status } = req.body;
@@ -143,19 +182,15 @@ app.post('/api/orders/:id/status', (req, res) => {
   });
 });
 
-// --- ROUTE REDIRECTS / CLEAN MAPPINGS ---
-
-// Route for legacy /food-menu endpoint to serve the clean static guest menu safely
+// --- ROUTE MAPPINGS ---
 app.get('/food-menu', (req, res) => {
   res.sendFile(path.join(__dirname, '../public/guest-menu.html'));
 });
 
-// Fallback to index.html for root client-side routing if needed
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '../public/index.html'));
 });
 
-// Start Server
 app.listen(PORT, () => {
   console.log(`HostlyDesk server running on port ${PORT}`);
 });
