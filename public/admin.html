@@ -3,106 +3,121 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hotel Manager Dashboard - HostlyDesk</title>
+    <title>Hotel Manager Control Center - HostlyDesk</title>
     <style>
-        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f8fafc; color: #1e293b; }
-        .container { max-width: 700px; margin: 0 auto; background: #fff; padding: 25px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
-        h1 { font-size: 22px; margin-bottom: 5px; color: #0f172a; text-align: center; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 20px; background: #f1f5f9; color: #1e293b; }
+        .container { max-width: 700px; margin: 0 auto; background: #fff; padding: 30px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+        h1 { font-size: 24px; text-align: center; margin-bottom: 5px; color: #0f172a; }
         .subtitle { text-align: center; color: #64748b; font-size: 14px; margin-bottom: 25px; }
-        
-        .section-box { background: #f1f5f9; border-radius: 8px; padding: 20px; margin-bottom: 20px; }
-        .section-title { font-weight: bold; font-size: 16px; margin-bottom: 10px; color: #334155; }
-        
-        .form-group { margin-bottom: 15px; text-align: left; }
-        .form-group label { display: block; font-weight: bold; font-size: 13px; margin-bottom: 5px; color: #475569; }
-        .form-control { width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; font-size: 14px; }
-        
-        .upload-btn { background: #2563eb; color: white; border: none; padding: 12px 20px; font-weight: bold; border-radius: 8px; cursor: pointer; font-size: 14px; width: 100%; }
+        .section-card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; margin-bottom: 20px; }
+        .section-title { font-weight: bold; font-size: 16px; margin-bottom: 12px; color: #334155; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; font-size: 13px; font-weight: bold; color: #475569; margin-bottom: 5px; }
+        input[type="text"], input[type="file"] { width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; box-sizing: border-box; background: #fff; }
+        .upload-btn { background: #2563eb; color: #fff; border: none; padding: 12px 20px; font-weight: bold; border-radius: 8px; cursor: pointer; font-size: 14px; width: 100%; text-transform: uppercase; }
         .upload-btn:hover { background: #1d4ed8; }
-
-        .alert { padding: 10px; border-radius: 6px; margin-top: 10px; font-size: 13px; font-weight: bold; text-align: center; display: none; }
-        .helper-text { font-size: 11px; color: #64748b; margin-top: 4px; }
+        .menu-list { list-style: none; padding: 0; margin: 0; }
+        .menu-item { display: flex; justify-content: space-between; align-items: center; background: #fff; padding: 12px 15px; border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 8px; font-size: 14px; }
+        .alert { padding: 12px; border-radius: 8px; margin-top: 15px; font-size: 14px; font-weight: bold; text-align: center; display: none; }
+        .back-link { display: block; text-align: center; margin-top: 20px; color: #2563eb; text-decoration: none; font-weight: bold; font-size: 14px; }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>🏨 Hotel Manager Control Center</h1>
-        <div class="subtitle">Upload your designer PDF menu. It will automatically be made viewable and searchable for guests!</div>
+        <div class="subtitle">Upload and manage multiple restaurant menus, bar lists, and property documents.</div>
 
-        <div class="section-box">
-            <div class="section-title">📄 Upload Designer Menu PDF</div>
-            <div class="form-group">
-                <label>Document Title (e.g., Main Restaurant Menu):</label>
-                <input type="text" id="docTitle" class="form-control" value="Main Restaurant Menu">
-            </div>
-            <div class="form-group">
-                <label>Select PDF File from Computer:</label>
-                <input type="file" id="pdfFile" class="form-control" accept="application/pdf">
-                <div class="helper-text">This will be saved for guest viewing AND parsed into clickable items automatically.</div>
-            </div>
-            <button type="button" class="upload-btn" onclick="uploadDocument()">Upload & Auto-Parse Menu</button>
+        <!-- Upload Form -->
+        <div class="section-card">
+            <div class="section-title">📤 Upload New Outlet Menu or Document</div>
+            <form id="uploadForm" onsubmit="uploadDocument(event)">
+                <div class="form-group">
+                    <label>Menu / Document Title (e.g., "Rooftop Bar Menu", "Coffee Shop Menu"):</label>
+                    <input type="text" id="docTitle" required placeholder="e.g., Main Restaurant Menu">
+                </div>
+                <div class="form-group">
+                    <label>Select PDF File:</label>
+                    <input type="file" id="docFile" accept="application/pdf" required>
+                </div>
+                <button type="submit" class="upload-btn">Upload Menu</button>
+            </form>
             <div id="alertBox" class="alert"></div>
         </div>
+
+        <!-- Active Menus List -->
+        <div class="section-card">
+            <div class="section-title">📋 Active Menus & Documents on Property</div>
+            <ul id="activeMenusList" class="menu-list">
+                <li class="menu-item"><span>Loading active menus...</span></li>
+            </ul>
+        </div>
+
+        <a href="/" class="back-link">← Back to Portal Home</a>
     </div>
 
     <script>
-        async function uploadDocument() {
-            const title = document.getElementById('docTitle').value.trim();
-            const fileInput = document.getElementById('pdfFile');
+        async function loadActiveMenus() {
+            try {
+                const res = await fetch('/api/factsheet');
+                const data = await res.json();
+                const listEl = document.getElementById('activeMenusList');
+                listEl.innerHTML = '';
+
+                if (data.documents && data.documents.menus && data.documents.menus.length > 0) {
+                    data.documents.menus.forEach(menu => {
+                        listEl.innerHTML += `
+                            <li class="menu-item">
+                                <span><b>📄 ${menu.title}</b> <small style="color: #64748b;">(${menu.filename})</small></span>
+                                <a href="/uploads/${encodeURIComponent(menu.filename)}" target="_blank" style="color: #2563eb; font-weight: bold; text-decoration: none;">View PDF</a>
+                            </li>
+                        `;
+                    });
+                } else {
+                    listEl.innerHTML = '<li class="menu-item"><span>No menus uploaded yet.</span></li>';
+                }
+            } catch (err) {
+                console.error('Failed to load menus', err);
+            }
+        }
+
+        async function uploadDocument(event) {
+            event.preventDefault();
+            const title = document.getElementById('docTitle').value;
+            const fileInput = document.getElementById('docFile');
             const alertBox = document.getElementById('alertBox');
 
-            if (fileInput.files.length === 0) {
-                alertBox.textContent = 'Please select a PDF file first.';
-                alertBox.style.background = '#fee2e2';
-                alertBox.style.color = '#991b1b';
-                alertBox.style.display = 'block';
-                return;
-            }
-
+            if (fileInput.files.length === 0) return;
             const file = fileInput.files[0];
+
             const reader = new FileReader();
-
-            alertBox.textContent = 'Processing and parsing PDF items... Please wait.';
-            alertBox.style.background = '#e0f2fe';
-            alertBox.style.color = '#0369a1';
-            alertBox.style.display = 'block';
-
-            reader.onload = async function(event) {
-                const base64Data = event.target.result;
-
-                const payload = {
-                    title: title,
-                    filename: file.name,
-                    fileData: base64Data
-                };
-
+            reader.onload = async function(e) {
+                const fileData = e.target.result;
                 try {
                     const res = await fetch('/api/upload-document', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload)
+                        body: JSON.stringify({ title, filename: file.name, fileData })
                     });
 
                     const result = await res.json();
                     if (res.ok) {
-                        alertBox.textContent = 'Success! PDF uploaded, saved, and parsed into clickable menu items!';
-                        alertBox.style.background = '#d1fae5';
-                        alertBox.style.color = '#065f46';
-                        alertBox.style.display = 'block';
-                        fileInput.value = '';
+                        alertBox.textContent = `Success! "${title}" uploaded successfully.`;
+                        alertBox.style.background = '#d1fae5'; alertBox.style.color = '#065f46'; alertBox.style.display = 'block';
+                        document.getElementById('uploadForm').reset();
+                        loadActiveMenus();
+                        setTimeout(() => { alertBox.style.display = 'none'; }, 4000);
                     } else {
                         throw new Error(result.error || 'Upload failed');
                     }
                 } catch (err) {
-                    alertBox.textContent = 'Failed to process document.';
-                    alertBox.style.background = '#fee2e2';
-                    alertBox.style.color = '#991b1b';
-                    alertBox.style.display = 'block';
+                    alertBox.textContent = 'Upload failed. Please try again.';
+                    alertBox.style.background = '#fee2e2'; alertBox.style.color = '#991b1b'; alertBox.style.display = 'block';
                 }
             };
-
             reader.readAsDataURL(file);
         }
+
+        loadActiveMenus();
     </script>
 </body>
 </html>
