@@ -33,7 +33,7 @@
 
         <div class="card-box">
             <div id="menuList">
-                <!-- Items render here instantly -->
+                <div style="text-align: center; color: #64748b; padding: 20px;">Loading menu items...</div>
             </div>
         </div>
 
@@ -81,24 +81,28 @@
             });
         }
 
-        // Render immediately using default list so it never shows "Loading..."
-        renderMenu(allMenuItems);
-
         async function fetchMenu() {
             try {
                 const res = await fetch('/api/food-items');
                 const data = await res.json();
                 if (data && data.length > 0) {
                     allMenuItems = data;
-                    renderMenu(allMenuItems);
                 }
             } catch (err) {
                 console.log('Using local fallback menu items.');
             }
+            renderMenu(allMenuItems);
         }
 
         function filterItems() {
-            const query = document.getElementById('searchInput').value.toLowerCase();
+            const query = document.getElementById('searchInput').value.trim().toLowerCase();
+            
+            // If search box is cleared or just 1 letter like "a", show the full list smoothly
+            if (query.length < 2) {
+                renderMenu(allMenuItems);
+                return;
+            }
+
             const filtered = allMenuItems.filter(item => 
                 item.name.toLowerCase().includes(query) || 
                 (item.description && item.description.toLowerCase().includes(query)) ||
