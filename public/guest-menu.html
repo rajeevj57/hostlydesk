@@ -3,127 +3,166 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HostlyDesk - Room Dining Menu</title>
+    <title>HostlyDesk - Guest Dining Menu</title>
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 15px; background: #0f172a; color: #fff; display: flex; justify-content: center; }
-        .mobile-container { width: 100%; max-width: 420px; background: #1e293b; border-radius: 24px; padding: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); box-sizing: border-box; }
-        .header-top { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #94a3b8; margin-bottom: 5px; }
-        .room-title { font-size: 26px; font-weight: bold; margin: 0 0 15px 0; color: #f8fafc; }
-        .search-box { margin-bottom: 15px; }
-        .search-input { width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 12px; font-size: 14px; box-sizing: border-box; outline: none; background: #fdfbf7; color: #1e293b; }
-        .card-box { background: #fdfbf7; border-radius: 16px; padding: 15px; color: #1e293b; margin-bottom: 15px; max-height: 420px; overflow-y: auto; }
-        .food-item { display: flex; justify-content: space-between; align-items: center; background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px; margin-bottom: 10px; }
-        .food-name { font-size: 14px; font-weight: bold; color: #0f172a; margin-bottom: 3px; }
-        .food-desc { font-size: 11px; color: #64748b; margin-bottom: 4px; }
-        .food-price { font-size: 12px; font-weight: bold; color: #2563eb; }
-        .order-btn { background: #c2a666; color: #fff; border: none; padding: 8px 12px; font-weight: bold; border-radius: 8px; cursor: pointer; font-size: 12px; text-transform: uppercase; white-space: nowrap; }
-        .order-btn:hover { background: #b09355; }
-        .alert { padding: 10px; border-radius: 8px; margin-top: 10px; font-size: 13px; font-weight: bold; text-align: center; display: none; }
-        .back-link { display: block; text-align: center; margin-top: 15px; color: #60a5fa; text-decoration: none; font-weight: bold; font-size: 13px; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 15px; background: #f8fafc; color: #1e293b; }
+        .container { max-width: 600px; margin: 0 auto; }
+        .header { background: #0f172a; color: #fff; padding: 20px; border-radius: 12px; margin-bottom: 15px; text-align: center; }
+        .search-box { width: 100%; padding: 14px; font-size: 16px; border: 2px solid #cbd5e1; border-radius: 10px; margin-bottom: 15px; box-sizing: border-box; outline: none; }
+        .search-box:focus { border-color: #2563eb; }
+        .menu-card { background: #fff; padding: 15px; border-radius: 10px; margin-bottom: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; }
+        .item-info h4 { margin: 0 0 5px 0; font-size: 16px; color: #0f172a; }
+        .item-info p { margin: 0; font-size: 13px; color: #64748b; }
+        .item-price { font-weight: bold; color: #2563eb; margin-top: 5px; font-size: 14px; }
+        .add-btn { background: #16a34a; color: #fff; border: none; padding: 8px 14px; border-radius: 6px; font-weight: bold; cursor: pointer; }
+        .add-btn:hover { background: #15803d; }
+        .cart-bar { position: fixed; bottom: 0; left: 0; right: 0; background: #0f172a; color: #fff; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 -4px 10px rgba(0,0,0,0.1); }
+        .order-btn { background: #2563eb; color: #fff; border: none; padding: 10px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; }
+        .pdf-banner { background: #e0f2fe; border: 1px solid #bae6fd; padding: 12px; border-radius: 8px; margin-bottom: 15px; text-align: center; font-size: 14px; }
+        .pdf-banner a { color: #0284c7; font-weight: bold; text-decoration: none; }
     </style>
 </head>
 <body>
-    <div class="mobile-container">
-        <div class="header-top">HostlyDesk · Room Dining</div>
-        <div class="room-title" id="roomDisplay">Room 305 Menu</div>
-
-        <div class="search-box">
-            <input type="text" id="searchInput" class="search-input" placeholder="🔍 Search dishes (e.g., Tikka, Biryani)..." oninput="filterItems()">
+    <div class="container">
+        <div class="header">
+            <h2>Room Dining & Menu</h2>
+            <div id="roomDisplay" style="font-size: 13px; color: #94a3b8; margin-top: 5px;">Loading room...</div>
         </div>
 
-        <div class="card-box">
-            <div id="menuList"></div>
+        <!-- Master Menu Document Link for Guests -->
+        <div id="masterMenuLinkContainer" style="display: none;">
+            <div class="pdf-banner" id="pdfBannerText">
+                📄 View Master Menu Document: <a id="pdfAnchor" href="#" target="_blank">Open Menu File</a>
+            </div>
         </div>
 
-        <div id="alertBox" class="alert"></div>
-        <a id="backPortal" href="/" class="back-link">← Back to Guest Portal</a>
+        <!-- Instant Search Bar -->
+        <input type="text" id="searchInput" class="search-box" placeholder="Type 1-2 words (e.g., tikka, coffee, soup)..." oninput="filterMenuItems()">
+
+        <div id="menuContainer">
+            <p style="text-align: center; color: #64748b;">Loading menu items...</p>
+        </div>
+    </div>
+
+    <!-- Floating Cart Bar -->
+    <div class="cart-bar" id="cartBar" style="display: none;">
+        <div>
+            <span id="cartCount">0</span> items selected
+        </div>
+        <button class="order-btn" onclick="submitOrder()">Place Order Now</button>
     </div>
 
     <script>
+        let allMenuItems = [];
+        let cart = {};
         const urlParams = new URLSearchParams(window.location.search);
-        const currentRoom = urlParams.get('room') || '305';
-        document.getElementById('roomDisplay').textContent = `Room ${currentRoom} Menu`;
-        document.getElementById('backPortal').href = `/?room=${currentRoom}`;
+        const roomNumber = urlParams.get('room') || 'General';
+        document.getElementById('roomDisplay').textContent = `Room / Location: ${roomNumber}`;
 
-        let menuCatalog = [];
-
-        async function fetchMenu() {
+        async function loadData() {
             try {
+                // Fetch menu items for search & order
                 const res = await fetch('/api/food-items');
-                const data = await res.json();
-                if (data && data.length > 0) {
-                    menuCatalog = data;
-                } else {
-                    menuCatalog = [
-                        { id: 1, name: 'Chicken Tikka', category: 'Starters', price: 450, description: 'Tandoori spiced roasted chicken chunks', icon: '🍗' },
-                        { id: 2, name: 'Paneer Butter Masala', category: 'Main Course', price: 380, description: 'Cottage cheese in rich tomato gravy', icon: '🧀' },
-                        { id: 3, name: 'Chicken Biryani', category: 'Main Course', price: 490, description: 'Fragrant basmati rice cooked with tender chicken', icon: '🍚' }
-                    ];
+                allMenuItems = await res.json();
+                renderMenu(allMenuItems);
+
+                // Fetch uploaded master documents
+                const docRes = await fetch('/api/factsheet');
+                const docData = await docRes.json();
+                if (docData.documents && docData.documents.menus && docData.documents.menus.length > 0) {
+                    const latestMenu = docData.documents.menus[docData.documents.menus.length - 1];
+                    if (latestMenu.path) {
+                        document.getElementById('pdfAnchor').href = latestMenu.path;
+                        document.getElementById('pdfAnchor').textContent = latestMenu.title || 'Open PDF Menu';
+                        document.getElementById('masterMenuLinkContainer').style.display = 'block';
+                    }
                 }
-                renderMenu(menuCatalog);
             } catch (e) {
-                console.error('Failed to load menu items');
+                document.getElementById('menuContainer').innerHTML = '<p style="text-align:center; color:red;">Failed to load menu.</p>';
             }
         }
 
         function renderMenu(items) {
-            const listEl = document.getElementById('menuList');
-            if (!items || items.length === 0) {
-                listEl.innerHTML = '<div style="text-align: center; color: #64748b; padding: 20px;">No items available.</div>';
+            const container = document.getElementById('menuContainer');
+            if (items.length === 0) {
+                container.innerHTML = '<p style="text-align:center; color:#64748b;">No items available right now.</p>';
                 return;
             }
 
             let html = '';
             items.forEach(item => {
                 html += `
-                    <div class="food-item">
-                        <div style="flex-grow:1; margin-right:8px;">
-                            <div class="food-name">${item.icon || '🍽️'} ${item.name}</div>
-                            <div class="food-desc">${item.description || ''}</div>
-                            <div class="food-price">₹${item.price || 0}</div>
+                    <div class="menu-card">
+                        <div class="item-info">
+                            <h4>${item.icon || '🍽️'} ${item.name}</h4>
+                            <p>${item.description || item.category}</p>
+                            <div class="item-price">₹${item.price}</div>
                         </div>
-                        <button class="order-btn" onclick="orderFood('${item.name.replace(/'/g, "\\'")}')">Order</button>
+                        <button class="add-btn" onclick="addToCart('${item.name}', ${item.price})">+ Add</button>
                     </div>
                 `;
             });
-            listEl.innerHTML = html;
+            container.innerHTML = html;
         }
 
-        function filterItems() {
-            const query = document.getElementById('searchInput').value.trim().toLowerCase();
-            if (query === '') {
-                renderMenu(menuCatalog);
-                return;
-            }
-            const filtered = menuCatalog.filter(item => 
-                item.name.toLowerCase().includes(query) || 
-                (item.description && item.description.toLowerCase().includes(query)) || 
-                (item.category && item.category.toLowerCase().includes(query))
+        function filterMenuItems() {
+            const query = document.getElementById('searchInput').value.toLowerCase();
+            const filtered = allMenuItems.filter(i => 
+                i.name.toLowerCase().includes(query) || 
+                (i.category && i.category.toLowerCase().includes(query)) ||
+                (i.description && i.description.toLowerCase().includes(query))
             );
             renderMenu(filtered);
         }
 
-        async function orderFood(itemName) {
-            const alertBox = document.getElementById('alertBox');
+        function addToCart(name, price) {
+            if (!cart[name]) {
+                cart[name] = { name, price, qty: 0 };
+            }
+            cart[name].qty += 1;
+            updateCartBar();
+        }
+
+        function updateCartBar() {
+            let totalCount = 0;
+            Object.values(cart).forEach(i => totalCount += i.qty);
+            
+            const bar = document.getElementById('cartBar');
+            if (totalCount > 0) {
+                bar.style.display = 'flex';
+                document.getElementById('cartCount').textContent = totalCount;
+            } else {
+                bar.style.display = 'none';
+            }
+        }
+
+        async function submitOrder() {
+            let orderSummary = Object.values(cart).map(i => `${i.qty}x ${i.name}`).join(', ');
+            
             try {
                 const res = await fetch('/api/orders', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ room: currentRoom, department: 'fnb', items: itemName })
+                    body: JSON.stringify({
+                        room: roomNumber,
+                        department: 'Kitchen / F&B',
+                        items: orderSummary
+                    })
                 });
 
                 if (res.ok) {
-                    alertBox.textContent = `Success! "${itemName}" ordered for Room ${currentRoom}.`;
-                    alertBox.style.background = '#d1fae5'; alertBox.style.color = '#065f46'; alertBox.style.display = 'block';
-                    setTimeout(() => { alertBox.style.display = 'none'; }, 4000);
+                    alert('Order placed successfully! Sent to Kitchen department.');
+                    cart = {};
+                    updateCartBar();
+                } else {
+                    alert('Failed to place order.');
                 }
-            } catch (err) {
-                alertBox.textContent = 'Failed to place order. Try again.';
-                alertBox.style.background = '#fee2e2'; alertBox.style.color = '#991b1b'; alertBox.style.display = 'block';
+            } catch (e) {
+                alert('Connection error.');
             }
         }
 
-        fetchMenu();
+        loadData();
     </script>
 </body>
 </html>
