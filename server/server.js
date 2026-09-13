@@ -8,7 +8,6 @@ const PORT = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use(express.static(path.join(__dirname, '../public')));
 
 const dbPath = path.join(__dirname, 'database.sqlite');
@@ -18,7 +17,6 @@ const db = new sqlite3.Database(dbPath, (err) => {
 });
 
 db.serialize(() => {
-  // 1. Orders Table
   db.run(`CREATE TABLE IF NOT EXISTS orders (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     room TEXT,
@@ -28,7 +26,6 @@ db.serialize(() => {
     timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
   )`);
 
-  // 2. Structured Menu Items Table (for Guest Search)
   db.run(`CREATE TABLE IF NOT EXISTS menu_items (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     menu_title TEXT,
@@ -39,13 +36,11 @@ db.serialize(() => {
     icon TEXT
   )`);
 
-  // 3. Factsheet Table (for Admin File Uploads)
   db.run(`CREATE TABLE IF NOT EXISTS factsheet (
     id INTEGER PRIMARY KEY CHECK (id = 1),
     documents TEXT
   )`);
 
-  // Initialize factsheet row if empty
   db.get(`SELECT id FROM factsheet WHERE id = 1`, (err, row) => {
     if (!row) {
       const initialDocs = JSON.stringify({ menus: [] });
@@ -54,9 +49,7 @@ db.serialize(() => {
   });
 });
 
-// --- ADMIN FILE UPLOAD ROUTES ---
-
-// Get active documents for admin panel
+// Admin Factsheet / Document Routes
 app.get('/api/factsheet', (req, res) => {
   db.get(`SELECT documents FROM factsheet WHERE id = 1`, (err, row) => {
     if (err) return res.status(500).json({ error: 'Database error' });
@@ -69,10 +62,11 @@ app.get('/api/factsheet', (req, res) => {
   });
 });
 
-// Upload a new document/menu record (Robust handler for JSON or form submissions)
 app.post('/api/upload-document', (req, res) => {
-  const title = req.body.title || req.body.menuTitle || 'Menu';
-  const filename = req.body.filename || (req.body.file ? req.body.file.name : 'Uploaded_Menu.pdf');
+  const { title, filename } = req.body;
+  if (!title || !filename) {
+    return res.status(400).json({ error: 'Title and filename required' });
+  }
 
   db.get(`SELECT documents FROM factsheet WHERE id = 1`, (err, row) => {
     if (err) return res.status(500).json({ error: 'Database error' });
@@ -93,7 +87,6 @@ app.post('/api/upload-document', (req, res) => {
   });
 });
 
-// Delete a document/menu record
 app.post('/api/delete-document', (req, res) => {
   const { filename } = req.body;
   if (!filename) return res.status(400).json({ error: 'Filename required' });
@@ -115,41 +108,28 @@ app.post('/api/delete-document', (req, res) => {
   });
 });
 
-
-// --- ORDER ROUTES ---
-
-app.post('/api/orders', (req, res) => {
-  const { room, department, items } = req.body;
-  if (!room || !department || !items) {
-    return res.status(400).json({ error: 'Missing required order fields' });
+// Save Structured Menu Items with Categories
+app.post('/api/upload-menu-items', (req, res) => {
+  const { menuTitle, items } = req.body;
+  if (!menuTitle || !items || !Array.isArray(items)) {
+    return res.status(400).json({ error: 'Invalid menu data' });
   }
 
-  const query = `INSERT INTO orders (room, department, items, status) VALUES (?, ?, ?, 'Pending')`;
-  db.run(query, [room, department, items], function(err) {
-    if (err) return res.status(500).json({ error: 'Failed to save order' });
-    res.json({ success: true, orderId: this.lastID });
+  db.run(`DELETE FROM menu_items WHERE menu_title = ?`, [menuTitle], (err) => {
+    if (err) return res.status(500).json({ error: 'Database error' });
+
+    const stmt = db.prepare(`INSERT INTO menu_items (menu_title, name, category, price, description, icon) VALUES (?, ?, ?, ?, ?, ?)`);
+    items.forEach(item => {
+      stmt.run(menuTitle, item.name, item.category || 'Main Course', item.price || 0, item.description || '', item.icon || '🍽️');
+    });
+    stmt.finalize((finalizeErr) => {
+      if (finalizeErr) return res.status(500).json({ error: 'Failed to save items' });
+      res.json({ success: true, message: 'Menu items published successfully' });
+    });
   });
 });
 
-app.get('/api/orders', (req, res) => {
-  db.all(`SELECT * FROM orders ORDER BY timestamp DESC`, [], (err, rows) => {
-    if (err) return res.status(500).json({ error: 'Failed to fetch orders' });
-    res.json(rows);
-  });
-});
-
-app.post('/api/orders/:id/status', (req, res) => {
-  const orderId = req.params.id;
-  const { status } = req.body;
-  db.run(`UPDATE orders SET status = ? WHERE id = ?`, [status, orderId], function(err) {
-    if (err) return res.status(500).json({ error: 'Failed to update order status' });
-    res.json({ success: true });
-  });
-});
-
-
-// --- MENU ITEMS ROUTES ---
-
+// Fetch Menu Items
 app.get('/api/food-items', (req, res) => {
   db.all(`SELECT * FROM menu_items`, [], (err, rows) => {
     if (err) return res.status(500).json({ error: 'Failed to fetch items' });
@@ -157,8 +137,31 @@ app.get('/api/food-items', (req, res) => {
   });
 });
 
+// Orders APIs
+app.post('/api/orders', (req, res) => {
+  const { room, department, items } = req.body;
+  if (!room || !department || !items) return res.status(400).json({ error: 'Missing fields' });
 
-// --- FRONTEND ROUTING ---
+  db.run(`INSERT INTO orders (room, department, items, status) VALUES (?, ?, ?, 'Pending')`, [room, department, items], function(err) {
+    if (err) return res.status(500).json({ error: 'Failed' });
+    res.json({ success: true, orderId: this.lastID });
+  });
+});
+
+app.get('/api/orders', (req, res) => {
+  db.all(`SELECT * FROM orders ORDER BY timestamp DESC`, [], (err, rows) => {
+    if (err) return res.status(500).json({ error: 'Failed' });
+    res.json(rows);
+  });
+});
+
+app.post('/api/orders/:id/status', (req, res) => {
+  db.run(`UPDATE orders SET status = ? WHERE id = ?`, [req.body.status, req.params.id], function(err) {
+    if (err) return res.status(500).json({ error: 'Failed' });
+    res.json({ success: true });
+  });
+});
+
 app.get('/food-menu', (req, res) => {
   res.sendFile(path.join(__dirname, '../public/guest-menu.html'));
 });
@@ -168,5 +171,5 @@ app.get('*', (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`HostlyDesk server running on port ${PORT}`);
+  console.log(`Server running on port ${PORT}`);
 });
