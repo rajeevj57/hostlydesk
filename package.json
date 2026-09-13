@@ -1,13 +1,14 @@
 {
   "name": "hostlydesk",
   "version": "1.0.0",
-  "description": "AI-driven hotel front office concierge",
+  "description": "Hotel Front Office & Room Service AI Concierge",
   "main": "server/server.js",
   "scripts": {
     "start": "node server/server.js"
   },
   "dependencies": {
-    "express": "^4.18.2",
+    "express": "^4.19.2",
+    "pdf-parse": "^1.1.1",
     "sqlite3": "^5.1.7"
   }
 }
