@@ -6,23 +6,18 @@ const cors = require('cors');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Middleware
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.static(path.join(__dirname, '../public')));
 
-// Initialize SQLite Database
 const dbPath = path.join(__dirname, 'database.sqlite');
 const db = new sqlite3.Database(dbPath, (err) => {
-  if (err) {
-    console.error('Database connection error:', err.message);
-  } else {
-    console.log('Connected to SQLite database.');
-  }
+  if (err) console.error('Database connection error:', err.message);
+  else console.log('Connected to SQLite database.');
 });
 
-// Create tables if they don't exist
 db.serialize(() => {
+  // 1. Orders Table
   db.run(`CREATE TABLE IF NOT EXISTS orders (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     room TEXT,
@@ -32,12 +27,7 @@ db.serialize(() => {
     timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
   )`);
 
-  db.run(`CREATE TABLE IF NOT EXISTS factsheet (
-    id INTEGER PRIMARY KEY CHECK (id = 1),
-    documents TEXT
-  )`);
-
-  // Table to store structured menu items for instant guest search
+  // 2. Structured Menu Items Table (for Guest Search)
   db.run(`CREATE TABLE IF NOT EXISTS menu_items (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     menu_title TEXT,
@@ -46,6 +36,12 @@ db.serialize(() => {
     price REAL,
     description TEXT,
     icon TEXT
+  )`);
+
+  // 3. Factsheet Table (for Admin File Uploads)
+  db.run(`CREATE TABLE IF NOT EXISTS factsheet (
+    id INTEGER PRIMARY KEY CHECK (id = 1),
+    documents TEXT
   )`);
 
   // Initialize factsheet row if empty
@@ -57,9 +53,9 @@ db.serialize(() => {
   });
 });
 
-// --- API ROUTES ---
+// --- ADMIN FILE UPLOAD ROUTES ---
 
-// 1. Get Factsheet / Active Documents & Menus
+// Get active documents for admin panel
 app.get('/api/factsheet', (req, res) => {
   db.get(`SELECT documents FROM factsheet WHERE id = 1`, (err, row) => {
     if (err) return res.status(500).json({ error: 'Database error' });
@@ -72,7 +68,7 @@ app.get('/api/factsheet', (req, res) => {
   });
 });
 
-// 2. Upload PDF Menu or Document
+// Upload a new document/menu record
 app.post('/api/upload-document', (req, res) => {
   const { title, filename } = req.body;
   if (!title || !filename) {
@@ -90,7 +86,7 @@ app.post('/api/upload-document', (req, res) => {
 
       db.run(`UPDATE factsheet SET documents = ? WHERE id = 1`, [JSON.stringify(docs)], (updateErr) => {
         if (updateErr) return res.status(500).json({ error: 'Failed to update factsheet' });
-        res.json({ success: true, message: 'Menu uploaded successfully' });
+        res.json({ success: true, message: 'Document uploaded successfully' });
       });
     } catch (e) {
       res.status(500).json({ error: 'Parsing error' });
@@ -98,7 +94,7 @@ app.post('/api/upload-document', (req, res) => {
   });
 });
 
-// 3. Delete Uploaded Menu / Document
+// Delete a document/menu record
 app.post('/api/delete-document', (req, res) => {
   const { filename } = req.body;
   if (!filename) return res.status(400).json({ error: 'Filename required' });
@@ -120,36 +116,10 @@ app.post('/api/delete-document', (req, res) => {
   });
 });
 
-// 4. Publish Structured Menu Items from Manager Dashboard
-app.post('/api/upload-menu-items', (req, res) => {
-  const { menuTitle, items } = req.body;
-  if (!menuTitle || !items || !Array.isArray(items)) {
-    return res.status(400).json({ error: 'Invalid menu data' });
-  }
 
-  db.run(`DELETE FROM menu_items WHERE menu_title = ?`, [menuTitle], (err) => {
-    if (err) return res.status(500).json({ error: 'Database error' });
+// --- ORDER ROUTES ---
 
-    const stmt = db.prepare(`INSERT INTO menu_items (menu_title, name, category, price, description, icon) VALUES (?, ?, ?, ?, ?, ?)`);
-    items.forEach(item => {
-      stmt.run(menuTitle, item.name, item.category || 'General', item.price || 0, item.description || '', item.icon || '🍽️');
-    });
-    stmt.finalize((finalizeErr) => {
-      if (finalizeErr) return res.status(500).json({ error: 'Failed to save items' });
-      res.json({ success: true, message: 'Menu items published successfully' });
-    });
-  });
-});
-
-// 5. Fetch Menu Items for Guests
-app.get('/api/food-items', (req, res) => {
-  db.all(`SELECT * FROM menu_items`, [], (err, rows) => {
-    if (err) return res.status(500).json({ error: 'Failed to fetch menu items' });
-    res.json(rows);
-  });
-});
-
-// 6. Submit Order / Service Request
+// Submit a new order
 app.post('/api/orders', (req, res) => {
   const { room, department, items } = req.body;
   if (!room || !department || !items) {
@@ -163,7 +133,7 @@ app.post('/api/orders', (req, res) => {
   });
 });
 
-// 7. Fetch Pending Orders for Dashboards
+// Fetch all orders for dashboards
 app.get('/api/orders', (req, res) => {
   db.all(`SELECT * FROM orders ORDER BY timestamp DESC`, [], (err, rows) => {
     if (err) return res.status(500).json({ error: 'Failed to fetch orders' });
@@ -171,18 +141,29 @@ app.get('/api/orders', (req, res) => {
   });
 });
 
-// 8. Update Order Status
+// Update order status (Accept/Complete)
 app.post('/api/orders/:id/status', (req, res) => {
   const orderId = req.params.id;
   const { status } = req.body;
-
   db.run(`UPDATE orders SET status = ? WHERE id = ?`, [status, orderId], function(err) {
     if (err) return res.status(500).json({ error: 'Failed to update order status' });
     res.json({ success: true });
   });
 });
 
-// --- ROUTE MAPPINGS ---
+
+// --- MENU ITEMS ROUTES ---
+
+// Fetch menu items for guest search screen
+app.get('/api/food-items', (req, res) => {
+  db.all(`SELECT * FROM menu_items`, [], (err, rows) => {
+    if (err) return res.status(500).json({ error: 'Failed to fetch items' });
+    res.json(rows);
+  });
+});
+
+
+// --- FRONTEND ROUTING ---
 app.get('/food-menu', (req, res) => {
   res.sendFile(path.join(__dirname, '../public/guest-menu.html'));
 });
