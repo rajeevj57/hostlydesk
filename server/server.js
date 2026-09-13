@@ -1,175 +1,161 @@
 const express = require('express');
+const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
-const fs = require('fs');
-const pdfParse = require('pdf-parse');
+const cors = require('cors');
 
 const app = express();
-const PORT = process.env.PORT || 10000;
+const PORT = process.env.PORT || 3000;
 
-app.use(express.json({ limit: '25mb' }));
-app.use(express.urlencoded({ extended: true, limit: '25mb' }));
+// Middleware
+app.use(cors());
+app.use(express.json({ limit: '50mb' })); // Large limit to handle PDF base64 uploads
 app.use(express.static(path.join(__dirname, '../public')));
 
-const dataDir = path.join(__dirname, '../data');
-if (!fs.existsSync(dataDir)) {
-  try { fs.mkdirSync(dataDir, { recursive: true }); } catch(e) {}
-}
+// Initialize SQLite Database
+const dbPath = path.join(__dirname, 'database.sqlite');
+const db = new sqlite3.Database(dbPath, (err) => {
+  if (err) {
+    console.error('Database connection error:', err.message);
+  } else {
+    console.log('Connected to SQLite database.');
+  }
+});
 
-let db = null;
-try {
-  const sqlite3 = require('sqlite3').verbose();
-  const dbFile = path.join(dataDir, 'hostlydesk.db');
-  db = new sqlite3.Database(dbFile, (err) => {
-    if (!err) {
-      db.serialize(() => {
-        db.run(`CREATE TABLE IF NOT EXISTS orders (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          room TEXT,
-          items TEXT,
-          department TEXT DEFAULT 'housekeeping',
-          status TEXT DEFAULT 'Pending',
-          created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        )`, () => {});
+// Create tables if they don't exist
+db.serialize(() => {
+  db.run(`CREATE TABLE IF NOT EXISTS orders (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    room TEXT,
+    department TEXT,
+    items TEXT,
+    status TEXT DEFAULT 'Pending',
+    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+  )`);
 
-        db.run(`CREATE TABLE IF NOT EXISTS menu_items (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          name TEXT,
-          category TEXT,
-          price REAL,
-          description TEXT,
-          icon TEXT DEFAULT '🍽️'
-        )`, () => {});
+  db.run(`CREATE TABLE IF NOT EXISTS factsheet (
+    id INTEGER PRIMARY KEY CHECK (id = 1),
+    documents TEXT
+  )`);
 
-        db.run(`CREATE TABLE IF NOT EXISTS hotel_documents (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          title TEXT,
-          filename TEXT,
-          filedata TEXT
-        )`, () => {});
-      });
+  // Initialize factsheet row if empty
+  db.get(`SELECT id FROM factsheet WHERE id = 1`, (err, row) => {
+    if (!row) {
+      const initialDocs = JSON.stringify({ menus: [] });
+      db.run(`INSERT INTO factsheet (id, documents) VALUES (1, ?)`, [initialDocs]);
     }
   });
-} catch (e) {
-  console.log('Database running on memory fallback.');
-}
-
-// Routes
-app.get('/', (req, res) => res.sendFile(path.join(__dirname, '../public/index.html')));
-app.get('/kitchen', (req, res) => res.sendFile(path.join(__dirname, '../public/kitchen.html')));
-app.get('/food-menu', (req, res) => res.sendFile(path.join(__dirname, '../public/food-menu.html')));
-app.get('/factsheet.html', (req, res) => res.sendFile(path.join(__dirname, '../public/factsheet.html')));
-app.get('/admin.html', (req, res) => res.sendFile(path.join(__dirname, '../public/admin.html')));
-
-app.get('/api/context', (req, res) => res.json({ room: req.query.room || '305' }));
-
-// Dynamic Searchable Food Items API directly from Database
-app.get('/api/food-items', (req, res) => {
-  if (!db) return res.json([]);
-  db.all('SELECT * FROM menu_items ORDER BY id DESC', [], (err, rows) => {
-    res.json(rows || []);
-  });
 });
 
-app.post('/api/orders', (req, res) => {
-  const room = req.body.room || req.query.room || '305';
-  const department = req.body.department || 'housekeeping';
-  const items = typeof req.body.items === 'object' ? JSON.stringify(req.body.items) : req.body.items;
+// --- API ROUTES ---
 
-  if (!db) return res.json({ success: true, id: Date.now() });
-
-  db.run(`INSERT INTO orders (room, items, department) VALUES (?, ?, ?)`, [room, items, department], function(err) {
-    if (err) return res.status(500).json({ error: err.message });
-    res.json({ success: true, id: this.lastID });
-  });
-});
-
-app.get('/api/orders', (req, res) => {
-  if (!db) return res.json([]);
-  db.all('SELECT * FROM orders ORDER BY id DESC', [], (err, rows) => res.json(rows || []));
-});
-
-app.post('/api/orders/:id/status', (req, res) => {
-  if (!db) return res.json({ success: true });
-  db.run(`UPDATE orders SET status = ? WHERE id = ?`, [req.body.status, req.params.id], function(err) {
-    res.json({ success: true, updated: this.changes });
-  });
-});
-
+// 1. Get Factsheet / Active Documents & Menus
 app.get('/api/factsheet', (req, res) => {
-  if (!db) {
-    return res.json({
-      wifiDetails: "Network: Hotel_Guest_WiFi | Password: welcome2026",
-      documents: { factsheet: 'FactSheet.pdf', menus: [{ id: 1, title: 'Main Restaurant Menu', filename: 'Default_Menu.pdf' }] }
-    });
-  }
-
-  db.all(`SELECT title, filename FROM hotel_documents`, [], (err, rows) => {
-    const menus = (rows && rows.length > 0) ? rows : [{ id: 1, title: 'Main Restaurant Menu', filename: 'Default_Menu.pdf' }];
-    res.json({
-      wifiDetails: "Network: Hotel_Guest_WiFi | Password: welcome2026",
-      documents: { factsheet: 'FactSheet.pdf', menus: menus }
-    });
-  });
-});
-
-// Manager Upload Endpoint: Saves PDF for viewing AND parses text into searchable menu items
-app.post('/api/upload-document', async (req, res) => {
-  const { title, filename, fileData } = req.body;
-  if (!filename || !fileData) return res.status(400).json({ error: 'Filename and file data required.' });
-
-  if (!db) return res.json({ success: true });
-
-  try {
-    db.run(`INSERT INTO hotel_documents (title, filename, filedata) VALUES (?, ?, ?)`, 
-      [title || 'Restaurant Menu', filename, fileData], 
-    async function(err) {
-      if (err) return res.status(500).json({ error: 'Failed to save document.' });
-
-      try {
-        const matches = fileData.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
-        const buffer = Buffer.from(matches ? matches[2] : fileData, 'base64');
-        const pdfData = await pdfParse(buffer);
-        
-        // Extract clean text lines from the uploaded PDF
-        const lines = pdfData.text.split('\n').map(l => l.trim()).filter(l => l.length > 2);
-        
-        // Optionally clear old items or insert new ones from the uploaded menu
-        const stmt = db.prepare(`INSERT INTO menu_items (name, category, price, description, icon) VALUES (?, ?, ?, ?, ?)`);
-        
-        lines.forEach(line => {
-          if (line.length < 40 && !line.toLowerCase().includes('page') && !line.toLowerCase().includes('copyright')) {
-            stmt.run(line, title || 'Keys Cafe Menu', 350, 'Imported from uploaded menu PDF', '🍽️');
-          }
-        });
-        stmt.finalize();
-      } catch (parseErr) {
-        console.log('PDF text extraction note:', parseErr.message);
-      }
-
-      res.json({ success: true, message: 'PDF uploaded, parsed, and menu items made searchable!' });
-    });
-  } catch (err) {
-    res.status(500).json({ error: 'Server error processing upload.' });
-  }
-});
-
-app.get('/uploads/:filename', (req, res) => {
-  const filename = req.params.filename;
-  if (!db) return res.status(404).send('Document not found.');
-
-  db.get(`SELECT filedata FROM hotel_documents WHERE filename = ?`, [filename], (err, row) => {
-    if (err || !row) return res.status(404).send('Document not found.');
+  db.get(`SELECT documents FROM factsheet WHERE id = 1`, (err, row) => {
+    if (err) return res.status(500).json({ error: 'Database error' });
     try {
-      const matches = row.filedata.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
-      const buffer = Buffer.from(matches ? matches[2] : row.filedata, 'base64');
-      res.setHeader('Content-Type', 'application/pdf');
-      res.send(buffer);
+      const documents = JSON.parse(row ? row.documents : '{"menus":[]}');
+      res.json({ documents });
     } catch (e) {
-      res.status(500).send('Error rendering document.');
+      res.json({ documents: { menus: [] } });
     }
   });
 });
 
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`HostlyDesk running on port ${PORT}`);
+// 2. Upload PDF Menu or Document
+app.post('/api/upload-document', (req, res) => {
+  const { title, filename, fileData } = req.body;
+  if (!title || !filename) {
+    return res.status(400).json({ error: 'Title and filename required' });
+  }
+
+  db.get(`SELECT documents FROM factsheet WHERE id = 1`, (err, row) => {
+    if (err) return res.status(500).json({ error: 'Database error' });
+
+    try {
+      let docs = JSON.parse(row ? row.documents : '{"menus":[]}');
+      if (!docs.menus) docs.menus = [];
+
+      // Add new menu to array
+      docs.menus.push({ title, filename, uploadedAt: new Date().toISOString() });
+
+      db.run(`UPDATE factsheet SET documents = ? WHERE id = 1`, [JSON.stringify(docs)], (updateErr) => {
+        if (updateErr) return res.status(500).json({ error: 'Failed to update factsheet' });
+        res.json({ success: true, message: 'Menu uploaded successfully' });
+      });
+    } catch (e) {
+      res.status(500).json({ error: 'Parsing error' });
+    }
+  });
+});
+
+// 3. Delete Uploaded Menu / Document
+app.post('/api/delete-document', (req, res) => {
+  const { filename } = req.body;
+  if (!filename) return res.status(400).json({ error: 'Filename required' });
+
+  db.get(`SELECT documents FROM factsheet WHERE id = 1`, (err, row) => {
+    if (err || !row) return res.status(404).json({ error: 'Not found' });
+
+    try {
+      let docs = JSON.parse(row.documents || '{"menus":[]}');
+      docs.menus = docs.menus.filter(m => m.filename !== filename);
+
+      db.run(`UPDATE factsheet SET documents = ? WHERE id = 1`, [JSON.stringify(docs)], (updateErr) => {
+        if (updateErr) return res.status(500).json({ error: 'Database update failed' });
+        res.json({ success: true });
+      });
+    } catch (e) {
+      res.status(500).json({ error: 'Parsing error' });
+    }
+  });
+});
+
+// 4. Submit Order / Service Request
+app.post('/api/orders', (req, res) => {
+  const { room, department, items } = req.body;
+  if (!room || !department || !items) {
+    return res.status(400).json({ error: 'Missing required order fields' });
+  }
+
+  const query = `INSERT INTO orders (room, department, items, status) VALUES (?, ?, ?, 'Pending')`;
+  db.run(query, [room, department, items], function(err) {
+    if (err) return res.status(500).json({ error: 'Failed to save order' });
+    res.json({ success: true, orderId: this.lastID });
+  });
+});
+
+// 5. Fetch Pending Orders for Dashboards
+app.get('/api/orders', (req, res) => {
+  db.all(`SELECT * FROM orders ORDER BY timestamp DESC`, [], (err, rows) => {
+    if (err) return res.status(500).json({ error: 'Failed to fetch orders' });
+    res.json(rows);
+  });
+});
+
+// 6. Update Order Status (Fulfill/Complete)
+app.post('/api/orders/:id/status', (req, res) => {
+  const orderId = req.params.id;
+  const { status } = req.body;
+
+  db.run(`UPDATE orders SET status = ? WHERE id = ?`, [status, orderId], function(err) {
+    if (err) return res.status(500).json({ error: 'Failed to update order status' });
+    res.json({ success: true });
+  });
+});
+
+// --- ROUTE REDIRECTS / CLEAN MAPPINGS ---
+
+// Route for legacy /food-menu endpoint to serve the clean static guest menu safely
+app.get('/food-menu', (req, res) => {
+  res.sendFile(path.join(__dirname, '../public/guest-menu.html'));
+});
+
+// Fallback to index.html for root client-side routing if needed
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, '../public/index.html'));
+});
+
+// Start Server
+app.listen(PORT, () => {
+  console.log(`HostlyDesk server running on port ${PORT}`);
 });
