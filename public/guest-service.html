@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HostlyDesk - Guest Services</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 15px; background: #0f172a; color: #fff; display: flex; justify-content: center; }
+        .mobile-container { width: 100%; max-width: 420px; background: #1e293b; border-radius: 24px; padding: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); box-sizing: border-box; }
+        .header-top { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #94a3b8; margin-bottom: 5px; }
+        .room-title { font-size: 24px; font-weight: bold; margin: 0 0 15px 0; color: #f8fafc; text-transform: capitalize; }
+        .card-box { background: #fdfbf7; border-radius: 16px; padding: 15px; color: #1e293b; margin-bottom: 15px; }
+        .service-item { display: flex; justify-content: space-between; align-items: center; background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px; margin-bottom: 10px; }
+        .service-name { font-size: 14px; font-weight: bold; color: #0f172a; }
+        .req-btn { background: #2563eb; color: #fff; border: none; padding: 8px 14px; font-weight: bold; border-radius: 8px; cursor: pointer; font-size: 12px; text-transform: uppercase; }
+        .req-btn:hover { background: #1d4ed8; }
+        .alert { padding: 10px; border-radius: 8px; margin-top: 10px; font-size: 13px; font-weight: bold; text-align: center; display: none; }
+        .back-link { display: block; text-align: center; margin-top: 15px; color: #60a5fa; text-decoration: none; font-weight: bold; font-size: 13px; }
+    </style>
+</head>
+<body>
+    <div class="mobile-container">
+        <div class="header-top">HostlyDesk · Guest Services</div>
+        <div class="room-title" id="pageTitle">Service Request</div>
+
+        <div class="card-box">
+            <div id="serviceList"></div>
+        </div>
+
+        <div id="alertBox" class="alert"></div>
+        <a id="backPortal" href="/" class="back-link">← Back to Guest Portal</a>
+    </div>
+
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const currentRoom = urlParams.get('room') || '305';
+        const currentDept = urlParams.get('dept') || 'housekeeping';
+
+        document.getElementById('pageTitle').textContent = `${currentDept.replace('-', ' & ')} Requests`;
+        document.getElementById('backPortal').href = `/?room=${currentRoom}`;
+
+        const services = {
+            housekeeping: [
+                { name: '🧹 Extra Towels', desc: 'Fresh bath and face towels' },
+                { name: '🛏️ Make Up Room', desc: 'Full housekeeping service' },
+                { name: '🧴 Toiletries Refill', desc: 'Soap, shampoo, and dental kit' },
+                { name: '💧 Drinking Water', desc: 'Complimentary bottled water' }
+            ],
+            maintenance: [
+                { name: '💡 AC / Climate Control', desc: 'Temperature adjustment or repair' },
+                { name: '⚡ Electrical / Lighting', desc: 'Socket, switch, or bulb issue' },
+                { name: '🚿 Plumbing / Bathroom', desc: 'Leakage or hot water check' },
+                { name: '📺 TV / Wi-Fi Support', desc: 'Remote or internet connection help' }
+            ],
+            frontoffice: [
+                { name: '🛎️ Wake-up Call', desc: 'Schedule a morning wake-up call' },
+                { name: '🚕 Transportation / Taxi', desc: 'Airport drop or local cab booking' },
+                { name: '💼 Luggage Assistance', desc: 'Bellboy assistance for checkout' },
+                { name: '🔑 Safe Deposit / Key', desc: 'In-room safe or keycard help' }
+            ],
+            fnb: [
+                { name: '🍳 Breakfast Order', desc: 'In-room breakfast assistance' },
+                { name: '☕ Coffee / Tea Service', desc: 'Fresh hot beverages delivered' },
+                { name: '🍽️ Cutlery Request', desc: 'Extra plates, spoons, or napkins' },
+                { name: '🧊 Ice Cubes Bucket', desc: 'Bucket of fresh ice for room' }
+            ]
+        };
+
+        function loadServices() {
+            const listEl = document.getElementById('serviceList');
+            const items = services[currentDept] || services.housekeeping;
+            
+            listEl.innerHTML = '';
+            items.forEach(item => {
+                listEl.innerHTML += `
+                    <div class="service-item">
+                        <div>
+                            <div class="service-name">${item.name}</div>
+                            <div style="font-size: 11px; color: #64748b;">${item.desc}</div>
+                        </div>
+                        <button class="req-btn" onclick="requestService('${item.name.replace(/'/g, "\\'")}')">Request</button>
+                    </div>
+                `;
+            });
+        }
+
+        async function requestService(serviceName) {
+            const alertBox = document.getElementById('alertBox');
+            try {
+                const res = await fetch('/api/orders', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ room: currentRoom, department: currentDept, items: serviceName })
+                });
+
+                if (res.ok) {
+                    alertBox.textContent = `Requested! "${serviceName}" logged for Room ${currentRoom}.`;
+                    alertBox.style.background = '#d1fae5'; alertBox.style.color = '#065f46'; alertBox.style.display = 'block';
+                    setTimeout(() => { alertBox.style.display = 'none'; }, 4000);
+                }
+            } catch (err) {
+                alertBox.textContent = 'Failed to submit request.';
+                alertBox.style.background = '#fee2e2'; alertBox.style.color = '#991b1b'; alertBox.style.display = 'block';
+            }
+        }
+
+        loadServices();
+    </script>
+</body>
+</html>
