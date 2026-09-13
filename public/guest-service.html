@@ -9,10 +9,13 @@
         .mobile-container { width: 100%; max-width: 420px; background: #1e293b; border-radius: 24px; padding: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); box-sizing: border-box; }
         .header-top { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #94a3b8; margin-bottom: 5px; }
         .room-title { font-size: 24px; font-weight: bold; margin: 0 0 15px 0; color: #f8fafc; text-transform: capitalize; }
-        .card-box { background: #fdfbf7; border-radius: 16px; padding: 15px; color: #1e293b; margin-bottom: 15px; }
+        .search-box { margin-bottom: 15px; }
+        .search-input { width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 12px; font-size: 14px; box-sizing: border-box; outline: none; background: #fdfbf7; color: #1e293b; }
+        .card-box { background: #fdfbf7; border-radius: 16px; padding: 15px; color: #1e293b; margin-bottom: 15px; max-height: 400px; overflow-y: auto; }
         .service-item { display: flex; justify-content: space-between; align-items: center; background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px; margin-bottom: 10px; }
-        .service-name { font-size: 14px; font-weight: bold; color: #0f172a; }
-        .req-btn { background: #2563eb; color: #fff; border: none; padding: 8px 14px; font-weight: bold; border-radius: 8px; cursor: pointer; font-size: 12px; text-transform: uppercase; }
+        .service-name { font-size: 14px; font-weight: bold; color: #0f172a; margin-bottom: 3px; }
+        .service-desc { font-size: 11px; color: #64748b; }
+        .req-btn { background: #2563eb; color: #fff; border: none; padding: 8px 14px; font-weight: bold; border-radius: 8px; cursor: pointer; font-size: 12px; text-transform: uppercase; white-space: nowrap; }
         .req-btn:hover { background: #1d4ed8; }
         .alert { padding: 10px; border-radius: 8px; margin-top: 10px; font-size: 13px; font-weight: bold; text-align: center; display: none; }
         .back-link { display: block; text-align: center; margin-top: 15px; color: #60a5fa; text-decoration: none; font-weight: bold; font-size: 13px; }
@@ -22,6 +25,10 @@
     <div class="mobile-container">
         <div class="header-top">HostlyDesk · Guest Services</div>
         <div class="room-title" id="pageTitle">Service Request</div>
+
+        <div class="search-box">
+            <input type="text" id="searchInput" class="search-input" placeholder="🔍 Search requests..." oninput="filterServices()">
+        </div>
 
         <div class="card-box">
             <div id="serviceList"></div>
@@ -38,25 +45,30 @@
 
         document.getElementById('pageTitle').textContent = `${currentDept.replace('-', ' & ')} Requests`;
         document.getElementById('backPortal').href = `/?room=${currentRoom}`;
+        document.getElementById('searchInput').placeholder = `🔍 Search ${currentDept} items...`;
 
-        const services = {
+        const serviceCatalogs = {
             housekeeping: [
                 { name: '🧹 Extra Towels', desc: 'Fresh bath and face towels' },
                 { name: '🛏️ Make Up Room', desc: 'Full housekeeping service' },
                 { name: '🧴 Toiletries Refill', desc: 'Soap, shampoo, and dental kit' },
-                { name: '💧 Drinking Water', desc: 'Complimentary bottled water' }
+                { name: '💧 Drinking Water', desc: 'Complimentary bottled water' },
+                { name: '🛏️ Extra Pillow & Bedding', desc: 'Additional pillows or blankets' },
+                { name: '🗑️ Room Cleaning', desc: 'Quick trash clearance and cleanup' }
             ],
             maintenance: [
                 { name: '💡 AC / Climate Control', desc: 'Temperature adjustment or repair' },
                 { name: '⚡ Electrical / Lighting', desc: 'Socket, switch, or bulb issue' },
                 { name: '🚿 Plumbing / Bathroom', desc: 'Leakage or hot water check' },
-                { name: '📺 TV / Wi-Fi Support', desc: 'Remote or internet connection help' }
+                { name: '📺 TV / Wi-Fi Support', desc: 'Remote or internet connection help' },
+                { name: '🚪 Door Lock / Keycard', desc: 'Electronic lock or keycard battery issue' }
             ],
             frontoffice: [
                 { name: '🛎️ Wake-up Call', desc: 'Schedule a morning wake-up call' },
                 { name: '🚕 Transportation / Taxi', desc: 'Airport drop or local cab booking' },
                 { name: '💼 Luggage Assistance', desc: 'Bellboy assistance for checkout' },
-                { name: '🔑 Safe Deposit / Key', desc: 'In-room safe or keycard help' }
+                { name: '🔑 Safe Deposit / Key', desc: 'In-room safe or keycard help' },
+                { name: '📄 Invoice / Bill Print', desc: 'Request printout of current folio' }
             ],
             fnb: [
                 { name: '🍳 Breakfast Order', desc: 'In-room breakfast assistance' },
@@ -66,22 +78,43 @@
             ]
         };
 
-        function loadServices() {
+        let currentList = serviceCatalogs[currentDept] || serviceCatalogs.housekeeping;
+
+        function renderServices(items) {
             const listEl = document.getElementById('serviceList');
-            const items = services[currentDept] || services.housekeeping;
-            
-            listEl.innerHTML = '';
+            if (!items || items.length === 0) {
+                listEl.innerHTML = '<div style="text-align: center; color: #64748b; padding: 20px;">No matching requests found.</div>';
+                return;
+            }
+
+            let html = '';
             items.forEach(item => {
-                listEl.innerHTML += `
+                html += `
                     <div class="service-item">
-                        <div>
+                        <div style="flex-grow:1; margin-right:8px;">
                             <div class="service-name">${item.name}</div>
-                            <div style="font-size: 11px; color: #64748b;">${item.desc}</div>
+                            <div class="service-desc">${item.desc}</div>
                         </div>
                         <button class="req-btn" onclick="requestService('${item.name.replace(/'/g, "\\'")}')">Request</button>
                     </div>
                 `;
             });
+            listEl.innerHTML = html;
+        }
+
+        renderServices(currentList);
+
+        function filterServices() {
+            const query = document.getElementById('searchInput').value.trim().toLowerCase();
+            if (query === '') {
+                renderServices(currentList);
+                return;
+            }
+            const filtered = currentList.filter(item => 
+                item.name.toLowerCase().includes(query) || 
+                item.desc.toLowerCase().includes(query)
+            );
+            renderServices(filtered);
         }
 
         async function requestService(serviceName) {
@@ -103,8 +136,6 @@
                 alertBox.style.background = '#fee2e2'; alertBox.style.color = '#991b1b'; alertBox.style.display = 'block';
             }
         }
-
-        loadServices();
     </script>
 </body>
 </html>
