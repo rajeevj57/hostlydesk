@@ -2,13 +2,30 @@ const express = require('express');
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 const cors = require('cors');
+const multer = require('multer');
+const fs = require('fs');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use(express.static(path.join(__dirname, '../public')));
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+
+// Ensure uploads folder exists
+const uploadDir = path.join(__dirname, '../uploads');
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
+
+// Configure multer for file uploads (PDF, CSV)
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, uploadDir),
+  filename: (req, file, cb) => cb(null, Date.now() + '-' + file.originalname)
+});
+const upload = multer({ storage });
 
 const dbPath = path.join(__dirname, 'database.sqlite');
 const db = new sqlite3.Database(dbPath, (err) => {
@@ -49,7 +66,7 @@ db.serialize(() => {
   });
 });
 
-// Admin Factsheet / Document Routes
+// Admin Factsheet / Document Routes with Real File Upload
 app.get('/api/factsheet', (req, res) => {
   db.get(`SELECT documents FROM factsheet WHERE id = 1`, (err, row) => {
     if (err) return res.status(500).json({ error: 'Database error' });
@@ -62,10 +79,12 @@ app.get('/api/factsheet', (req, res) => {
   });
 });
 
-app.post('/api/upload-document', (req, res) => {
-  const { title, filename } = req.body;
-  if (!title || !filename) {
-    return res.status(400).json({ error: 'Title and filename required' });
+app.post('/api/upload-document', upload.single('menuFile'), (req, res) => {
+  const title = req.body.title;
+  const file = req.file;
+
+  if (!title || !file) {
+    return res.status(400).json({ error: 'Title and file are required' });
   }
 
   db.get(`SELECT documents FROM factsheet WHERE id = 1`, (err, row) => {
@@ -75,32 +94,16 @@ app.post('/api/upload-document', (req, res) => {
       let docs = JSON.parse(row ? row.documents : '{"menus":[]}');
       if (!docs.menus) docs.menus = [];
 
-      docs.menus.push({ title, filename, uploadedAt: new Date().toISOString() });
+      docs.menus.push({
+        title,
+        filename: file.originalname,
+        path: `/uploads/${file.filename}`,
+        uploadedAt: new Date().toISOString()
+      });
 
       db.run(`UPDATE factsheet SET documents = ? WHERE id = 1`, [JSON.stringify(docs)], (updateErr) => {
         if (updateErr) return res.status(500).json({ error: 'Failed to update factsheet' });
         res.json({ success: true, message: 'Document uploaded successfully' });
-      });
-    } catch (e) {
-      res.status(500).json({ error: 'Parsing error' });
-    }
-  });
-});
-
-app.post('/api/delete-document', (req, res) => {
-  const { filename } = req.body;
-  if (!filename) return res.status(400).json({ error: 'Filename required' });
-
-  db.get(`SELECT documents FROM factsheet WHERE id = 1`, (err, row) => {
-    if (err || !row) return res.status(404).json({ error: 'Not found' });
-
-    try {
-      let docs = JSON.parse(row.documents || '{"menus":[]}');
-      docs.menus = docs.menus.filter(m => m.filename !== filename);
-
-      db.run(`UPDATE factsheet SET documents = ? WHERE id = 1`, [JSON.stringify(docs)], (updateErr) => {
-        if (updateErr) return res.status(500).json({ error: 'Database update failed' });
-        res.json({ success: true });
       });
     } catch (e) {
       res.status(500).json({ error: 'Parsing error' });
@@ -129,7 +132,7 @@ app.post('/api/upload-menu-items', (req, res) => {
   });
 });
 
-// Fetch Menu Items
+// Fetch Menu Items for Guest Search
 app.get('/api/food-items', (req, res) => {
   db.all(`SELECT * FROM menu_items`, [], (err, rows) => {
     if (err) return res.status(500).json({ error: 'Failed to fetch items' });
