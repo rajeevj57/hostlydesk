@@ -28,12 +28,12 @@
         <div class="room-title" id="roomDisplay">Room 305</div>
 
         <div class="search-box">
-            <input type="text" id="searchInput" class="search-input" placeholder="🔍 Search items (e.g., Tikka, Fish, Coffee)..." oninput="filterItems()">
+            <input type="text" id="searchInput" class="search-input" placeholder="🔍 Search items (e.g., Tikka, Fish)..." oninput="filterItems()">
         </div>
 
         <div class="card-box">
             <div id="menuList">
-                <div style="text-align: center; color: #64748b; padding: 20px;">Loading menu items...</div>
+                <div style="text-align: center; color: #64748b; padding: 20px;">Loading menu...</div>
             </div>
         </div>
 
@@ -47,6 +47,7 @@
         document.getElementById('roomDisplay').textContent = `Room ${currentRoom} Menu`;
         document.getElementById('backPortal').href = `/?room=${currentRoom}`;
 
+        // Instant local fallback items so screen loads with zero delay
         let allMenuItems = [
             { id: 1, name: 'Chicken Tikka', category: 'Starters', price: 450, description: 'Tandoori spiced roasted chicken chunks', icon: '🍗' },
             { id: 2, name: 'Fish Finger & Chips', category: 'Starters', price: 480, description: 'Crispy fried fish strips with tartar sauce', icon: '🐟' },
@@ -58,6 +59,9 @@
             { id: 8, name: 'Garlic Naan', category: 'Breads', price: 75, description: 'Tandoor-baked flatbread with fresh garlic', icon: '🫓' },
             { id: 9, name: 'Chocolate Brownie', category: 'Desserts', price: 220, description: 'Warm chocolate pastry with fudge sauce', icon: '🍰' }
         ];
+
+        // Render instantly on page load without waiting for server response
+        renderMenu(allMenuItems);
 
         function renderMenu(items) {
             const listEl = document.getElementById('menuList');
@@ -81,24 +85,24 @@
             });
         }
 
-        async function fetchMenu() {
+        // Fetch live database items silently in the background
+        async function fetchMenuBackground() {
             try {
                 const res = await fetch('/api/food-items');
                 const data = await res.json();
                 if (data && data.length > 0) {
                     allMenuItems = data;
+                    renderMenu(allMenuItems); // Refresh with live items if available
                 }
             } catch (err) {
-                console.log('Using local fallback menu items.');
+                console.log('Using local fallback items.');
             }
-            renderMenu(allMenuItems);
         }
 
         function filterItems() {
             const query = document.getElementById('searchInput').value.trim().toLowerCase();
             
-            // If search box is cleared or just 1 letter like "a", show the full list smoothly
-            if (query.length < 2) {
+            if (query.length === 0) {
                 renderMenu(allMenuItems);
                 return;
             }
@@ -131,7 +135,8 @@
             }
         }
 
-        fetchMenu();
+        // Trigger background sync
+        fetchMenuBackground();
     </script>
 </body>
 </html>
