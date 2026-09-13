@@ -45,23 +45,31 @@
         document.getElementById('roomDisplay').textContent = `Room ${currentRoom} Menu`;
         document.getElementById('backPortal').href = `/?room=${currentRoom}`;
 
-        // Clean, structured menu catalog that avoids parsing messy PDF text blocks
-        const menuCatalog = [
-            { id: 1, name: 'Chicken Tikka', category: 'Starters', price: 450, description: 'Tandoori spiced roasted chicken chunks', icon: '🍗' },
-            { id: 2, name: 'Fish Finger & Chips', category: 'Starters', price: 480, description: 'Crispy fried fish strips with tartar sauce', icon: '🐟' },
-            { id: 3, name: 'Paneer Butter Masala', category: 'Main Course', price: 380, description: 'Cottage cheese in rich tomato gravy', icon: '🧀' },
-            { id: 4, name: 'Dal Makhani', category: 'Main Course', price: 340, description: 'Slow-cooked black lentils with butter and cream', icon: '🍲' },
-            { id: 5, name: 'Chicken Biryani', category: 'Main Course', price: 490, description: 'Fragrant basmati rice cooked with tender chicken', icon: '🍚' },
-            { id: 6, name: 'Fresh Lime Soda', category: 'Beverages', price: 120, description: 'Refreshing sparkling beverage', icon: '🥤' },
-            { id: 7, name: 'Cappuccino', category: 'Beverages', price: 180, description: 'Hot brewed espresso with steamed milk', icon: '☕' },
-            { id: 8, name: 'Garlic Naan', category: 'Breads', price: 75, description: 'Tandoor-baked flatbread with fresh garlic', icon: '🫓' },
-            { id: 9, name: 'Chocolate Brownie', category: 'Desserts', price: 220, description: 'Warm chocolate pastry with fudge sauce', icon: '🍰' }
-        ];
+        let menuCatalog = [];
+
+        async function fetchMenu() {
+            try {
+                const res = await fetch('/api/food-items');
+                const data = await res.json();
+                if (data && data.length > 0) {
+                    menuCatalog = data;
+                } else {
+                    menuCatalog = [
+                        { id: 1, name: 'Chicken Tikka', category: 'Starters', price: 450, description: 'Tandoori spiced roasted chicken chunks', icon: '🍗' },
+                        { id: 2, name: 'Paneer Butter Masala', category: 'Main Course', price: 380, description: 'Cottage cheese in rich tomato gravy', icon: '🧀' },
+                        { id: 3, name: 'Chicken Biryani', category: 'Main Course', price: 490, description: 'Fragrant basmati rice cooked with tender chicken', icon: '🍚' }
+                    ];
+                }
+                renderMenu(menuCatalog);
+            } catch (e) {
+                console.error('Failed to load menu items');
+            }
+        }
 
         function renderMenu(items) {
             const listEl = document.getElementById('menuList');
             if (!items || items.length === 0) {
-                listEl.innerHTML = '<div style="text-align: center; color: #64748b; padding: 20px;">No matching items found.</div>';
+                listEl.innerHTML = '<div style="text-align: center; color: #64748b; padding: 20px;">No items available.</div>';
                 return;
             }
 
@@ -81,8 +89,6 @@
             listEl.innerHTML = html;
         }
 
-        renderMenu(menuCatalog);
-
         function filterItems() {
             const query = document.getElementById('searchInput').value.trim().toLowerCase();
             if (query === '') {
@@ -91,8 +97,8 @@
             }
             const filtered = menuCatalog.filter(item => 
                 item.name.toLowerCase().includes(query) || 
-                item.description.toLowerCase().includes(query) || 
-                item.category.toLowerCase().includes(query)
+                (item.description && item.description.toLowerCase().includes(query)) || 
+                (item.category && item.category.toLowerCase().includes(query))
             );
             renderMenu(filtered);
         }
@@ -116,6 +122,8 @@
                 alertBox.style.background = '#fee2e2'; alertBox.style.color = '#991b1b'; alertBox.style.display = 'block';
             }
         }
+
+        fetchMenu();
     </script>
 </body>
 </html>
