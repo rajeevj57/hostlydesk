@@ -32,9 +32,7 @@
         </div>
 
         <div class="card-box">
-            <div id="menuList">
-                <div style="text-align: center; color: #64748b; padding: 20px;">Loading menu...</div>
-            </div>
+            <div id="menuList"></div>
         </div>
 
         <div id="alertBox" class="alert"></div>
@@ -47,7 +45,7 @@
         document.getElementById('roomDisplay').textContent = `Room ${currentRoom} Menu`;
         document.getElementById('backPortal').href = `/?room=${currentRoom}`;
 
-        // Instant local fallback items so screen loads with zero delay
+        // Hardcoded instant array so typing never waits for servers
         let allMenuItems = [
             { id: 1, name: 'Chicken Tikka', category: 'Starters', price: 450, description: 'Tandoori spiced roasted chicken chunks', icon: '🍗' },
             { id: 2, name: 'Fish Finger & Chips', category: 'Starters', price: 480, description: 'Crispy fried fish strips with tartar sauce', icon: '🐟' },
@@ -60,9 +58,6 @@
             { id: 9, name: 'Chocolate Brownie', category: 'Desserts', price: 220, description: 'Warm chocolate pastry with fudge sauce', icon: '🍰' }
         ];
 
-        // Render instantly on page load without waiting for server response
-        renderMenu(allMenuItems);
-
         function renderMenu(items) {
             const listEl = document.getElementById('menuList');
             if (!items || items.length === 0) {
@@ -70,9 +65,9 @@
                 return;
             }
 
-            listEl.innerHTML = '';
+            let html = '';
             items.forEach(item => {
-                listEl.innerHTML += `
+                html += `
                     <div class="food-item">
                         <div style="flex-grow:1; margin-right:8px;">
                             <div class="food-name">${item.icon || '🍽️'} ${item.name}</div>
@@ -83,30 +78,19 @@
                     </div>
                 `;
             });
+            listEl.innerHTML = html;
         }
 
-        // Fetch live database items silently in the background
-        async function fetchMenuBackground() {
-            try {
-                const res = await fetch('/api/food-items');
-                const data = await res.json();
-                if (data && data.length > 0) {
-                    allMenuItems = data;
-                    renderMenu(allMenuItems); // Refresh with live items if available
-                }
-            } catch (err) {
-                console.log('Using local fallback items.');
-            }
-        }
+        // Initial render immediately
+        renderMenu(allMenuItems);
 
+        // Instant filtering with zero delay
         function filterItems() {
             const query = document.getElementById('searchInput').value.trim().toLowerCase();
-            
-            if (query.length === 0) {
+            if (query === '') {
                 renderMenu(allMenuItems);
                 return;
             }
-
             const filtered = allMenuItems.filter(item => 
                 item.name.toLowerCase().includes(query) || 
                 (item.description && item.description.toLowerCase().includes(query)) ||
@@ -134,9 +118,6 @@
                 alertBox.style.background = '#fee2e2'; alertBox.style.color = '#991b1b'; alertBox.style.display = 'block';
             }
         }
-
-        // Trigger background sync
-        fetchMenuBackground();
     </script>
 </body>
 </html>
