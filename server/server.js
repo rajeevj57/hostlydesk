@@ -8,6 +8,7 @@ const PORT = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use(express.static(path.join(__dirname, '../public')));
 
 const dbPath = path.join(__dirname, 'database.sqlite');
@@ -68,12 +69,10 @@ app.get('/api/factsheet', (req, res) => {
   });
 });
 
-// Upload a new document/menu record
+// Upload a new document/menu record (Robust handler for JSON or form submissions)
 app.post('/api/upload-document', (req, res) => {
-  const { title, filename } = req.body;
-  if (!title || !filename) {
-    return res.status(400).json({ error: 'Title and filename required' });
-  }
+  const title = req.body.title || req.body.menuTitle || 'Menu';
+  const filename = req.body.filename || (req.body.file ? req.body.file.name : 'Uploaded_Menu.pdf');
 
   db.get(`SELECT documents FROM factsheet WHERE id = 1`, (err, row) => {
     if (err) return res.status(500).json({ error: 'Database error' });
@@ -119,7 +118,6 @@ app.post('/api/delete-document', (req, res) => {
 
 // --- ORDER ROUTES ---
 
-// Submit a new order
 app.post('/api/orders', (req, res) => {
   const { room, department, items } = req.body;
   if (!room || !department || !items) {
@@ -133,7 +131,6 @@ app.post('/api/orders', (req, res) => {
   });
 });
 
-// Fetch all orders for dashboards
 app.get('/api/orders', (req, res) => {
   db.all(`SELECT * FROM orders ORDER BY timestamp DESC`, [], (err, rows) => {
     if (err) return res.status(500).json({ error: 'Failed to fetch orders' });
@@ -141,7 +138,6 @@ app.get('/api/orders', (req, res) => {
   });
 });
 
-// Update order status (Accept/Complete)
 app.post('/api/orders/:id/status', (req, res) => {
   const orderId = req.params.id;
   const { status } = req.body;
@@ -154,7 +150,6 @@ app.post('/api/orders/:id/status', (req, res) => {
 
 // --- MENU ITEMS ROUTES ---
 
-// Fetch menu items for guest search screen
 app.get('/api/food-items', (req, res) => {
   db.all(`SELECT * FROM menu_items`, [], (err, rows) => {
     if (err) return res.status(500).json({ error: 'Failed to fetch items' });
