@@ -23,20 +23,20 @@
 <body>
     <div class="container">
         <h1>HostlyDesk Manager Dashboard</h1>
-        <div class="subtitle">Upload operational files and configure searchable room dining menu items with categories.</div>
+        <div class="subtitle">Upload operational files from your computer and publish searchable room dining items.</div>
 
-        <!-- Document Upload Section -->
+        <!-- Real File Upload Section -->
         <div class="section">
-            <h2>Upload Master Document / PDF</h2>
+            <h2>Upload Master Document / PDF / CSV</h2>
             <input type="text" id="docTitle" placeholder="Document Title (e.g., Room Service Menu)">
-            <input type="text" id="docFilename" placeholder="Filename (e.g., menu.pdf)">
-            <button onclick="uploadDocument()">Save Document Record</button>
+            <input type="file" id="menuFileInput" accept=".pdf,.csv,.txt,.doc,.docx" style="padding: 8px; background: #0f172a;">
+            <button onclick="uploadDocumentFile()">Upload File to Server</button>
             <div id="docAlert" style="margin-top: 10px; font-size: 13px;"></div>
         </div>
 
-        <!-- Structured Menu Items Section with Category Column -->
+        <!-- Structured Menu Items Section with Categories -->
         <div class="section">
-            <h2>Publish Digital Searchable Menu Items</h2>
+            <h2>Publish Digital Searchable Menu Items for Guests</h2>
             <input type="text" id="menuTitleInput" value="Room Dining Menu" placeholder="Menu Title">
             
             <div class="row">
@@ -77,32 +77,37 @@
     <script>
         let itemsQueue = [];
 
-        async function uploadDocument() {
+        async function uploadDocumentFile() {
             const title = document.getElementById('docTitle').value;
-            const filename = document.getElementById('docFilename').value;
+            const fileInput = document.getElementById('menuFileInput');
             const alertBox = document.getElementById('docAlert');
 
-            if (!title || !filename) {
-                alertBox.textContent = 'Please fill in both fields.';
+            if (!title || fileInput.files.length === 0) {
+                alertBox.textContent = 'Please enter a title and select a file from your computer.';
                 alertBox.style.color = '#f87171';
                 return;
             }
 
+            const formData = new FormData();
+            formData.append('title', title);
+            formData.append('menuFile', fileInput.files[0]);
+
             try {
                 const res = await fetch('/api/upload-document', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ title, filename })
+                    body: formData
                 });
                 if (res.ok) {
-                    alertBox.textContent = 'Document record saved successfully!';
+                    alertBox.textContent = 'File uploaded successfully!';
                     alertBox.style.color = '#4ade80';
+                    document.getElementById('docTitle').value = '';
+                    fileInput.value = '';
                 } else {
                     alertBox.textContent = 'Upload failed.';
                     alertBox.style.color = '#f87171';
                 }
             } catch (e) {
-                alertBox.textContent = 'Server error.';
+                alertBox.textContent = 'Server error during upload.';
                 alertBox.style.color = '#f87171';
             }
         }
@@ -112,18 +117,17 @@
             const category = document.getElementById('itemCategory').value;
             const price = parseFloat(document.getElementById('itemPrice').value) || 0;
             const description = document.getElementById('itemDesc').value;
+            const publishAlert = document.getElementById('publishAlert');
 
             if (!name) {
-                alertButton = document.getElementById('publishAlert');
-                alertButton.textContent = 'Item name is required.';
-                alertButton.style.color = '#f87171';
+                publishAlert.textContent = 'Item name is required.';
+                publishAlert.style.color = '#f87171';
                 return;
             }
 
             itemsQueue.push({ name, category, price, description, icon: '🍽️' });
             renderQueue();
 
-            // Clear inputs
             document.getElementById('itemName').value = '';
             document.getElementById('itemPrice').value = '';
             document.getElementById('itemDesc').value = '';
@@ -137,7 +141,7 @@
             }
 
             let html = '';
-            itemsQueue.forEach((item, index) => {
+            itemsQueue.forEach((item) => {
                 html += `<tr>
                     <td>${item.name}</td>
                     <td><span style="background:#0f172a; padding:3px 8px; border-radius:6px; font-size:12px; color:#38bdf8;">${item.category}</span></td>
