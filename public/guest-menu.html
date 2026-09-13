@@ -3,15 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HostlyDesk - Instant Food Menu</title>
+    <title>HostlyDesk - Room Dining Menu</title>
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 15px; background: #0f172a; color: #fff; display: flex; justify-content: center; }
         .mobile-container { width: 100%; max-width: 420px; background: #1e293b; border-radius: 24px; padding: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); box-sizing: border-box; }
         .header-top { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #94a3b8; margin-bottom: 5px; }
-        .room-title { font-size: 28px; font-weight: bold; margin: 0 0 15px 0; color: #f8fafc; }
+        .room-title { font-size: 26px; font-weight: bold; margin: 0 0 15px 0; color: #f8fafc; }
         .search-box { margin-bottom: 15px; }
         .search-input { width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 12px; font-size: 14px; box-sizing: border-box; outline: none; background: #fdfbf7; color: #1e293b; }
-        .card-box { background: #fdfbf7; border-radius: 16px; padding: 15px; color: #1e293b; margin-bottom: 15px; max-height: 400px; overflow-y: auto; }
+        .card-box { background: #fdfbf7; border-radius: 16px; padding: 15px; color: #1e293b; margin-bottom: 15px; max-height: 420px; overflow-y: auto; }
         .food-item { display: flex; justify-content: space-between; align-items: center; background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px; margin-bottom: 10px; }
         .food-name { font-size: 14px; font-weight: bold; color: #0f172a; margin-bottom: 3px; }
         .food-desc { font-size: 11px; color: #64748b; margin-bottom: 4px; }
@@ -25,10 +25,10 @@
 <body>
     <div class="mobile-container">
         <div class="header-top">HostlyDesk · Room Dining</div>
-        <div class="room-title" id="roomDisplay">Room 305</div>
+        <div class="room-title" id="roomDisplay">Room 305 Menu</div>
 
         <div class="search-box">
-            <input type="text" id="searchInput" class="search-input" placeholder="🔍 Search items (e.g., Tikka, Fish)..." oninput="filterItems()">
+            <input type="text" id="searchInput" class="search-input" placeholder="🔍 Search dishes (e.g., Tikka, Biryani)..." oninput="filterItems()">
         </div>
 
         <div class="card-box">
@@ -45,8 +45,8 @@
         document.getElementById('roomDisplay').textContent = `Room ${currentRoom} Menu`;
         document.getElementById('backPortal').href = `/?room=${currentRoom}`;
 
-        // Hardcoded instant array so typing never waits for servers
-        let allMenuItems = [
+        // Clean, structured menu catalog that avoids parsing messy PDF text blocks
+        const menuCatalog = [
             { id: 1, name: 'Chicken Tikka', category: 'Starters', price: 450, description: 'Tandoori spiced roasted chicken chunks', icon: '🍗' },
             { id: 2, name: 'Fish Finger & Chips', category: 'Starters', price: 480, description: 'Crispy fried fish strips with tartar sauce', icon: '🐟' },
             { id: 3, name: 'Paneer Butter Masala', category: 'Main Course', price: 380, description: 'Cottage cheese in rich tomato gravy', icon: '🧀' },
@@ -81,20 +81,18 @@
             listEl.innerHTML = html;
         }
 
-        // Initial render immediately
-        renderMenu(allMenuItems);
+        renderMenu(menuCatalog);
 
-        // Instant filtering with zero delay
         function filterItems() {
             const query = document.getElementById('searchInput').value.trim().toLowerCase();
             if (query === '') {
-                renderMenu(allMenuItems);
+                renderMenu(menuCatalog);
                 return;
             }
-            const filtered = allMenuItems.filter(item => 
+            const filtered = menuCatalog.filter(item => 
                 item.name.toLowerCase().includes(query) || 
-                (item.description && item.description.toLowerCase().includes(query)) ||
-                (item.category && item.category.toLowerCase().includes(query))
+                item.description.toLowerCase().includes(query) || 
+                item.category.toLowerCase().includes(query)
             );
             renderMenu(filtered);
         }
