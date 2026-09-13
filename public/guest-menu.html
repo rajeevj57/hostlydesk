@@ -33,7 +33,7 @@
 
         <div class="card-box">
             <div id="menuList">
-                <div style="text-align: center; color: #64748b; padding: 20px;">Loading menu items...</div>
+                <!-- Items render here instantly -->
             </div>
         </div>
 
@@ -81,17 +81,20 @@
             });
         }
 
+        // Render immediately using default list so it never shows "Loading..."
+        renderMenu(allMenuItems);
+
         async function fetchMenu() {
             try {
                 const res = await fetch('/api/food-items');
                 const data = await res.json();
                 if (data && data.length > 0) {
                     allMenuItems = data;
+                    renderMenu(allMenuItems);
                 }
             } catch (err) {
                 console.log('Using local fallback menu items.');
             }
-            renderMenu(allMenuItems);
         }
 
         function filterItems() {
