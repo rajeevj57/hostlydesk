@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Room QR Code Generator - HostlyDesk</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 20px; background: #f1f5f9; color: #1e293b; display: flex; justify-content: center; }
+        .container { max-width: 500px; width: 100%; background: #fff; padding: 30px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); text-align: center; }
+        h1 { font-size: 22px; margin-bottom: 5px; color: #0f172a; }
+        .subtitle { color: #64748b; font-size: 13px; margin-bottom: 25px; }
+        .form-group { margin-bottom: 20px; text-align: left; }
+        label { display: block; font-size: 13px; font-weight: bold; color: #475569; margin-bottom: 5px; }
+        input[type="text"] { width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; box-sizing: border-box; }
+        .gen-btn { background: #2563eb; color: #fff; border: none; padding: 12px 20px; font-weight: bold; border-radius: 8px; cursor: pointer; font-size: 14px; width: 100%; text-transform: uppercase; }
+        .gen-btn:hover { background: #1d4ed8; }
+        .qr-box { margin-top: 25px; padding: 20px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; display: none; }
+        .qr-box img { max-width: 200px; height: auto; margin-bottom: 15px; }
+        .qr-link { font-size: 12px; color: #2563eb; word-break: break-all; display: block; margin-bottom: 15px; text-decoration: none; font-weight: bold; }
+        .back-link { display: block; margin-top: 20px; color: #2563eb; text-decoration: none; font-weight: bold; font-size: 14px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📱 Room QR Code Generator</h1>
+        <div class="subtitle">Generate scannable QR codes for guest rooms instantly.</div>
+
+        <div class="form-group">
+            <label>Enter Room Number:</label>
+            <input type="text" id="roomInput" value="305" placeholder="e.g., 305">
+        </div>
+        <button class="gen-btn" onclick="generateQR()">Generate QR Code</button>
+
+        <div id="qrContainer" class="qr-box">
+            <div id="roomTitle" style="font-weight: bold; font-size: 16px; margin-bottom: 10px; color: #0f172a;"></div>
+            <img id="qrImage" src="" alt="Room QR Code">
+            <a id="targetLink" class="qr-link" href="" target="_blank"></a>
+            <button class="gen-btn" style="background: #059669; padding: 8px 12px; font-size: 12px;" onclick="window.print()">Print QR Code</button>
+        </div>
+
+        <a href="/admin.html" class="back-link">← Back to Manager Control Center</a>
+    </div>
+
+    <script>
+        function generateQR() {
+            const room = document.getElementById('roomInput').value.trim() || '305';
+            const baseUrl = window.location.origin;
+            const targetUrl = `${baseUrl}/?room=${room}`;
+            
+            const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(targetUrl)}`;
+            
+            document.getElementById('roomTitle').textContent = `QR Code for Room ${room}`;
+            document.getElementById('qrImage').src = qrImageUrl;
+            document.getElementById('targetLink.href') // fixed below
+            const linkEl = document.getElementById('targetLink');
+            linkEl.href = targetUrl;
+            linkEl.textContent = targetUrl;
+
+            document.getElementById('qrContainer').style.display = 'block';
+        }
+
+        // Generate default on load
+        generateQR();
+    </script>
+</body>
+</html>
