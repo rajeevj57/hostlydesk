@@ -5,11 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>HostlyDesk - Guest Dining Menu</title>
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 15px; background: #f8fafc; color: #1e293b; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 15px; background: #f8fafc; color: #1e293b; padding-bottom: 80px; }
         .container { max-width: 600px; margin: 0 auto; }
         .header { background: #0f172a; color: #fff; padding: 20px; border-radius: 12px; margin-bottom: 15px; text-align: center; }
         .search-box { width: 100%; padding: 14px; font-size: 16px; border: 2px solid #cbd5e1; border-radius: 10px; margin-bottom: 15px; box-sizing: border-box; outline: none; }
         .search-box:focus { border-color: #2563eb; }
+        .categories { display: flex; gap: 8px; overflow-x: auto; margin-bottom: 15px; padding-bottom: 5px; }
+        .cat-btn { background: #e2e8f0; border: none; padding: 8px 16px; border-radius: 20px; font-weight: bold; font-size: 13px; cursor: pointer; white-space: nowrap; color: #475569; }
+        .cat-btn.active { background: #2563eb; color: #fff; }
         .menu-card { background: #fff; padding: 15px; border-radius: 10px; margin-bottom: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; }
         .item-info h4 { margin: 0 0 5px 0; font-size: 16px; color: #0f172a; }
         .item-info p { margin: 0; font-size: 13px; color: #64748b; }
@@ -18,74 +21,76 @@
         .add-btn:hover { background: #15803d; }
         .cart-bar { position: fixed; bottom: 0; left: 0; right: 0; background: #0f172a; color: #fff; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 -4px 10px rgba(0,0,0,0.1); }
         .order-btn { background: #2563eb; color: #fff; border: none; padding: 10px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; }
-        .pdf-banner { background: #e0f2fe; border: 1px solid #bae6fd; padding: 12px; border-radius: 8px; margin-bottom: 15px; text-align: center; font-size: 14px; }
-        .pdf-banner a { color: #0284c7; font-weight: bold; text-decoration: none; }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h2>Room Dining & Menu</h2>
+            <h2>Room Dining Menu</h2>
             <div id="roomDisplay" style="font-size: 13px; color: #94a3b8; margin-top: 5px;">Loading room...</div>
         </div>
 
-        <!-- Master Menu Document Link for Guests -->
-        <div id="masterMenuLinkContainer" style="display: none;">
-            <div class="pdf-banner" id="pdfBannerText">
-                📄 View Master Menu Document: <a id="pdfAnchor" href="#" target="_blank">Open Menu File</a>
-            </div>
+        <input type="text" id="searchInput" class="search-box" placeholder="Type 1-2 keywords (e.g., tikka, soup, coffee)..." oninput="filterMenu()">
+
+        <div class="categories" id="categoryTabs">
+            <button class="cat-btn active" onclick="setCategory('All', this)">All Items</button>
+            <button class="cat-btn" onclick="setCategory('Starters', this)">Starters</button>
+            <button class="cat-btn" onclick="setCategory('Main Course', this)">Main Course</button>
+            <button class="cat-btn" onclick="setCategory('Desserts', this)">Desserts</button>
+            <button class="cat-btn" onclick="setCategory('Beverages', this)">Beverages</button>
         </div>
 
-        <!-- Instant Search Bar -->
-        <input type="text" id="searchInput" class="search-box" placeholder="Type 1-2 words (e.g., tikka, coffee, soup)..." oninput="filterMenuItems()">
-
         <div id="menuContainer">
-            <p style="text-align: center; color: #64748b;">Loading menu items...</p>
+            <p style="text-align: center; color: #64748b;">Loading items...</p>
         </div>
     </div>
 
-    <!-- Floating Cart Bar -->
     <div class="cart-bar" id="cartBar" style="display: none;">
-        <div>
-            <span id="cartCount">0</span> items selected
-        </div>
+        <div><span id="cartCount">0</span> items selected</div>
         <button class="order-btn" onclick="submitOrder()">Place Order Now</button>
     </div>
 
     <script>
         let allMenuItems = [];
+        let currentCategory = 'All';
         let cart = {};
+
         const urlParams = new URLSearchParams(window.location.search);
         const roomNumber = urlParams.get('room') || 'General';
         document.getElementById('roomDisplay').textContent = `Room / Location: ${roomNumber}`;
 
-        async function loadData() {
+        async function loadMenu() {
             try {
-                // Fetch menu items for search & order
                 const res = await fetch('/api/food-items');
                 allMenuItems = await res.json();
                 renderMenu(allMenuItems);
-
-                // Fetch uploaded master documents
-                const docRes = await fetch('/api/factsheet');
-                const docData = await docRes.json();
-                if (docData.documents && docData.documents.menus && docData.documents.menus.length > 0) {
-                    const latestMenu = docData.documents.menus[docData.documents.menus.length - 1];
-                    if (latestMenu.path) {
-                        document.getElementById('pdfAnchor').href = latestMenu.path;
-                        document.getElementById('pdfAnchor').textContent = latestMenu.title || 'Open PDF Menu';
-                        document.getElementById('masterMenuLinkContainer').style.display = 'block';
-                    }
-                }
             } catch (e) {
-                document.getElementById('menuContainer').innerHTML = '<p style="text-align:center; color:red;">Failed to load menu.</p>';
+                document.getElementById('menuContainer').innerHTML = '<p style="text-align:center; color:red;">Failed to load menu items.</p>';
             }
+        }
+
+        function setCategory(cat, btn) {
+            currentCategory = cat;
+            document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            filterMenu();
+        }
+
+        function filterMenu() {
+            const query = document.getElementById('searchInput').value.toLowerCase();
+            const filtered = allMenuItems.filter(item => {
+                const matchesCat = currentCategory === 'All' || (item.category && item.category.toLowerCase() === currentCategory.toLowerCase());
+                const matchesSearch = item.name.toLowerCase().includes(query) || 
+                                      (item.description && item.description.toLowerCase().includes(query));
+                return matchesCat && matchesSearch;
+            });
+            renderMenu(filtered);
         }
 
         function renderMenu(items) {
             const container = document.getElementById('menuContainer');
             if (items.length === 0) {
-                container.innerHTML = '<p style="text-align:center; color:#64748b;">No items available right now.</p>';
+                container.innerHTML = '<p style="text-align:center; color:#64748b;">No items found.</p>';
                 return;
             }
 
@@ -105,55 +110,36 @@
             container.innerHTML = html;
         }
 
-        function filterMenuItems() {
-            const query = document.getElementById('searchInput').value.toLowerCase();
-            const filtered = allMenuItems.filter(i => 
-                i.name.toLowerCase().includes(query) || 
-                (i.category && i.category.toLowerCase().includes(query)) ||
-                (i.description && i.description.toLowerCase().includes(query))
-            );
-            renderMenu(filtered);
-        }
-
         function addToCart(name, price) {
-            if (!cart[name]) {
-                cart[name] = { name, price, qty: 0 };
-            }
+            if (!cart[name]) cart[name] = { name, price, qty: 0 };
             cart[name].qty += 1;
-            updateCartBar();
+            updateCart();
         }
 
-        function updateCartBar() {
-            let totalCount = 0;
-            Object.values(cart).forEach(i => totalCount += i.qty);
-            
+        function updateCart() {
+            let total = 0;
+            Object.values(cart).forEach(i => total += i.qty);
             const bar = document.getElementById('cartBar');
-            if (totalCount > 0) {
+            if (total > 0) {
                 bar.style.display = 'flex';
-                document.getElementById('cartCount').textContent = totalCount;
+                document.getElementById('cartCount').textContent = total;
             } else {
                 bar.style.display = 'none';
             }
         }
 
         async function submitOrder() {
-            let orderSummary = Object.values(cart).map(i => `${i.qty}x ${i.name}`).join(', ');
-            
+            const summary = Object.values(cart).map(i => `${i.qty}x ${i.name}`).join(', ');
             try {
                 const res = await fetch('/api/orders', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        room: roomNumber,
-                        department: 'Kitchen / F&B',
-                        items: orderSummary
-                    })
+                    body: JSON.stringify({ room: roomNumber, department: 'Kitchen / F&B', items: summary })
                 });
-
                 if (res.ok) {
                     alert('Order placed successfully! Sent to Kitchen department.');
                     cart = {};
-                    updateCartBar();
+                    updateCart();
                 } else {
                     alert('Failed to place order.');
                 }
@@ -162,7 +148,7 @@
             }
         }
 
-        loadData();
+        loadMenu();
     </script>
 </body>
 </html>
