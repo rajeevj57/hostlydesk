@@ -15,7 +15,7 @@
         .services-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 20px; }
         .service-card { background: #0f172a; border: 1px solid #334155; padding: 15px; border-radius: 8px; cursor: pointer; text-align: center; transition: all 0.2s; }
         .service-card.selected { border-color: #38bdf8; background: #1e3a8a; }
-        .service-card h4 { margin: 0 0 5px 0; font-size: 15px; }
+        .service-card h4 { margin: 0 0 5px 0; font-size: 15px; color: #f8fafc; }
         .service-card p { margin: 0; font-size: 12px; color: #94a3b8; }
         .custom-input { width: 100%; padding: 12px; background: #0f172a; border: 1px solid #334155; border-radius: 8px; color: white; box-sizing: border-box; margin-bottom: 15px; }
         .btn-submit { width: 100%; background: #d97706; color: white; border: none; padding: 14px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 16px; }
@@ -26,7 +26,7 @@
 <body>
     <div class="container">
         <h1 id="roomTitle">Room Service</h1>
-        <div class="subtitle">Tap services below or type a custom request — it goes straight to the team.</div>
+        <div class="subtitle">Tap services below to select, or type an unlisted request. No typing required!</div>
 
         <div class="dept-tabs" id="deptTabs"></div>
 
@@ -34,7 +34,7 @@
             <div style="grid-column: span 2; text-align: center; color: #94a3b8; padding: 20px;">Loading services...</div>
         </div>
 
-        <input type="text" id="customRequest" class="custom-input" placeholder="Or type unlisted request here (e.g. Extra pillows)...">
+        <input type="text" id="customRequest" class="custom-input" placeholder="Optional: Type unlisted request here...">
 
         <button class="btn-submit" onclick="submitRequest()">SEND REQUEST</button>
         <div id="successMsg" class="success-msg">Request sent successfully! The team has been notified.</div>
@@ -89,14 +89,14 @@
             const filteredServices = services.filter(s => s.department_id === activeDepartmentId);
 
             if (filteredServices.length === 0) {
-                grid.innerHTML = '<div style="grid-column: span 2; text-align: center; color: #94a3b8; padding: 20px;">No specific services listed. Use custom input below.</div>';
+                grid.innerHTML = '<div style="grid-column: span 2; text-align: center; color: #94a3b8; padding: 20px;">No preset services for this department. Use optional text box below.</div>';
                 return;
             }
 
             grid.innerHTML = filteredServices.map(s => `
                 <div class="service-card ${selectedServices.has(s.name) ? 'selected' : ''}" onclick="toggleService('${s.name}')">
                     <h4>${s.name}</h4>
-                    ${s.price > 0 ? `<p>₹${s.price}</p>` : ''}
+                    ${s.price && s.price > 0 ? `<p>₹${s.price}</p>` : '<p>Complimentary</p>'}
                 </div>
             `).join('');
         }
@@ -121,7 +121,7 @@
             }
 
             if (!itemsList) {
-                alert('Please select a service or type a request.');
+                alert('Please tap at least one service card or type a request.');
                 return;
             }
 
