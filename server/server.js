@@ -93,7 +93,7 @@ async function parsePDFMenu(filePath, menuTitle) {
   const lines = pdfData.text
     .split(/\r?\n/)
     .map(l => l.trim())
-    .filter(l => l.length > 2);
+    .filter(l => l.length > 2 && l !== "'" && l !== '"' && l.toLowerCase() !== 'with');
 
   const items = [];
   let currentCategory = 'Main Course';
@@ -132,6 +132,7 @@ async function parsePDFMenu(filePath, menuTitle) {
       let name = line
         .replace(priceMatch[0], '')
         .replace(/[\.\-\–\_]{2,}/g, ' ')
+        .replace(/^['"\s]+|['"\s]+$/g, '')
         .replace(/\s+/g, ' ')
         .trim();
 
