@@ -78,6 +78,18 @@ db.serialize(() => {
       db.run(`INSERT INTO factsheet (id, documents) VALUES (1, ?)`, [initialDocs]);
     }
   });
+
+  // Auto-seed default hotel departments if they don't exist yet
+  const defaultDepts = [
+    { name: 'Kitchen / F&B', slug: 'kitchen-f-b' },
+    { name: 'Housekeeping', slug: 'housekeeping' },
+    { name: 'Front Office', slug: 'front-office' },
+    { name: 'Maintenance', slug: 'maintenance' }
+  ];
+
+  defaultDepts.forEach(d => {
+    db.run(`INSERT OR IGNORE INTO departments (name, slug) VALUES (?, ?)`, [d.name, d.slug]);
+  });
 });
 
 // Helper to parse CSV content
@@ -264,7 +276,7 @@ app.get('/api/departments', (req, res) => {
   });
 });
 
-// Dynamic Department Services APIs (e.g. adding Body Massage under Spa)
+// Dynamic Department Services APIs
 app.post('/api/department-services', (req, res) => {
   const { department_id, name, price, description } = req.body;
   if (!department_id || !name) return res.status(400).json({ error: 'Department ID and service name are required' });
