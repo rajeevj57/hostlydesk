@@ -52,6 +52,21 @@ db.serialize(() => {
     icon TEXT
   )`);
 
+  db.run(`CREATE TABLE IF NOT EXISTS departments (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT UNIQUE,
+    slug TEXT
+  )`);
+
+  db.run(`CREATE TABLE IF NOT EXISTS department_services (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    department_id INTEGER,
+    name TEXT,
+    price REAL,
+    description TEXT,
+    FOREIGN KEY(department_id) REFERENCES departments(id)
+  )`);
+
   db.run(`CREATE TABLE IF NOT EXISTS factsheet (
     id INTEGER PRIMARY KEY CHECK (id = 1),
     documents TEXT
@@ -138,7 +153,7 @@ async function parsePDFMenu(filePath, menuTitle) {
         .replace(priceMatch[0], '')
         .replace(/[\.\-\–\_]{2,}/g, ' ')
         .replace(/^['"\s]+|['"\s]+$/g, '')
-        .replace(/['"‘’`]+$/, '') // Specifically strip trailing quotes/apostrophes
+        .replace(/['"‘’`]+$/, '')
         .replace(/\s+/g, ' ')
         .trim();
 
@@ -227,6 +242,44 @@ app.get('/api/factsheet', (req, res) => {
     } catch (e) {
       res.json({ documents: { menus: [] } });
     }
+  });
+});
+
+// Dynamic Departments APIs
+app.post('/api/departments', (req, res) => {
+  const { name } = req.body;
+  if (!name) return res.status(400).json({ error: 'Department name is required' });
+  const slug = name.toLowerCase().replace(/[^a-z0-9]/g, '-');
+
+  db.run(`INSERT OR IGNORE INTO departments (name, slug) VALUES (?, ?)`, [name, slug], function(err) {
+    if (err) return res.status(500).json({ error: 'Failed to create department' });
+    res.json({ success: true, departmentId: this.lastID, slug });
+  });
+});
+
+app.get('/api/departments', (req, res) => {
+  db.all(`SELECT * FROM departments`, [], (err, rows) => {
+    if (err) return res.status(500).json({ error: 'Failed to fetch departments' });
+    res.json(rows);
+  });
+});
+
+// Dynamic Department Services APIs (e.g. adding Body Massage under Spa)
+app.post('/api/department-services', (req, res) => {
+  const { department_id, name, price, description } = req.body;
+  if (!department_id || !name) return res.status(400).json({ error: 'Department ID and service name are required' });
+
+  db.run(`INSERT INTO department_services (department_id, name, price, description) VALUES (?, ?, ?, ?)`, 
+    [department_id, name, price || 0, description || ''], function(err) {
+    if (err) return res.status(500).json({ error: 'Failed to add service' });
+    res.json({ success: true, serviceId: this.lastID });
+  });
+});
+
+app.get('/api/department-services', (req, res) => {
+  db.all(`SELECT ds.*, d.name as department_name, d.slug FROM department_services ds JOIN departments d ON ds.department_id = d.id`, [], (err, rows) => {
+    if (err) return res.status(500).json({ error: 'Failed to fetch services' });
+    res.json(rows);
   });
 });
 
