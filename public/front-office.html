@@ -36,7 +36,6 @@
     </div>
 
     <script>
-        const targetDepartment = 'Front Office';
         let audioCtx = null;
 
         function unlockAudio() {
@@ -79,7 +78,7 @@
                 const orders = await res.json();
                 
                 const deptOrders = orders.filter(o => 
-                    o.department && o.department.toLowerCase().includes('front') && 
+                    o.department && (o.department.toLowerCase().includes('front') || o.department.toLowerCase().includes('housekeeping')) && 
                     o.status === 'Pending'
                 );
 
@@ -107,6 +106,7 @@
                     <div class="order-card">
                         <div class="order-info">
                             <h3>Room: ${o.room}</h3>
+                            <p><strong>Department:</strong> ${o.department}</p>
                             <p><strong>Request:</strong> ${o.items}</p>
                             <p style="font-size: 12px; color: #64748b;">Time: ${o.timestamp}</p>
                         </div>
