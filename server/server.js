@@ -4,6 +4,7 @@ const path = require('path');
 const cors = require('cors');
 const multer = require('multer');
 const fs = require('fs');
+const pdfParse = require('pdf-parse');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -64,11 +65,10 @@ db.serialize(() => {
   });
 });
 
-// Helper to parse CSV text into menu item objects
+// Helper to parse CSV content
 function parseCSVContent(fileContent, menuTitle) {
   const lines = fileContent.split(/\r?\n/).filter(l => l.trim() !== '');
   const items = [];
-  // Starts at i=1 assuming row 1 is header: Name, Category, Price, Description
   for (let i = 1; i < lines.length; i++) {
     const cols = lines[i].split(',').map(c => c.trim().replace(/^["'](.*)["']$/, '$1'));
     if (cols.length >= 2) {
@@ -85,8 +85,64 @@ function parseCSVContent(fileContent, menuTitle) {
   return items;
 }
 
-// Admin Document / CSV Upload Route
-app.post('/api/upload-document', upload.single('menuFile'), (req, res) => {
+// Helper to intelligently parse PDF text extracted from designer menus
+async function parsePDFMenu(filePath, menuTitle) {
+  const dataBuffer = fs.readFileSync(filePath);
+  const pdfData = await pdfParse(dataBuffer);
+  const lines = pdfData.text.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
+
+  const items = [];
+  let currentCategory = 'Main Course';
+
+  // Keywords to detect category headers inside the PDF text
+  const categoryKeywords = {
+    'Starter': 'Starters',
+    'Appetiser': 'Starters',
+    'Soup': 'Starters',
+    'Salad': 'Starters',
+    'Main': 'Main Course',
+    'Curry': 'Main Course',
+    'Rice': 'Main Course',
+    'Biryani': 'Main Course',
+    'Bread': 'Breads',
+    'Dessert': 'Desserts',
+    'Sweet': 'Desserts',
+    'Beverage': 'Beverages',
+    'Drink': 'Beverages',
+    'Bar': 'Beverages'
+  };
+
+  for (let line of lines) {
+    // Check if line is a category header
+    let foundCat = Object.keys(categoryKeywords).find(k => line.toLowerCase().includes(k.toLowerCase()) && line.length < 30);
+    if (foundCat) {
+      currentCategory = categoryKeywords[foundCat];
+      continue;
+    }
+
+    // Look for prices (e.g., numbers at the end of a line like "Paneer Tikka ... 350" or "350.00")
+    const priceMatch = line.match(/(\d{2,4})(\.\d{2})?$/);
+    if (priceMatch && line.length > 4) {
+      const price = parseFloat(priceMatch[0]);
+      let name = line.replace(priceMatch[0], '').replace(/[\.\-\–\_]+/g, '').trim();
+
+      if (name.length > 2) {
+        items.push({
+          menuTitle: menuTitle,
+          name: name,
+          category: currentCategory,
+          price: price,
+          description: '',
+          icon: '🍽️'
+        });
+      }
+    }
+  }
+  return items;
+}
+
+// Admin Document / PDF / CSV Upload Route with Auto-Parsing
+app.post('/api/upload-document', upload.single('menuFile'), async (req, res) => {
   const title = req.body.title;
   const file = req.file;
 
@@ -94,9 +150,9 @@ app.post('/api/upload-document', upload.single('menuFile'), (req, res) => {
     return res.status(400).json({ error: 'Title and file are required' });
   }
 
-  const isCsv = file.originalname.toLowerCase().endsWith('.csv');
+  const fileExtension = path.extname(file.originalname).toLowerCase();
 
-  db.get(`SELECT documents FROM factsheet WHERE id = 1`, (err, row) => {
+  db.get(`SELECT documents FROM factsheet WHERE id = 1`, async (err, row) => {
     if (err) return res.status(500).json({ error: 'Database error' });
 
     try {
@@ -110,26 +166,32 @@ app.post('/api/upload-document', upload.single('menuFile'), (req, res) => {
         uploadedAt: new Date().toISOString()
       });
 
-      db.run(`UPDATE factsheet SET documents = ? WHERE id = 1`, [JSON.stringify(docs)], (updateErr) => {
+      db.run(`UPDATE factsheet SET documents = ? WHERE id = 1`, [JSON.stringify(docs)], async (updateErr) => {
         if (updateErr) return res.status(500).json({ error: 'Failed to update factsheet' });
 
-        // If it's a CSV file, automatically parse and insert all items into menu_items table
-        if (isCsv) {
-          fs.readFile(file.path, 'utf8', (readErr, data) => {
-            if (!readErr) {
-              const parsedItems = parseCSVContent(data, title);
-              if (parsedItems.length > 0) {
-                const stmt = db.prepare(`INSERT INTO menu_items (menu_title, name, category, price, description, icon) VALUES (?, ?, ?, ?, ?, ?)`);
-                parsedItems.forEach(item => {
-                  stmt.run(item.menuTitle, item.name, item.category, item.price, item.description, item.icon);
-                });
-                stmt.finalize();
-              }
-            }
-          });
+        let parsedItems = [];
+
+        if (fileExtension === '.csv') {
+          const data = fs.readFileSync(file.path, 'utf8');
+          parsedItems = parseCSVContent(data, title);
+        } else if (fileExtension === '.pdf') {
+          try {
+            parsedItems = await parsePDFMenu(file.path, title);
+          } catch (pdfErr) {
+            console.error('PDF parsing error:', pdfErr);
+          }
         }
 
-        res.json({ success: true, message: 'File uploaded and processed successfully' });
+        // Insert parsed items into database so they appear in search and categories
+        if (parsedItems.length > 0) {
+          const stmt = db.prepare(`INSERT INTO menu_items (menu_title, name, category, price, description, icon) VALUES (?, ?, ?, ?, ?, ?)`);
+          parsedItems.forEach(item => {
+            stmt.run(item.menuTitle, item.name, item.category, item.price, item.description, item.icon);
+          });
+          stmt.finalize();
+        }
+
+        res.json({ success: true, message: `File uploaded and ${parsedItems.length} items parsed successfully!` });
       });
     } catch (e) {
       res.status(500).json({ error: 'Parsing error' });
@@ -149,7 +211,6 @@ app.get('/api/factsheet', (req, res) => {
   });
 });
 
-// Manual structured items upload fallback
 app.post('/api/upload-menu-items', (req, res) => {
   const { menuTitle, items } = req.body;
   if (!menuTitle || !items || !Array.isArray(items)) {
