@@ -85,48 +85,61 @@ function parseCSVContent(fileContent, menuTitle) {
   return items;
 }
 
-// Helper to intelligently parse PDF text extracted from designer menus
+// Helper to intelligently clean and parse text from designer PDF menus
 async function parsePDFMenu(filePath, menuTitle) {
   const dataBuffer = fs.readFileSync(filePath);
   const pdfData = await pdfParse(dataBuffer);
-  const lines = pdfData.text.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
+  
+  const lines = pdfData.text
+    .split(/\r?\n/)
+    .map(l => l.trim())
+    .filter(l => l.length > 2);
 
   const items = [];
   let currentCategory = 'Main Course';
 
-  // Keywords to detect category headers inside the PDF text
   const categoryKeywords = {
-    'Starter': 'Starters',
-    'Appetiser': 'Starters',
-    'Soup': 'Starters',
-    'Salad': 'Starters',
-    'Main': 'Main Course',
-    'Curry': 'Main Course',
-    'Rice': 'Main Course',
-    'Biryani': 'Main Course',
-    'Bread': 'Breads',
-    'Dessert': 'Desserts',
-    'Sweet': 'Desserts',
-    'Beverage': 'Beverages',
-    'Drink': 'Beverages',
-    'Bar': 'Beverages'
+    'starter': 'Starters',
+    'appetiser': 'Starters',
+    'appetizer': 'Starters',
+    'soup': 'Starters',
+    'salad': 'Starters',
+    'main': 'Main Course',
+    'curry': 'Main Course',
+    'rice': 'Main Course',
+    'biryani': 'Main Course',
+    'bread': 'Breads',
+    'dessert': 'Desserts',
+    'sweet': 'Desserts',
+    'beverage': 'Beverages',
+    'drink': 'Beverages',
+    'bar': 'Beverages'
   };
 
   for (let line of lines) {
-    // Check if line is a category header
-    let foundCat = Object.keys(categoryKeywords).find(k => line.toLowerCase().includes(k.toLowerCase()) && line.length < 30);
-    if (foundCat) {
-      currentCategory = categoryKeywords[foundCat];
+    const lowerLine = line.toLowerCase();
+
+    let foundCatKey = Object.keys(categoryKeywords).find(k => lowerLine.includes(k) && line.length < 35);
+    if (foundCatKey && (lowerLine.includes('menu') || lowerLine.length < 20)) {
+      currentCategory = categoryKeywords[foundCatKey];
       continue;
     }
 
-    // Look for prices (e.g., numbers at the end of a line like "Paneer Tikka ... 350" or "350.00")
     const priceMatch = line.match(/(\d{2,4})(\.\d{2})?$/);
-    if (priceMatch && line.length > 4) {
+    if (priceMatch) {
       const price = parseFloat(priceMatch[0]);
-      let name = line.replace(priceMatch[0], '').replace(/[\.\-\–\_]+/g, '').trim();
+      
+      let name = line
+        .replace(priceMatch[0], '')
+        .replace(/[\.\-\–\_]{2,}/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
 
-      if (name.length > 2) {
+      // Auto-correct font mapping glitches (e.g., Dice tea -> Ice tea)
+      if (name.startsWith('Dce ')) name = 'Ice ' + name.slice(4);
+      if (name.startsWith('Dice ')) name = 'Ice ' + name.slice(5);
+
+      if (name.length > 2 && price > 0) {
         items.push({
           menuTitle: menuTitle,
           name: name,
@@ -141,7 +154,7 @@ async function parsePDFMenu(filePath, menuTitle) {
   return items;
 }
 
-// Admin Document / PDF / CSV Upload Route with Auto-Parsing
+// Admin Document Upload with Auto-Parsing for PDF and CSV
 app.post('/api/upload-document', upload.single('menuFile'), async (req, res) => {
   const title = req.body.title;
   const file = req.file;
@@ -182,7 +195,6 @@ app.post('/api/upload-document', upload.single('menuFile'), async (req, res) => 
           }
         }
 
-        // Insert parsed items into database so they appear in search and categories
         if (parsedItems.length > 0) {
           const stmt = db.prepare(`INSERT INTO menu_items (menu_title, name, category, price, description, icon) VALUES (?, ?, ?, ?, ?, ?)`);
           parsedItems.forEach(item => {
