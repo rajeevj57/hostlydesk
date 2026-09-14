@@ -3,152 +3,156 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HostlyDesk - Guest Dining Menu</title>
+    <title>HostlyDesk - Guest Portal</title>
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 15px; background: #f8fafc; color: #1e293b; padding-bottom: 80px; }
-        .container { max-width: 600px; margin: 0 auto; }
-        .header { background: #0f172a; color: #fff; padding: 20px; border-radius: 12px; margin-bottom: 15px; text-align: center; }
-        .search-box { width: 100%; padding: 14px; font-size: 16px; border: 2px solid #cbd5e1; border-radius: 10px; margin-bottom: 15px; box-sizing: border-box; outline: none; }
-        .search-box:focus { border-color: #2563eb; }
-        .categories { display: flex; gap: 8px; overflow-x: auto; margin-bottom: 15px; padding-bottom: 5px; }
-        .cat-btn { background: #e2e8f0; border: none; padding: 8px 16px; border-radius: 20px; font-weight: bold; font-size: 13px; cursor: pointer; white-space: nowrap; color: #475569; }
-        .cat-btn.active { background: #2563eb; color: #fff; }
-        .menu-card { background: #fff; padding: 15px; border-radius: 10px; margin-bottom: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; }
-        .item-info h4 { margin: 0 0 5px 0; font-size: 16px; color: #0f172a; }
-        .item-info p { margin: 0; font-size: 13px; color: #64748b; }
-        .item-price { font-weight: bold; color: #2563eb; margin-top: 5px; font-size: 14px; }
-        .add-btn { background: #16a34a; color: #fff; border: none; padding: 8px 14px; border-radius: 6px; font-weight: bold; cursor: pointer; }
-        .add-btn:hover { background: #15803d; }
-        .cart-bar { position: fixed; bottom: 0; left: 0; right: 0; background: #0f172a; color: #fff; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 -4px 10px rgba(0,0,0,0.1); }
-        .order-btn { background: #2563eb; color: #fff; border: none; padding: 10px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 20px; background: #0f172a; color: #f8fafc; }
+        .container { max-width: 600px; margin: 0 auto; background: #1e293b; padding: 25px; border-radius: 12px; border: 1px solid #334155; }
+        h1 { margin-top: 0; color: #38bdf8; font-size: 22px; text-align: center; }
+        .subtitle { text-align: center; color: #94a3b8; margin-bottom: 20px; font-size: 14px; }
+        .dept-tabs { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 10px; margin-bottom: 20px; }
+        .dept-tab { background: #334155; color: #f8fafc; border: none; padding: 8px 14px; border-radius: 20px; cursor: pointer; white-space: nowrap; font-size: 13px; }
+        .dept-tab.active { background: #38bdf8; color: #0f172a; font-weight: bold; }
+        .services-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 20px; }
+        .service-card { background: #0f172a; border: 1px solid #334155; padding: 15px; border-radius: 8px; cursor: pointer; text-align: center; transition: all 0.2s; }
+        .service-card.selected { border-color: #38bdf8; background: #1e3a8a; }
+        .service-card h4 { margin: 0 0 5px 0; font-size: 15px; }
+        .service-card p { margin: 0; font-size: 12px; color: #94a3b8; }
+        .custom-input { width: 100%; padding: 12px; background: #0f172a; border: 1px solid #334155; border-radius: 8px; color: white; box-sizing: border-box; margin-bottom: 15px; }
+        .btn-submit { width: 100%; background: #d97706; color: white; border: none; padding: 14px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 16px; }
+        .btn-submit:hover { background: #b45309; }
+        .success-msg { color: #22c55e; text-align: center; margin-top: 15px; font-weight: bold; display: none; }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="header">
-            <h2>Room Dining Menu</h2>
-            <div id="roomDisplay" style="font-size: 13px; color: #94a3b8; margin-top: 5px;">Loading room...</div>
+        <h1 id="roomTitle">Room Service</h1>
+        <div class="subtitle">Tap services below or type a custom request — it goes straight to the team.</div>
+
+        <div class="dept-tabs" id="deptTabs"></div>
+
+        <div class="services-grid" id="servicesGrid">
+            <div style="grid-column: span 2; text-align: center; color: #94a3b8; padding: 20px;">Loading services...</div>
         </div>
 
-        <input type="text" id="searchInput" class="search-box" placeholder="Type 1-2 keywords (e.g., tikka, soup, coffee)..." oninput="filterMenu()">
+        <input type="text" id="customRequest" class="custom-input" placeholder="Or type unlisted request here (e.g. Extra pillows)...">
 
-        <div class="categories" id="categoryTabs">
-            <button class="cat-btn active" onclick="setCategory('All', this)">All Items</button>
-            <button class="cat-btn" onclick="setCategory('Starters', this)">Starters</button>
-            <button class="cat-btn" onclick="setCategory('Main Course', this)">Main Course</button>
-            <button class="cat-btn" onclick="setCategory('Desserts', this)">Desserts</button>
-            <button class="cat-btn" onclick="setCategory('Beverages', this)">Beverages</button>
-        </div>
-
-        <div id="menuContainer">
-            <p style="text-align: center; color: #64748b;">Loading items...</p>
-        </div>
-    </div>
-
-    <div class="cart-bar" id="cartBar" style="display: none;">
-        <div><span id="cartCount">0</span> items selected</div>
-        <button class="order-btn" onclick="submitOrder()">Place Order Now</button>
+        <button class="btn-submit" onclick="submitRequest()">SEND REQUEST</button>
+        <div id="successMsg" class="success-msg">Request sent successfully! The team has been notified.</div>
     </div>
 
     <script>
-        let allMenuItems = [];
-        let currentCategory = 'All';
-        let cart = {};
-
         const urlParams = new URLSearchParams(window.location.search);
-        const roomNumber = urlParams.get('room') || 'General';
-        document.getElementById('roomDisplay').textContent = `Room / Location: ${roomNumber}`;
+        const roomNumber = urlParams.get('room') || '305';
+        document.getElementById('roomTitle').innerText = `Room ${roomNumber} - Service Portal`;
 
-        async function loadMenu() {
+        let departments = [];
+        let services = [];
+        let activeDepartmentId = null;
+        let selectedServices = new Set();
+
+        async function loadData() {
             try {
-                const res = await fetch('/api/food-items');
-                allMenuItems = await res.json();
-                renderMenu(allMenuItems);
-            } catch (e) {
-                document.getElementById('menuContainer').innerHTML = '<p style="text-align:center; color:red;">Failed to load menu items.</p>';
+                const [deptRes, servRes] = await Promise.all([
+                    fetch('/api/departments'),
+                    fetch('/api/department-services')
+                ]);
+                departments = await deptRes.json();
+                services = await servRes.json();
+
+                if (departments.length > 0) {
+                    activeDepartmentId = departments[0].id;
+                }
+                renderTabs();
+                renderServices();
+            } catch (err) {
+                console.error('Failed to load portal data');
             }
         }
 
-        function setCategory(cat, btn) {
-            currentCategory = cat;
-            document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            filterMenu();
+        function renderTabs() {
+            const tabsContainer = document.getElementById('deptTabs');
+            tabsContainer.innerHTML = departments.map(d => `
+                <button class="dept-tab ${d.id === activeDepartmentId ? 'active' : ''}" onclick="switchDept(${d.id})">
+                    ${d.name}
+                </button>
+            `).join('');
         }
 
-        function filterMenu() {
-            const query = document.getElementById('searchInput').value.toLowerCase();
-            const filtered = allMenuItems.filter(item => {
-                const matchesCat = currentCategory === 'All' || (item.category && item.category.toLowerCase() === currentCategory.toLowerCase());
-                const matchesSearch = item.name.toLowerCase().includes(query) || 
-                                      (item.description && item.description.toLowerCase().includes(query));
-                return matchesCat && matchesSearch;
-            });
-            renderMenu(filtered);
+        function switchDept(deptId) {
+            activeDepartmentId = deptId;
+            renderTabs();
+            renderServices();
         }
 
-        function renderMenu(items) {
-            const container = document.getElementById('menuContainer');
-            if (items.length === 0) {
-                container.innerHTML = '<p style="text-align:center; color:#64748b;">No items found.</p>';
+        function renderServices() {
+            const grid = document.getElementById('servicesGrid');
+            const filteredServices = services.filter(s => s.department_id === activeDepartmentId);
+
+            if (filteredServices.length === 0) {
+                grid.innerHTML = '<div style="grid-column: span 2; text-align: center; color: #94a3b8; padding: 20px;">No specific services listed. Use custom input below.</div>';
                 return;
             }
 
-            let html = '';
-            items.forEach(item => {
-                html += `
-                    <div class="menu-card">
-                        <div class="item-info">
-                            <h4>${item.icon || '🍽️'} ${item.name}</h4>
-                            <p>${item.description || item.category}</p>
-                            <div class="item-price">₹${item.price}</div>
-                        </div>
-                        <button class="add-btn" onclick="addToCart('${item.name}', ${item.price})">+ Add</button>
-                    </div>
-                `;
-            });
-            container.innerHTML = html;
+            grid.innerHTML = filteredServices.map(s => `
+                <div class="service-card ${selectedServices.has(s.name) ? 'selected' : ''}" onclick="toggleService('${s.name}')">
+                    <h4>${s.name}</h4>
+                    ${s.price > 0 ? `<p>₹${s.price}</p>` : ''}
+                </div>
+            `).join('');
         }
 
-        function addToCart(name, price) {
-            if (!cart[name]) cart[name] = { name, price, qty: 0 };
-            cart[name].qty += 1;
-            updateCart();
-        }
-
-        function updateCart() {
-            let total = 0;
-            Object.values(cart).forEach(i => total += i.qty);
-            const bar = document.getElementById('cartBar');
-            if (total > 0) {
-                bar.style.display = 'flex';
-                document.getElementById('cartCount').textContent = total;
+        function toggleService(name) {
+            if (selectedServices.has(name)) {
+                selectedServices.delete(name);
             } else {
-                bar.style.display = 'none';
+                selectedServices.add(name);
             }
+            renderServices();
         }
 
-        async function submitOrder() {
-            const summary = Object.values(cart).map(i => `${i.qty}x ${i.name}`).join(', ');
+        async function submitRequest() {
+            const customText = document.getElementById('customRequest').value.trim();
+            const activeDept = departments.find(d => d.id === activeDepartmentId);
+            const deptName = activeDept ? activeDept.name : 'Front Office';
+
+            let itemsList = Array.from(selectedServices).join(', ');
+            if (customText) {
+                itemsList = itemsList ? `${itemsList}, ${customText}` : customText;
+            }
+
+            if (!itemsList) {
+                alert('Please select a service or type a request.');
+                return;
+            }
+
             try {
                 const res = await fetch('/api/orders', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ room: roomNumber, department: 'Kitchen / F&B', items: summary })
+                    body: JSON.stringify({
+                        room: roomNumber,
+                        department: deptName,
+                        items: itemsList
+                    })
                 });
+
                 if (res.ok) {
-                    alert('Order placed successfully! Sent to Kitchen department.');
-                    cart = {};
-                    updateCart();
+                    selectedServices.clear();
+                    document.getElementById('customRequest').value = '';
+                    renderServices();
+                    
+                    const msg = document.getElementById('successMsg');
+                    msg.style.display = 'block';
+                    setTimeout(() => { msg.style.display = 'none'; }, 4000);
                 } else {
-                    alert('Failed to place order.');
+                    alert('Failed to send request. Please try again.');
                 }
             } catch (e) {
-                alert('Connection error.');
+                alert('Network error.');
             }
         }
 
-        loadMenu();
+        loadData();
     </script>
 </body>
 </html>
