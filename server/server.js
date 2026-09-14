@@ -79,16 +79,25 @@ app.post('/api/upload-document', upload.single('menuFile'), async (req, res) => 
         let extractedText = '';
         const filePath = req.file.path;
 
-        if (req.file.mimetype === 'application/pdf' || req.file.originalname.endsWith('.pdf')) {
-            const dataBuffer = fs.readFileSync(filePath);
-            const pdfData = await pdfParse(dataBuffer);
-            extractedText = pdfData.text;
-        } else {
-            extractedText = fs.readFileSync(filePath, 'utf8');
+        try {
+            if (req.file.mimetype === 'application/pdf' || req.file.originalname.endsWith('.pdf')) {
+                const dataBuffer = fs.readFileSync(filePath);
+                const pdfData = await pdfParse(dataBuffer);
+                extractedText = pdfData.text || '';
+            } else {
+                extractedText = fs.readFileSync(filePath, 'utf8');
+            }
+        } catch (parseErr) {
+            console.error('PDF library read error:', parseErr);
+        } finally {
+            if (fs.existsSync(filePath)) {
+                fs.unlinkSync(filePath);
+            }
         }
 
-        // Clean up temporary file
-        fs.unlinkSync(filePath);
+        if (!extractedText || extractedText.trim().length === 0) {
+            return res.status(400).json({ success: false, error: 'Could not extract text from this PDF. Try saving it as a clean text/CSV file or simpler PDF.' });
+        }
 
         // Ensure "Kitchen / F&B" department exists to hold menu items
         let deptResult = await pool.query("SELECT id FROM departments WHERE name = 'Kitchen / F&B'");
@@ -100,30 +109,34 @@ app.post('/api/upload-document', upload.single('menuFile'), async (req, res) => 
             deptId = deptResult.rows[0].id;
         }
 
-        // Parse lines into menu items
+        // Parse lines into menu items safely
         const lines = extractedText.split('\n').map(l => l.trim()).filter(l => l.length > 2);
         let parsedCount = 0;
 
         for (const line of lines) {
-            if (line.length < 50 && !line.includes('Page') && !line.includes('http')) {
-                const existing = await pool.query(
-                    'SELECT id FROM department_services WHERE department_id = $1 AND LOWER(name) = LOWER($2)',
-                    [deptId, line]
-                );
-                if (existing.rows.length === 0) {
-                    await pool.query(
-                        'INSERT INTO department_services (department_id, name, price) VALUES ($1, $2, $3)',
-                        [deptId, line, 0]
+            if (line.length < 60 && !line.toLowerCase().includes('page') && !line.includes('http')) {
+                try {
+                    const existing = await pool.query(
+                        'SELECT id FROM department_services WHERE department_id = $1 AND LOWER(name) = LOWER($2)',
+                        [deptId, line]
                     );
-                    parsedCount++;
+                    if (existing.rows.length === 0) {
+                        await pool.query(
+                            'INSERT INTO department_services (department_id, name, price) VALUES ($1, $2, $3)',
+                            [deptId, line, 0]
+                        );
+                        parsedCount++;
+                    }
+                } catch (dbInsertErr) {
+                    console.error('Skipping duplicate or invalid line:', line);
                 }
             }
         }
 
         res.json({ success: true, message: `File uploaded and ${parsedCount} items parsed successfully!` });
     } catch (err) {
-        console.error('Upload parsing error:', err);
-        res.status(500).json({ success: false, error: 'Failed to parse document.' });
+        console.error('Upload general error:', err);
+        res.status(500).json({ success: false, error: 'Failed to process document upload.' });
     }
 });
 
