@@ -1,5 +1,5 @@
 const express = require('express');
-const sqlite3 = require('sqlite3').verbose();
+const { Pool } = require('pg');
 const path = require('path');
 
 const app = express();
@@ -9,29 +9,61 @@ const PORT = process.env.PORT || 3000;
 app.use(express.json());
 app.use(express.static(__dirname));
 
-// Database Setup (SQLite)
-const dbFile = path.join(__dirname, 'hostlydesk.db');
-const db = new sqlite3.Database(dbFile, (err) => {
+// Database Setup (Supabase / PostgreSQL)
+const pool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: { rejectUnauthorized: false } // Required for secure cloud connections like Supabase
+});
+
+pool.connect((err, client, release) => {
     if (err) {
-        console.error('Error opening database', err.message);
+        console.error('Error connecting to Supabase database', err.stack);
     } else {
-        console.log('Connected to the SQLite database.');
-        // Create requests table if it doesn't exist
-        db.run(`CREATE TABLE IF NOT EXISTS requests (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            hotel_id TEXT,
-            room TEXT,
-            guest_name TEXT,
-            service_type TEXT,
-            department TEXT,
-            details TEXT,
-            status TEXT DEFAULT 'Pending',
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        )`);
+        console.log('Connected to Supabase PostgreSQL database.');
+        release();
+        initializeTables();
     }
 });
 
-// API: Get services list for the guest portal
+// Initialize required database tables if they don't exist
+async function initializeTables() {
+    try {
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS requests (
+                id SERIAL PRIMARY KEY,
+                hotel_id TEXT,
+                room TEXT,
+                guest_name TEXT,
+                service_type TEXT,
+                department TEXT,
+                details TEXT,
+                status TEXT DEFAULT 'Pending',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS departments (
+                id SERIAL PRIMARY KEY,
+                name TEXT UNIQUE NOT NULL
+            )
+        `);
+
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS department_services (
+                id SERIAL PRIMARY KEY,
+                department_id INTEGER REFERENCES departments(id) ON DELETE CASCADE,
+                name TEXT NOT NULL,
+                price NUMERIC DEFAULT 0
+            )
+        `);
+        console.log('Database tables verified/created successfully.');
+    } catch (err) {
+        console.error('Error initializing tables:', err);
+    }
+}
+
+// API: Get services list for the guest portal (fallback list)
 app.get('/api/get-services', (req, res) => {
     const services = [
         { id: 'towels', name: 'Extra Towels', department: 'Housekeeping' },
@@ -47,55 +79,43 @@ app.get('/api/get-services', (req, res) => {
     res.json(services);
 });
 
-// API: Submit a new request from the guest portal
-app.post('/api/submit-request', (req, res) => {
-    const { hotel_id, room, guest_name, service_type, department, details } = req.body;
-    const query = `INSERT INTO requests (hotel_id, room, guest_name, service_type, department, details) VALUES (?, ?, ?, ?, ?, ?)`;
-    
-    db.run(query, [hotel_id, room, guest_name, service_type, department, details], function(err) {
-        if (err) {
-            console.error(err);
-            res.status(500).json({ success: false, error: err.message });
-        } else {
-            res.json({ success: true, id: this.lastID });
-        }
-    });
+// API: Get Departments
+app.get('/api/departments', async (req, res) => {
+    try {
+        const result = await pool.query('SELECT * FROM departments ORDER BY id ASC');
+        res.json(result.rows);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Database error' });
+    }
 });
 
-// API: Fetch active requests for department dashboards
-app.get('/api/requests', (req, res) => {
-    const hotelId = req.query.hotel_id || 'MAURYA_SHERATON';
-    db.all(`SELECT * FROM requests WHERE hotel_id = ? ORDER BY created_at DESC`, [hotelId], (err, rows) => {
-        if (err) {
-            res.status(500).json({ error: err.message });
-        } else {
-            res.json(rows);
-        }
-    });
+// API: Get Department Services / Menu Items
+app.get('/api/department-services', async (req, res) => {
+    try {
+        const result = await pool.query('SELECT * FROM department_services ORDER BY id ASC');
+        res.json(result.rows);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Database error' });
+    }
 });
 
-// API: Update request status (e.g., mark as Completed)
-app.post('/api/update-status', (req, res) => {
-    const { id, status } = req.body;
-    db.run(`UPDATE requests SET status = ? WHERE id = ?`, [status, id], function(err) {
-        if (err) {
-            res.status(500).json({ success: false, error: err.message });
-        } else {
-            res.json({ success: true });
-        }
-    });
-});
-
-// Route for Guest Portal
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'index.html'));
-});
-
-// Route for Kitchen Dashboard (Points directly to kitchen-dashboard.html)
-app.get('/kitchen', (req, res) => {
-    res.sendFile(path.join(__dirname, 'kitchen-dashboard.html'));
+// API: Post Orders
+app.post('/api/orders', async (req, res) => {
+    const { room, department, items } = req.body;
+    try {
+        const result = await pool.query(
+            'INSERT INTO requests (room, department, details) VALUES ($1, $2, $3) RETURNING *',
+            [room, department, items]
+        );
+        res.json({ success: true, order: result.rows[0] });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Failed to save order' });
+    }
 });
 
 app.listen(PORT, () => {
-    console.log(`HostlyDesk server running on port ${PORT}`);
+    console.log(`Server is running on port ${PORT}`);
 });
