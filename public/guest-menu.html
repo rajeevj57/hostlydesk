@@ -3,42 +3,64 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HostlyDesk - Guest Portal</title>
+    <title>HostlyDesk - Digital Key & Service Portal</title>
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 20px; background: #0f172a; color: #f8fafc; }
-        .container { max-width: 600px; margin: 0 auto; background: #1e293b; padding: 25px; border-radius: 12px; border: 1px solid #334155; }
-        h1 { margin-top: 0; color: #38bdf8; font-size: 22px; text-align: center; }
-        .subtitle { text-align: center; color: #94a3b8; margin-bottom: 20px; font-size: 14px; }
-        .dept-tabs { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 10px; margin-bottom: 15px; }
-        .dept-tab { background: #334155; color: #f8fafc; border: none; padding: 8px 14px; border-radius: 20px; cursor: pointer; white-space: nowrap; font-size: 13px; }
-        .dept-tab.active { background: #38bdf8; color: #0f172a; font-weight: bold; }
-        .search-box { width: 100%; padding: 10px 14px; background: #0f172a; border: 1px solid #334155; border-radius: 8px; color: white; box-sizing: border-box; margin-bottom: 15px; font-size: 14px; }
-        .services-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 20px; max-height: 250px; overflow-y: auto; padding-right: 4px; }
-        .service-card { background: #0f172a; border: 1px solid #334155; padding: 15px; border-radius: 8px; cursor: pointer; text-align: center; transition: all 0.2s; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 0; background: #0f172a; color: #f8fafc; }
+        .top-header { background: #0f172a; color: white; padding: 25px 20px 20px 20px; border-bottom: 2px solid #334155; }
+        .brand-sub { font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: #38bdf8; font-weight: bold; margin-bottom: 5px; }
+        h1 { margin: 0 0 5px 0; font-size: 26px; font-weight: 700; color: #f8fafc; }
+        .welcome-text { color: #94a3b8; font-size: 13px; margin-bottom: 15px; }
+        .hotel-meta { display: flex; justify-content: space-between; font-size: 12px; color: #cbd5e1; border-top: 1px solid #1e293b; padding-top: 12px; margin-top: 10px; }
+        
+        .content-body { padding: 20px; max-width: 600px; margin: 0 auto; background: #1e293b; border-radius: 12px; margin-top: 20px; border: 1px solid #334155; margin-bottom: 30px; }
+        .section-title { font-size: 18px; font-weight: bold; margin-bottom: 4px; color: #f8fafc; }
+        .section-desc { font-size: 13px; color: #94a3b8; margin-bottom: 15px; }
+        
+        .search-box { width: 100%; padding: 12px 16px; background: #0f172a; border: 1px solid #334155; border-radius: 8px; color: white; box-sizing: border-box; margin-bottom: 15px; font-size: 14px; outline: none; }
+        .search-box:focus { border-color: #38bdf8; }
+
+        .dept-tabs { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 15px; }
+        .dept-tab { background: #334155; color: #cbd5e1; border: none; padding: 7px 14px; border-radius: 20px; cursor: pointer; white-space: nowrap; font-size: 13px; font-weight: 600; }
+        .dept-tab.active { background: #38bdf8; color: #0f172a; }
+
+        .services-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 20px; max-height: 320px; overflow-y: auto; padding-right: 4px; }
+        .service-card { background: #0f172a; border: 1px solid #334155; padding: 14px; border-radius: 8px; cursor: pointer; text-align: center; transition: all 0.2s; }
         .service-card.selected { border-color: #38bdf8; background: #1e3a8a; }
-        .service-card h4 { margin: 0 0 5px 0; font-size: 15px; color: #f8fafc; }
+        .service-card h4 { margin: 0 0 5px 0; font-size: 14px; color: #f8fafc; font-weight: 600; }
         .service-card p { margin: 0; font-size: 12px; color: #94a3b8; }
-        .custom-input { width: 100%; padding: 12px; background: #0f172a; border: 1px solid #334155; border-radius: 8px; color: white; box-sizing: border-box; margin-bottom: 15px; }
+
         .btn-submit { width: 100%; background: #d97706; color: white; border: none; padding: 14px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 16px; }
         .btn-submit:hover { background: #b45309; }
-        .success-msg { color: #22c55e; text-align: center; margin-top: 15px; font-weight: bold; display: none; }
+        
+        .success-msg { color: #22c55e; text-align: center; margin-top: 15px; font-weight: bold; display: none; font-size: 14px; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1 id="roomTitle">Room Service</h1>
-        <div class="subtitle">Tap visual cards or type keywords to quickly find services!</div>
 
+    <div class="top-header">
+        <div class="brand-sub">HostlyDesk · Digital Key</div>
+        <h1 id="roomTitle">Room 305</h1>
+        <div class="welcome-text">Welcome, Guest</div>
+        <div class="hotel-meta">
+            <span>HostlyDesk Hotel</span>
+            <span>Checkout 11:00 AM</span>
+        </div>
+    </div>
+
+    <div class="content-body">
+        <div class="section-title">Need something?</div>
+        <div class="section-desc">Select a category, type keywords (e.g., soup, chicken tikka), or tap standard services below.</div>
+
+        <!-- Department / Category Tabs -->
         <div class="dept-tabs" id="deptTabs"></div>
 
-        <!-- Quick 1-2 keyword search filter -->
-        <input type="text" id="keywordSearch" class="search-box" placeholder="🔍 Type 1-2 keywords to filter services (e.g. towel, water)..." oninput="renderServices()">
+        <!-- Keyword search filter for large menus -->
+        <input type="text" id="keywordSearch" class="search-box" placeholder="🔍 Type 1-2 keywords to search menu items..." oninput="renderServices()">
 
+        <!-- Dynamic Services Grid pulled from Manager's database -->
         <div class="services-grid" id="servicesGrid">
-            <div style="grid-column: span 2; text-align: center; color: #94a3b8; padding: 20px;">Loading services...</div>
+            <div style="grid-column: span 2; text-align: center; color: #94a3b8; padding: 30px;">Loading menu items...</div>
         </div>
-
-        <input type="text" id="customRequest" class="custom-input" placeholder="Optional: Type unlisted request here...">
 
         <button class="btn-submit" onclick="submitRequest()">SEND REQUEST</button>
         <div id="successMsg" class="success-msg">Request sent successfully! The team has been notified.</div>
@@ -47,7 +69,7 @@
     <script>
         const urlParams = new URLSearchParams(window.location.search);
         const roomNumber = urlParams.get('room') || '305';
-        document.getElementById('roomTitle').innerText = `Room ${roomNumber} - Service Portal`;
+        document.getElementById('roomTitle').innerText = `Room ${roomNumber}`;
 
         let departments = [];
         let services = [];
@@ -84,7 +106,7 @@
 
         function switchDept(deptId) {
             activeDepartmentId = deptId;
-            document.getElementById('keywordSearch').value = ''; // Reset search on tab change
+            document.getElementById('keywordSearch').value = '';
             renderTabs();
             renderServices();
         }
@@ -95,7 +117,7 @@
 
             let filteredServices = services.filter(s => s.department_id === activeDepartmentId);
 
-            // Apply 1-2 keyword filter if guest types in the search box
+            // Real-time keyword filter across items uploaded by the manager
             if (searchTerm) {
                 const keywords = searchTerm.split(' ');
                 filteredServices = filteredServices.filter(s => {
@@ -105,16 +127,19 @@
             }
 
             if (filteredServices.length === 0) {
-                grid.innerHTML = '<div style="grid-column: span 2; text-align: center; color: #94a3b8; padding: 20px;">No matching services found. Use the unlisted request box below.</div>';
+                grid.innerHTML = '<div style="grid-column: span 2; text-align: center; color: #94a3b8; padding: 30px; font-size: 13px;">No items found matching your search.</div>';
                 return;
             }
 
-            grid.innerHTML = filteredServices.map(s => `
-                <div class="service-card ${selectedServices.has(s.name) ? 'selected' : ''}" onclick="toggleService('${s.name}')">
-                    <h4>${s.name}</h4>
-                    ${s.price && s.price > 0 ? `<p>₹${s.price}</p>` : '<p>Complimentary</p>'}
-                </div>
-            `).join('');
+            grid.innerHTML = filteredServices.map(s => {
+                const isSelected = selectedServices.has(s.name);
+                return `
+                    <div class="service-card ${isSelected ? 'selected' : ''}" onclick="toggleService('${s.name}')">
+                        <h4>${s.name}</h4>
+                        ${s.price && s.price > 0 ? `<p>₹${s.price}</p>` : '<p>Complimentary</p>'}
+                    </div>
+                `;
+            }).join('');
         }
 
         function toggleService(name) {
@@ -127,19 +152,14 @@
         }
 
         async function submitRequest() {
-            const customText = document.getElementById('customRequest').value.trim();
-            const activeDept = departments.find(d => d.id === activeDepartmentId);
-            const deptName = activeDept ? activeDept.name : 'Front Office';
-
-            let itemsList = Array.from(selectedServices).join(', ');
-            if (customText) {
-                itemsList = itemsList ? `${itemsList}, ${customText}` : customText;
-            }
-
-            if (!itemsList) {
-                alert('Please tap at least one service card or type a request.');
+            if (selectedServices.size === 0) {
+                alert('Please tap at least one item from the menu.');
                 return;
             }
+
+            const activeDept = departments.find(d => d.id === activeDepartmentId);
+            const deptName = activeDept ? activeDept.name : 'Front Office';
+            const itemsList = Array.from(selectedServices).join(', ');
 
             try {
                 const res = await fetch('/api/orders', {
@@ -154,7 +174,6 @@
 
                 if (res.ok) {
                     selectedServices.clear();
-                    document.getElementById('customRequest').value = '';
                     document.getElementById('keywordSearch').value = '';
                     renderServices();
                     
