@@ -69,7 +69,7 @@ async function initializeTables() {
     }
 }
 
-// API: Upload and Parse Master Document (PDF / CSV)
+// API: Upload and Parse Master Document (PDF / CSV) with Detailed Error Logging
 app.post('/api/upload-document', upload.single('menuFile'), async (req, res) => {
     try {
         if (!req.file) {
@@ -89,6 +89,7 @@ app.post('/api/upload-document', upload.single('menuFile'), async (req, res) => 
             }
         } catch (parseErr) {
             console.error('PDF library read error:', parseErr);
+            return res.status(500).json({ success: false, error: 'PDF Parse Error: ' + parseErr.message });
         } finally {
             if (fs.existsSync(filePath)) {
                 fs.unlinkSync(filePath);
@@ -96,7 +97,7 @@ app.post('/api/upload-document', upload.single('menuFile'), async (req, res) => 
         }
 
         if (!extractedText || extractedText.trim().length === 0) {
-            return res.status(400).json({ success: false, error: 'Could not extract text from this PDF. Try saving it as a clean text/CSV file or simpler PDF.' });
+            return res.status(400).json({ success: false, error: 'Could not extract text from this PDF.' });
         }
 
         // Ensure "Kitchen / F&B" department exists to hold menu items
@@ -109,34 +110,29 @@ app.post('/api/upload-document', upload.single('menuFile'), async (req, res) => 
             deptId = deptResult.rows[0].id;
         }
 
-        // Parse lines into menu items safely
         const lines = extractedText.split('\n').map(l => l.trim()).filter(l => l.length > 2);
         let parsedCount = 0;
 
         for (const line of lines) {
             if (line.length < 60 && !line.toLowerCase().includes('page') && !line.includes('http')) {
-                try {
-                    const existing = await pool.query(
-                        'SELECT id FROM department_services WHERE department_id = $1 AND LOWER(name) = LOWER($2)',
-                        [deptId, line]
+                const existing = await pool.query(
+                    'SELECT id FROM department_services WHERE department_id = $1 AND LOWER(name) = LOWER($2)',
+                    [deptId, line]
+                );
+                if (existing.rows.length === 0) {
+                    await pool.query(
+                        'INSERT INTO department_services (department_id, name, price) VALUES ($1, $2, $3)',
+                        [deptId, line, 0]
                     );
-                    if (existing.rows.length === 0) {
-                        await pool.query(
-                            'INSERT INTO department_services (department_id, name, price) VALUES ($1, $2, $3)',
-                            [deptId, line, 0]
-                        );
-                        parsedCount++;
-                    }
-                } catch (dbInsertErr) {
-                    console.error('Skipping duplicate or invalid line:', line);
+                    parsedCount++;
                 }
             }
         }
 
         res.json({ success: true, message: `File uploaded and ${parsedCount} items parsed successfully!` });
     } catch (err) {
-        console.error('Upload general error:', err);
-        res.status(500).json({ success: false, error: 'Failed to process document upload.' });
+        console.error('Upload general error details:', err);
+        res.status(500).json({ success: false, error: 'Database/Server Error: ' + err.message });
     }
 });
 
