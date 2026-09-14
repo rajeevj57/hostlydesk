@@ -3,123 +3,145 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Housekeeping Dashboard - HostlyDesk</title>
+    <title>HostlyDesk - Department Dashboard</title>
     <style>
-        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f8fafc; color: #1e293b; }
-        .container { max-width: 1100px; margin: 0 auto; }
-        h1 { font-size: 24px; margin-bottom: 5px; color: #0284c7; }
-        .card { background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-top: 20px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #e2e8f0; font-size: 14px; }
-        th { background: #e0f2fe; font-weight: bold; color: #0369a1; }
-        .room-badge { background: #eff6ff; color: #1d4ed8; padding: 4px 8px; border-radius: 4px; font-weight: bold; }
-        .status-pending { background: #fee2e2; color: #991b1b; padding: 6px 12px; border-radius: 12px; font-size: 12px; font-weight: bold; display: inline-block; }
-        .status-preparing { background: #fef3c7; color: #d97706; padding: 6px 12px; border-radius: 12px; font-size: 12px; font-weight: bold; display: inline-block; }
-        .status-completed { background: #d1fae5; color: #065f46; padding: 6px 12px; border-radius: 12px; font-size: 12px; font-weight: bold; display: inline-block; }
-        .action-select { padding: 6px 10px; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 13px; font-weight: bold; cursor: pointer; background: #fff; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 20px; background: #0f172a; color: #f8fafc; }
+        .container { max-width: 900px; margin: 0 auto; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
+        h1 { margin: 0; color: #38bdf8; font-size: 24px; }
+        .badge { background: #334155; padding: 6px 12px; border-radius: 20px; font-size: 14px; }
+        .orders-grid { display: grid; gap: 15px; }
+        .order-card { background: #1e293b; border: 1px solid #334155; padding: 20px; border-radius: 10px; display: flex; justify-content: space-between; align-items: center; }
+        .order-info h3 { margin: 0 0 8px 0; font-size: 18px; color: #f1f5f9; }
+        .order-info p { margin: 4px 0; color: #94a3b8; font-size: 14px; }
+        .btn-complete { background: #16a34a; color: white; border: none; padding: 8px 16px; border-radius: 6px; font-weight: bold; cursor: pointer; }
+        .btn-complete:hover { background: #15803d; }
+        .audio-unlock { background: #eab308; color: #000; padding: 10px 15px; border-radius: 6px; margin-bottom: 20px; font-weight: bold; cursor: pointer; text-align: center; }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>🧹 Housekeeping Live Dashboard</h1>
-        <p style="color: #64748b; font-size: 14px;">Real-time room cleaning and amenity requests.</p>
+        <div id="audioUnlockBanner" class="audio-unlock" onclick="unlockAudio()">
+            🔊 Click anywhere here to enable sound alerts & beep notifications for new orders!
+        </div>
 
-        <div class="card">
-            <table>
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Room</th>
-                        <th>Request Details</th>
-                        <th>Time</th>
-                        <th>Status</th>
-                        <th>Action</th>
-                    </tr>
-                </thead>
-                <tbody id="ordersTableBody">
-                    <tr><td colspan="6" style="text-align:center; color:#64748b;">Loading housekeeping tasks...</td></tr>
-                </tbody>
-            </table>
+        <div class="header">
+            <h1 id="deptTitle">Department Order Desk</h1>
+            <div class="badge" id="orderCount">Active Orders: 0</div>
+        </div>
+
+        <div id="ordersContainer" class="orders-grid">
+            <div style="color: #64748b; text-align: center; padding: 40px;">Listening for incoming orders...</div>
         </div>
     </div>
 
     <script>
-        async function loadOrders() {
+        // Determine department name from URL path or query parameter (e.g., /kitchen.html or passed via query)
+        // For dedicated pages, you can hardcode the department name matching what is saved in orders, e.g. "Kitchen / F&B" or "Housekeeping"
+        const pathSegments = window.location.pathname.split('/');
+        const pageName = pathSegments[pathSegments.length - 1].replace('.html', '');
+        
+        let targetDepartment = 'Kitchen / F&B';
+        if (pageName === 'housekeeping') targetDepartment = 'Housekeeping';
+        else if (pageName === 'frontdesk') targetDepartment = 'Front Office';
+        else if (pageName === 'maintenance') targetDepartment = 'Maintenance';
+
+        document.getElementById('deptTitle').innerText = `${targetDepartment.toUpperCase()} - Live Dashboard`;
+
+        let audioCtx = null;
+        function unlockAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+            document.getElementById('audioUnlockBanner').style.display = 'none';
+        }
+
+        function playBeep() {
             try {
-                const res = await fetch('/api/orders');
-                const orders = await res.json();
-                const container = document.getElementById('ordersTableBody');
-                
-                const hkOrders = orders.filter(o => {
-                    const dept = (o.department || '').toLowerCase();
-                    return dept.includes('housekeeping');
-                });
-                
-                if (hkOrders.length === 0) {
-                    container.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#64748b;">No active housekeeping requests.</td></tr>';
-                    return;
+                if (!audioCtx) {
+                    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
                 }
+                const oscillator = audioCtx.createOscillator();
+                const gainNode = audioCtx.createGain();
 
-                container.innerHTML = '';
-                hkOrders.forEach(order => {
-                    let formattedItems = '';
-                    try {
-                        let parsed = typeof order.items === 'string' ? JSON.parse(order.items) : order.items;
-                        if (parsed && typeof parsed === 'object') {
-                            if (parsed.items) {
-                                parsed = parsed.items;
-                            }
-                        }
-                        if (Array.isArray(parsed)) {
-                            formattedItems = parsed.map(i => typeof i === 'string' ? i : (i.name || JSON.stringify(i))).join(', ');
-                        } else if (parsed && typeof parsed === 'object') {
-                            formattedItems = Object.entries(parsed).map(([k, v]) => `${k}: ${v}`).join(', ');
-                        } else {
-                            formattedItems = String(parsed);
-                        }
-                    } catch (e) {
-                        formattedItems = order.items;
-                    }
+                oscillator.type = 'sine';
+                oscillator.frequency.setValueAtTime(880, audioCtx.currentTime); // High pitch alert tone
+                gainNode.gain.setValueAtTime(0.15, audioCtx.currentTime);
 
-                    const status = order.status || 'Pending';
-                    let statusClass = 'status-pending';
-                    if (status === 'In Progress' || status === 'Preparing') statusClass = 'status-preparing';
-                    if (status === 'Completed') statusClass = 'status-completed';
+                oscillator.connect(gainNode);
+                gainNode.connect(audioCtx.destination);
 
-                    container.innerHTML += `
-                        <tr>
-                            <td>#${order.id}</td>
-                            <td><span class="room-badge">Room ${order.room || 'DEMO101'}</span></td>
-                            <td>${formattedItems}</td>
-                            <td>${order.created_at || 'Just now'}</td>
-                            <td><span class="${statusClass}">${status}</span></td>
-                            <td>
-                                <select class="action-select" onchange="updateStatus(${order.id}, this.value)">
-                                    <option value="" disabled selected>Update Status...</option>
-                                    <option value="Pending">🔴 Pending</option>
-                                    <option value="In Progress">🟡 In Progress</option>
-                                    <option value="Completed">🟢 Completed</option>
-                                </select>
-                            </td>
-                        </tr>
-                    `;
-                });
-            } catch (err) {
-                console.error('Error loading housekeeping orders:', err);
+                oscillator.start();
+                oscillator.stop(audioCtx.currentTime + 0.4); // Play for 0.4 seconds
+            } catch (e) {
+                console.log('Audio playback waiting for interaction.');
             }
         }
 
-        async function updateStatus(id, status) {
-            await fetch(`/api/orders/${id}/status`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ status })
-            });
-            loadOrders();
+        let previousOrderIDs = new Set();
+
+        async function fetchOrders() {
+            try {
+                const res = await fetch('/api/orders');
+                const orders = await res.json();
+                
+                // Filter orders for this specific department and status Pending
+                const deptOrders = orders.filter(o => 
+                    o.department && o.department.toLowerCase().includes(targetDepartment.toLowerCase()) && 
+                    o.status === 'Pending'
+                );
+
+                // Check for new orders to trigger beep alert
+                const currentIDs = new Set(deptOrders.map(o => o.id));
+                let hasNewOrder = false;
+                for (let id of currentIDs) {
+                    if (!previousOrderIDs.has(id) && previousOrderIDs.size > 0) {
+                        hasNewOrder = true;
+                    }
+                }
+
+                if (hasNewOrder) {
+                    playBeep();
+                }
+                previousOrderIDs = currentIDs;
+                document.getElementById('orderCount').innerText = `Active Orders: ${deptOrders.length}`;
+
+                const container = document.getElementById('ordersContainer');
+                if (deptOrders.length === 0) {
+                    container.innerHTML = '<div style="color: #64748b; text-align: center; padding: 40px; background: #1e293b; border-radius: 10px;">No pending orders right now.</div>';
+                    return;
+                }
+
+                container.innerHTML = deptOrders.map(o => `
+                    <div class="order-card">
+                        <div class="order-info">
+                            <h3>Room: ${o.room}</h3>
+                            <p><strong>Items:</strong> ${o.items}</p>
+                            <p style="font-size: 12px; color: #64748b;">Time: ${o.timestamp}</p>
+                        </div>
+                        <button class="btn-complete" onclick="completeOrder(${o.id})">Mark Complete ✓</button>
+                    </div>
+                `).join('');
+            } catch (err) {
+                console.error('Failed to fetch orders');
+            }
         }
 
-        loadOrders();
-        setInterval(loadOrders, 10000);
+        async function completeOrder(orderId) {
+            await fetch(`/api/orders/${orderId}/status`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: 'Completed' })
+            });
+            fetchOrders();
+        }
+
+        // Poll orders every 4 seconds
+        setInterval(fetchOrders, 4000);
+        fetchOrders();
     </script>
 </body>
 </html>
