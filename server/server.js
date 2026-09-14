@@ -138,6 +138,7 @@ async function parsePDFMenu(filePath, menuTitle) {
         .replace(priceMatch[0], '')
         .replace(/[\.\-\–\_]{2,}/g, ' ')
         .replace(/^['"\s]+|['"\s]+$/g, '')
+        .replace(/['"‘’`]+$/, '') // Specifically strip trailing quotes/apostrophes
         .replace(/\s+/g, ' ')
         .trim();
 
