@@ -90,10 +90,16 @@ async function parsePDFMenu(filePath, menuTitle) {
   const dataBuffer = fs.readFileSync(filePath);
   const pdfData = await pdfParse(dataBuffer);
   
+  // Forbidden noise words that should never be registered as dish names
+  const ignoredWords = new Set(['with', 'and', 'or', 'the', 'a', 'an', "'", '"', '–', '-', 's']);
+
   const lines = pdfData.text
     .split(/\r?\n/)
     .map(l => l.trim())
-    .filter(l => l.length > 2 && l !== "'" && l !== '"' && l.toLowerCase() !== 'with');
+    .filter(l => {
+      const lower = l.toLowerCase();
+      return l.length > 2 && !ignoredWords.has(lower);
+    });
 
   const items = [];
   let currentCategory = 'Main Course';
@@ -140,7 +146,7 @@ async function parsePDFMenu(filePath, menuTitle) {
       if (name.startsWith('Dce ')) name = 'Ice ' + name.slice(4);
       if (name.startsWith('Dice ')) name = 'Ice ' + name.slice(5);
 
-      if (name.length > 2 && price > 0) {
+      if (name.length > 2 && price > 0 && !ignoredWords.has(name.toLowerCase())) {
         items.push({
           menuTitle: menuTitle,
           name: name,
