@@ -69,7 +69,7 @@ async function initializeTables() {
     }
 }
 
-// API: Upload and Parse Master Document (PDF / CSV) with Detailed Error Logging
+// API: Upload and Parse Master Document (PDF / CSV) with Full Error Trace
 app.post('/api/upload-document', upload.single('menuFile'), async (req, res) => {
     try {
         if (!req.file) {
@@ -89,7 +89,7 @@ app.post('/api/upload-document', upload.single('menuFile'), async (req, res) => 
             }
         } catch (parseErr) {
             console.error('PDF library read error:', parseErr);
-            return res.status(500).json({ success: false, error: 'PDF Parse Error: ' + parseErr.message });
+            return res.status(500).json({ success: false, error: 'PDF Parse Error: ' + parseErr.toString() });
         } finally {
             if (fs.existsSync(filePath)) {
                 fs.unlinkSync(filePath);
@@ -132,7 +132,7 @@ app.post('/api/upload-document', upload.single('menuFile'), async (req, res) => 
         res.json({ success: true, message: `File uploaded and ${parsedCount} items parsed successfully!` });
     } catch (err) {
         console.error('Upload general error details:', err);
-        res.status(500).json({ success: false, error: 'Database/Server Error: ' + err.message });
+        res.status(500).json({ success: false, error: 'Database/Server Error: ' + err.toString() });
     }
 });
 
