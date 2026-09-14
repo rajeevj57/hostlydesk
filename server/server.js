@@ -10,7 +10,7 @@ const PORT = process.env.PORT || 3000;
 
 // Middleware
 app.use(express.json());
-app.use(express.static(__dirname));
+app.use(express.static(path.join(__dirname, '../public')));
 
 // Multer setup for handling file uploads temporarily
 const upload = multer({ dest: 'uploads/' });
@@ -105,9 +105,7 @@ app.post('/api/upload-document', upload.single('menuFile'), async (req, res) => 
         let parsedCount = 0;
 
         for (const line of lines) {
-            // Simple filter to avoid adding headers or long paragraphs as menu items
             if (line.length < 50 && !line.includes('Page') && !line.includes('http')) {
-                // Check if item already exists under this department to prevent duplicates
                 const existing = await pool.query(
                     'SELECT id FROM department_services WHERE department_id = $1 AND LOWER(name) = LOWER($2)',
                     [deptId, line]
