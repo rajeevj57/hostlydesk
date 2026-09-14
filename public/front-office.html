@@ -22,7 +22,7 @@
 <body>
     <div class="container">
         <div id="audioUnlockBanner" class="audio-unlock" onclick="unlockAudio()">
-            🔊 Click anywhere here to enable sound alerts & beep notifications for new front office requests!
+            🔊 Click anywhere here to enable reliable sound alerts for new requests!
         </div>
 
         <div class="header">
@@ -36,37 +36,22 @@
     </div>
 
     <script>
-        let audioCtx = null;
+        let audioUnlocked = false;
 
         function unlockAudio() {
-            if (!audioCtx) {
-                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            }
-            if (audioCtx.state === 'suspended') {
-                audioCtx.resume();
-            }
-            document.getElementById('audioUnlockBanner').style.display = 'none';
+            audioUnlocked = true;
+            const banner = document.getElementById('audioUnlockBanner');
+            if (banner) banner.style.display = 'none';
         }
 
         function playBeep() {
+            if (!audioUnlocked) return;
             try {
-                if (!audioCtx) {
-                    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                }
-                const oscillator = audioCtx.createOscillator();
-                const gainNode = audioCtx.createGain();
-
-                oscillator.type = 'sine';
-                oscillator.frequency.setValueAtTime(880, audioCtx.currentTime);
-                gainNode.gain.setValueAtTime(0.15, audioCtx.currentTime);
-
-                oscillator.connect(gainNode);
-                gainNode.connect(audioCtx.destination);
-
-                oscillator.start();
-                oscillator.stop(audioCtx.currentTime + 0.4);
+                const beepAudio = new Audio('data:audio/wav;base64,UklGRl9vT19XQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YU'+Array(100).join('A'));
+                beepAudio.volume = 0.5;
+                beepAudio.play().catch(e => console.log('Audio waiting for interaction'));
             } catch (e) {
-                console.log('Audio playback waiting for interaction.');
+                console.log('Audio playback error:', e);
             }
         }
 
@@ -77,7 +62,6 @@
                 const res = await fetch('/api/orders');
                 const orders = await res.json();
                 
-                // Strict filter to only show Front Office requests
                 const deptOrders = orders.filter(o => 
                     o.department && o.department.toLowerCase().includes('front office') && 
                     o.status === 'Pending'
