@@ -77,8 +77,9 @@
                 const res = await fetch('/api/orders');
                 const orders = await res.json();
                 
+                // Strict filter to only show Front Office requests
                 const deptOrders = orders.filter(o => 
-                    o.department && (o.department.toLowerCase().includes('front') || o.department.toLowerCase().includes('housekeeping')) && 
+                    o.department && o.department.toLowerCase().includes('front office') && 
                     o.status === 'Pending'
                 );
 
