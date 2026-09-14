@@ -5,182 +5,182 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>HostlyDesk - Manager Admin Dashboard</title>
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 20px; background: #0f172a; color: #fff; }
-        .container { max-width: 900px; margin: 0 auto; background: #1e293b; border-radius: 16px; padding: 25px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
-        h1 { font-size: 24px; margin-bottom: 5px; color: #f8fafc; }
-        .subtitle { font-size: 13px; color: #94a3b8; margin-bottom: 20px; }
-        .section { background: #334155; border-radius: 12px; padding: 20px; margin-bottom: 20px; }
-        h2 { font-size: 16px; margin-top: 0; color: #38bdf8; }
-        input, select, textarea { width: 100%; padding: 10px; margin-bottom: 10px; border: 1px solid #475569; border-radius: 8px; background: #0f172a; color: #fff; box-sizing: border-box; }
-        button { background: #2563eb; color: #fff; border: none; padding: 10px 15px; border-radius: 8px; font-weight: bold; cursor: pointer; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 20px; background: #0f172a; color: #f8fafc; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .card { background: #1e293b; padding: 20px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        h2 { margin-top: 0; color: #38bdf8; font-size: 20px; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-size: 14px; color: #94a3b8; }
+        input, select, textarea { width: 100%; padding: 10px; border: 1px solid #475569; background: #0f172a; color: #fff; border-radius: 6px; box-sizing: border-box; }
+        button { background: #2563eb; color: white; border: none; padding: 10px 20px; border-radius: 6px; font-weight: bold; cursor: pointer; }
         button:hover { background: #1d4ed8; }
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 14px; }
-        th, td { padding: 10px; text-align: left; border-bottom: 1px solid #475569; }
-        th { color: #38bdf8; }
-        .row { display: flex; gap: 10px; }
+        .btn-green { background: #16a34a; }
+        .btn-green:hover { background: #15803d; }
+        table { width: 100%; margin-top: 10px; border-collapse: collapse; font-size: 14px; }
+        th, td { padding: 8px; text-align: left; border-bottom: 1px solid #334155; }
+        th { color: #94a3b8; }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>HostlyDesk Manager Dashboard</h1>
-        <div class="subtitle">Upload operational files from your computer and publish searchable room dining items.</div>
+        <h1>Hotel Admin Dashboard</h1>
+        <p style="color: #94a3b8; margin-bottom: 25px;">Manage your hotel menu documents, items, and custom operational departments.</p>
 
-        <!-- Real File Upload Section -->
-        <div class="section">
+        <!-- 1. Upload PDF / CSV Menu -->
+        <div class="card">
             <h2>Upload Master Document / PDF / CSV</h2>
-            <input type="text" id="docTitle" placeholder="Document Title (e.g., Room Service Menu)">
-            <input type="file" id="menuFileInput" accept=".pdf,.csv,.txt,.doc,.docx" style="padding: 8px; background: #0f172a;">
-            <button onclick="uploadDocumentFile()">Upload File to Server</button>
-            <div id="docAlert" style="margin-top: 10px; font-size: 13px;"></div>
+            <form id="uploadForm" onsubmit="uploadDocument(event)">
+                <div class="form-group">
+                    <label>Document Title (e.g., Room Service Menu)</label>
+                    <input type="text" id="docTitle" required placeholder="Room Service Menu">
+                </div>
+                <div class="form-group">
+                    <label>Select PDF or CSV File</label>
+                    <input type="file" id="menuFile" accept=".pdf,.csv" required>
+                </div>
+                <button type="submit">Upload File to Server</button>
+            </form>
         </div>
 
-        <!-- Structured Menu Items Section with Categories -->
-        <div class="section">
-            <h2>Publish Digital Searchable Menu Items for Guests</h2>
-            <input type="text" id="menuTitleInput" value="Room Dining Menu" placeholder="Menu Title">
-            
-            <div class="row">
-                <input type="text" id="itemName" placeholder="Item Name (e.g., Chicken Tikka)">
-                <select id="itemCategory">
-                    <option value="Starters">Starters</option>
-                    <option value="Main Course" selected>Main Course</option>
-                    <option value="Beverages">Beverages</option>
-                    <option value="Desserts">Desserts</option>
-                    <option value="Breads">Breads</option>
-                </select>
-                <input type="number" id="itemPrice" placeholder="Price (₹)" style="width: 120px;">
-            </div>
-            <input type="text" id="itemDesc" placeholder="Description (e.g., Tandoori spiced roasted chicken)">
-            <button onclick="addMenuItemToList()">+ Add Item to Publish Queue</button>
+        <!-- 2. Manage Dynamic Departments & Services -->
+        <div class="card">
+            <h2>Manage Custom Departments & Services</h2>
+            <form id="deptForm" onsubmit="createDepartment(event)">
+                <div class="form-group">
+                    <label>New Department Name (e.g., Spa & Wellness, Valet, Laundry)</label>
+                    <input type="text" id="deptName" required placeholder="Spa & Wellness">
+                </div>
+                <button type="submit" class="btn-green">+ Create Department</button>
+            </form>
 
-            <table id="menuTable">
+            <hr style="border: 0; border-top: 1px solid #334155; margin: 20px 0;">
+
+            <form id="serviceForm" onsubmit="addService(event)">
+                <div class="form-group">
+                    <label>Select Department</label>
+                    <select id="serviceDeptId" required>
+                        <option value="">-- Choose Department --</option>
+                    </select>
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <div class="form-group" style="flex: 2;">
+                        <label>Service Name (e.g., Body Massage, Head Wash)</label>
+                        <input type="text" id="serviceName" required placeholder="Body Massage">
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                        <label>Price (₹)</label>
+                        <input type="number" id="servicePrice" required placeholder="1200">
+                    </div>
+                </div>
+                <button type="submit">+ Add Service to Department</button>
+            </form>
+
+            <h3 style="font-size: 16px; margin-top: 20px; color: #38bdf8;">Existing Department Services</h3>
+            <table>
                 <thead>
                     <tr>
-                        <th>Name</th>
-                        <th>Category</th>
+                        <th>Department</th>
+                        <th>Service Name</th>
                         <th>Price</th>
-                        <th>Description</th>
                     </tr>
                 </thead>
-                <tbody id="menuTableBody">
-                    <tr><td colspan="4" style="text-align:center; color:#94a3b8;">No items added yet.</td></tr>
+                <tbody id="servicesTableBody">
+                    <tr><td colspan="3" style="color: #64748b; text-align: center;">Loading services...</td></tr>
                 </tbody>
             </table>
-            <br>
-            <button onclick="publishMenuCatalog()" style="background: #16a34a;">Publish Menu to Guest Portal</button>
-            <div id="publishAlert" style="margin-top: 10px; font-size: 13px;"></div>
         </div>
-        
-        <a href="/" style="color: #60a5fa; text-decoration: none; font-weight: bold;">← Back to Home Portal</a>
     </div>
 
     <script>
-        let itemsQueue = [];
-
-        async function uploadDocumentFile() {
+        async function uploadDocument(e) {
+            e.preventDefault();
             const title = document.getElementById('docTitle').value;
-            const fileInput = document.getElementById('menuFileInput');
-            const alertBox = document.getElementById('docAlert');
-
-            if (!title || fileInput.files.length === 0) {
-                alertBox.textContent = 'Please enter a title and select a file from your computer.';
-                alertBox.style.color = '#f87171';
-                return;
-            }
+            const fileInput = document.getElementById('menuFile').files[0];
 
             const formData = new FormData();
             formData.append('title', title);
-            formData.append('menuFile', fileInput.files[0]);
+            formData.append('menuFile', fileInput);
 
+            const res = await fetch('/api/upload-document', { method: 'POST', body: formData });
+            const data = await res.json();
+            if (data.success) {
+                alert(data.message);
+                document.getElementById('uploadForm').reset();
+            } else {
+                alert('Upload failed: ' + data.error);
+            }
+        }
+
+        async function loadDepartmentsAndServices() {
             try {
-                const res = await fetch('/api/upload-document', {
-                    method: 'POST',
-                    body: formData
+                const deptRes = await fetch('/api/departments');
+                const departments = await deptRes.json();
+                const select = document.getElementById('serviceDeptId');
+                select.innerHTML = '<option value="">-- Choose Department --</option>';
+                departments.forEach(d => {
+                    select.innerHTML += `<option value="${d.id}">${d.name}</option>`;
                 });
-                if (res.ok) {
-                    alertBox.textContent = 'File uploaded successfully!';
-                    alertBox.style.color = '#4ade80';
-                    document.getElementById('docTitle').value = '';
-                    fileInput.value = '';
-                } else {
-                    alertBox.textContent = 'Upload failed.';
-                    alertBox.style.color = '#f87171';
+
+                const servRes = await fetch('/api/department-services');
+                const services = await servRes.json();
+                const tbody = document.getElementById('servicesTableBody');
+                if (services.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="3" style="color: #64748b; text-align: center;">No custom services added yet.</td></tr>';
+                    return;
                 }
-            } catch (e) {
-                alertBox.textContent = 'Server error during upload.';
-                alertBox.style.color = '#f87171';
+
+                tbody.innerHTML = services.map(s => `
+                    <tr>
+                        <td><strong>${s.department_name}</strong></td>
+                        <td>${s.name}</td>
+                        <td>₹${s.price}</td>
+                    </tr>
+                `).join('');
+            } catch (err) {
+                console.error('Failed to load department data');
             }
         }
 
-        function addMenuItemToList() {
-            const name = document.getElementById('itemName').value;
-            const category = document.getElementById('itemCategory').value;
-            const price = parseFloat(document.getElementById('itemPrice').value) || 0;
-            const description = document.getElementById('itemDesc').value;
-            const publishAlert = document.getElementById('publishAlert');
-
-            if (!name) {
-                publishAlert.textContent = 'Item name is required.';
-                publishAlert.style.color = '#f87171';
-                return;
-            }
-
-            itemsQueue.push({ name, category, price, description, icon: '🍽️' });
-            renderQueue();
-
-            document.getElementById('itemName').value = '';
-            document.getElementById('itemPrice').value = '';
-            document.getElementById('itemDesc').value = '';
-        }
-
-        function renderQueue() {
-            const tbody = document.getElementById('menuTableBody');
-            if (itemsQueue.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#94a3b8;">No items added yet.</td></tr>';
-                return;
-            }
-
-            let html = '';
-            itemsQueue.forEach((item) => {
-                html += `<tr>
-                    <td>${item.name}</td>
-                    <td><span style="background:#0f172a; padding:3px 8px; border-radius:6px; font-size:12px; color:#38bdf8;">${item.category}</span></td>
-                    <td>₹${item.price}</td>
-                    <td>${item.description}</td>
-                </tr>`;
+        async function createDepartment(e) {
+            e.preventDefault();
+            const name = document.getElementById('deptName').value;
+            const res = await fetch('/api/departments', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name })
             });
-            tbody.innerHTML = html;
-        }
-
-        async function publishMenuCatalog() {
-            const menuTitle = document.getElementById('menuTitleInput').value;
-            const publishAlert = document.getElementById('publishAlert');
-
-            if (itemsQueue.length === 0) {
-                publishAlert.textContent = 'Add at least one item before publishing.';
-                publishAlert.style.color = '#f87171';
-                return;
-            }
-
-            try {
-                const res = await fetch('/api/upload-menu-items', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ menuTitle, items: itemsQueue })
-                });
-
-                if (res.ok) {
-                    publishAlert.textContent = 'Menu successfully published to guest portal!';
-                    publishAlert.style.color = '#4ade80';
-                } else {
-                    publishAlert.textContent = 'Publish failed.';
-                    publishAlert.style.color = '#f87171';
-                }
-            } catch (e) {
-                publishAlert.textContent = 'Server connection error.';
-                publishAlert.style.color = '#f87171';
+            const data = await res.json();
+            if (data.success) {
+                alert('Department created successfully!');
+                document.getElementById('deptName').value = '';
+                loadDepartmentsAndServices();
+            } else {
+                alert('Error: ' + data.error);
             }
         }
+
+        async function addService(e) {
+            e.preventDefault();
+            const department_id = document.getElementById('serviceDeptId').value;
+            const name = document.getElementById('serviceName').value;
+            const price = document.getElementById('servicePrice').value;
+
+            const res = await fetch('/api/department-services', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ department_id, name, price })
+            });
+            const data = await res.json();
+            if (data.success) {
+                alert('Service added successfully!');
+                document.getElementById('serviceForm').reset();
+                loadDepartmentsAndServices();
+            } else {
+                alert('Error: ' + data.error);
+            }
+        }
+
+        loadDepartmentsAndServices();
     </script>
 </body>
 </html>
