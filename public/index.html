@@ -49,13 +49,13 @@
 
     <div class="content-body">
         <div class="section-title">Need something?</div>
-        <div class="section-desc">Select a category, type keywords (e.g., soup, chicken tikka), or tap standard services below.</div>
+        <div class="section-desc">Type keywords (e.g., soup, chicken tikka) or select a tab to search through uploaded menu items.</div>
 
         <!-- Department / Category Tabs -->
         <div class="dept-tabs" id="deptTabs"></div>
 
-        <!-- Keyword search filter for large menus -->
-        <input type="text" id="keywordSearch" class="search-box" placeholder="🔍 Type 1-2 keywords to search menu items..." oninput="renderServices()">
+        <!-- Keyword search filter -->
+        <input type="text" id="keywordSearch" class="search-box" placeholder="🔍 Type keywords to search all menu items..." oninput="renderServices()">
 
         <!-- Dynamic Services Grid pulled from Manager's database -->
         <div class="services-grid" id="servicesGrid">
@@ -117,11 +117,20 @@
 
             let filteredServices = services.filter(s => s.department_id === activeDepartmentId);
 
-            // Real-time keyword filter across items uploaded by the manager
+            // Flexible search across active tab
             if (searchTerm) {
                 const keywords = searchTerm.split(' ');
                 filteredServices = filteredServices.filter(s => {
                     const name = s.name.toLowerCase();
+                    return keywords.every(kw => name.includes(kw));
+                });
+            }
+
+            // Fallback: if nothing matches in current tab, search across ALL parsed menu items automatically
+            if (filteredServices.length === 0 && searchTerm) {
+                filteredServices = services.filter(s => {
+                    const name = s.name.toLowerCase();
+                    const keywords = searchTerm.split(' ');
                     return keywords.every(kw => name.includes(kw));
                 });
             }
