@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HostlyDesk - Front Office Live Dashboard</title>
+    <title>HostlyDesk - Housekeeping Live Dashboard</title>
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 20px; background: #0f172a; color: #f8fafc; }
         .container { max-width: 900px; margin: 0 auto; }
@@ -16,74 +16,37 @@
         .order-info p { margin: 4px 0; color: #94a3b8; font-size: 14px; }
         .btn-complete { background: #16a34a; color: white; border: none; padding: 8px 16px; border-radius: 6px; font-weight: bold; cursor: pointer; }
         .btn-complete:hover { background: #15803d; }
-        .audio-unlock { background: #eab308; color: #000; padding: 10px 15px; border-radius: 6px; margin-bottom: 20px; font-weight: bold; cursor: pointer; text-align: center; }
     </style>
 </head>
 <body>
     <div class="container">
-        <div id="audioUnlockBanner" class="audio-unlock" onclick="unlockAudio()">
-            🔊 Click anywhere here to enable reliable sound alerts for new requests!
-        </div>
-
         <div class="header">
-            <h1>Front Office Live Dashboard</h1>
+            <h1>Housekeeping Live Dashboard</h1>
             <div class="badge" id="orderCount">Active Requests: 0</div>
         </div>
 
         <div id="ordersContainer" class="orders-grid">
-            <div style="color: #64748b; text-align: center; padding: 40px;">Listening for incoming guest requests...</div>
+            <div style="color: #64748b; text-align: center; padding: 40px;">Listening for incoming housekeeping requests...</div>
         </div>
     </div>
 
     <script>
-        let audioUnlocked = false;
-
-        function unlockAudio() {
-            audioUnlocked = true;
-            const banner = document.getElementById('audioUnlockBanner');
-            if (banner) banner.style.display = 'none';
-        }
-
-        function playBeep() {
-            if (!audioUnlocked) return;
-            try {
-                const beepAudio = new Audio('data:audio/wav;base64,UklGRl9vT19XQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YU'+Array(100).join('A'));
-                beepAudio.volume = 0.5;
-                beepAudio.play().catch(e => console.log('Audio waiting for interaction'));
-            } catch (e) {
-                console.log('Audio playback error:', e);
-            }
-        }
-
-        let previousOrderIDs = new Set();
-
         async function fetchOrders() {
             try {
                 const res = await fetch('/api/orders');
                 const orders = await res.json();
                 
+                // Strict filter for Housekeeping only
                 const deptOrders = orders.filter(o => 
-                    o.department && o.department.toLowerCase().includes('front office') && 
+                    o.department && o.department.toLowerCase().includes('housekeeping') && 
                     o.status === 'Pending'
                 );
 
-                const currentIDs = new Set(deptOrders.map(o => o.id));
-                let hasNewOrder = false;
-                for (let id of currentIDs) {
-                    if (!previousOrderIDs.has(id) && previousOrderIDs.size > 0) {
-                        hasNewOrder = true;
-                    }
-                }
-
-                if (hasNewOrder) {
-                    playBeep();
-                }
-                previousOrderIDs = currentIDs;
                 document.getElementById('orderCount').innerText = `Active Requests: ${deptOrders.length}`;
 
                 const container = document.getElementById('ordersContainer');
                 if (deptOrders.length === 0) {
-                    container.innerHTML = '<div style="color: #64748b; text-align: center; padding: 40px; background: #1e293b; border-radius: 10px;">No pending front office requests.</div>';
+                    container.innerHTML = '<div style="color: #64748b; text-align: center; padding: 40px; background: #1e293b; border-radius: 10px;">No pending housekeeping requests.</div>';
                     return;
                 }
 
