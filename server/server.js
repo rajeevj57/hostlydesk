@@ -15,10 +15,11 @@ app.use(express.static(path.join(__dirname, '../public')));
 // Multer setup for handling file uploads temporarily
 const upload = multer({ dest: 'uploads/' });
 
-// Database Setup (Supabase / PostgreSQL)
+// Database Setup (Supabase / PostgreSQL) - Forced IPv4 (family: 4) to bypass Render IPv6 network restriction
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
-    ssl: { rejectUnauthorized: false }
+    ssl: { rejectUnauthorized: false },
+    family: 4
 });
 
 pool.connect((err, client, release) => {
