@@ -90,7 +90,6 @@ async function parsePDFMenu(filePath, menuTitle) {
   const dataBuffer = fs.readFileSync(filePath);
   const pdfData = await pdfParse(dataBuffer);
   
-  // Forbidden noise words that should never be registered as dish names
   const ignoredWords = new Set(['with', 'and', 'or', 'the', 'a', 'an', "'", '"', '–', '-', 's']);
 
   const lines = pdfData.text
@@ -98,7 +97,7 @@ async function parsePDFMenu(filePath, menuTitle) {
     .map(l => l.trim())
     .filter(l => {
       const lower = l.toLowerCase();
-      return l.length > 2 && !ignoredWords.has(lower);
+      return l.length > 2 && !ignoredWords.has(lower) && !lower.startsWith('with ');
     });
 
   const items = [];
@@ -142,11 +141,11 @@ async function parsePDFMenu(filePath, menuTitle) {
         .replace(/\s+/g, ' ')
         .trim();
 
-      // Auto-correct font mapping glitches (e.g., Dice tea -> Ice tea)
       if (name.startsWith('Dce ')) name = 'Ice ' + name.slice(4);
       if (name.startsWith('Dice ')) name = 'Ice ' + name.slice(5);
 
-      if (name.length > 2 && price > 0 && !ignoredWords.has(name.toLowerCase())) {
+      const lowerName = name.toLowerCase();
+      if (name.length > 2 && price > 0 && !ignoredWords.has(lowerName) && !lowerName.startsWith('with ')) {
         items.push({
           menuTitle: menuTitle,
           name: name,
