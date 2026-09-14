@@ -79,7 +79,6 @@ db.serialize(() => {
     }
   });
 
-  // Auto-seed default hotel departments if they don't exist yet
   const defaultDepts = [
     { name: 'Kitchen / F&B', slug: 'kitchen-f-b' },
     { name: 'Housekeeping', slug: 'housekeeping' },
@@ -92,7 +91,6 @@ db.serialize(() => {
   });
 });
 
-// Helper to parse CSV content
 function parseCSVContent(fileContent, menuTitle) {
   const lines = fileContent.split(/\r?\n/).filter(l => l.trim() !== '');
   const items = [];
@@ -112,7 +110,6 @@ function parseCSVContent(fileContent, menuTitle) {
   return items;
 }
 
-// Helper to intelligently clean and parse text from designer PDF menus
 async function parsePDFMenu(filePath, menuTitle) {
   const dataBuffer = fs.readFileSync(filePath);
   const pdfData = await pdfParse(dataBuffer);
@@ -188,7 +185,6 @@ async function parsePDFMenu(filePath, menuTitle) {
   return items;
 }
 
-// Admin Document Upload with Auto-Parsing for PDF and CSV
 app.post('/api/upload-document', upload.single('menuFile'), async (req, res) => {
   const title = req.body.title;
   const file = req.file;
@@ -257,7 +253,6 @@ app.get('/api/factsheet', (req, res) => {
   });
 });
 
-// Dynamic Departments APIs
 app.post('/api/departments', (req, res) => {
   const { name } = req.body;
   if (!name) return res.status(400).json({ error: 'Department name is required' });
@@ -276,7 +271,6 @@ app.get('/api/departments', (req, res) => {
   });
 });
 
-// Dynamic Department Services APIs
 app.post('/api/department-services', (req, res) => {
   const { department_id, name, price, description } = req.body;
   if (!department_id || !name) return res.status(400).json({ error: 'Department ID and service name are required' });
@@ -318,7 +312,6 @@ app.get('/api/food-items', (req, res) => {
   });
 });
 
-// Orders APIs
 app.post('/api/orders', (req, res) => {
   const { room, department, items } = req.body;
   if (!room || !department || !items) return res.status(400).json({ error: 'Missing fields' });
@@ -345,6 +338,11 @@ app.post('/api/orders/:id/status', (req, res) => {
 
 app.get('/food-menu', (req, res) => {
   res.sendFile(path.join(__dirname, '../public/guest-menu.html'));
+});
+
+// Explicit route for Front Office Dashboard
+app.get('/frontoffice.html', (req, res) => {
+  res.sendFile(path.join(__dirname, '../public/frontoffice.html'));
 });
 
 app.get('*', (req, res) => {
