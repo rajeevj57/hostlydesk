@@ -1,354 +1,203 @@
 const express = require('express');
-const sqlite3 = require('sqlite3').verbose();
-const path = require('path');
-const cors = require('cors');
+const { Pool } = require('pg');
 const multer = require('multer');
-const fs = require('fs');
 const pdfParse = require('pdf-parse');
+const fs = require('fs');
+const path = require('path');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(cors());
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ extended: true, limit: '50mb' }));
-app.use(express.static(path.join(__dirname, '../public')));
-app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+// Middleware
+app.use(express.json());
+app.use(express.static(__dirname));
 
-const uploadDir = path.join(__dirname, '../uploads');
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
-}
+// Multer setup for handling file uploads temporarily
+const upload = multer({ dest: 'uploads/' });
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, uploadDir),
-  filename: (req, file, cb) => cb(null, Date.now() + '-' + file.originalname)
-});
-const upload = multer({ storage });
-
-const dbPath = path.join(__dirname, 'database.sqlite');
-const db = new sqlite3.Database(dbPath, (err) => {
-  if (err) console.error('Database connection error:', err.message);
-  else console.log('Connected to SQLite database.');
+// Database Setup (Supabase / PostgreSQL)
+const pool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: { rejectUnauthorized: false }
 });
 
-db.serialize(() => {
-  db.run(`CREATE TABLE IF NOT EXISTS orders (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    room TEXT,
-    department TEXT,
-    items TEXT,
-    status TEXT DEFAULT 'Pending',
-    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
-  )`);
-
-  db.run(`CREATE TABLE IF NOT EXISTS menu_items (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    menu_title TEXT,
-    name TEXT,
-    category TEXT,
-    price REAL,
-    description TEXT,
-    icon TEXT
-  )`);
-
-  db.run(`CREATE TABLE IF NOT EXISTS departments (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT UNIQUE,
-    slug TEXT
-  )`);
-
-  db.run(`CREATE TABLE IF NOT EXISTS department_services (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    department_id INTEGER,
-    name TEXT,
-    price REAL,
-    description TEXT,
-    FOREIGN KEY(department_id) REFERENCES departments(id)
-  )`);
-
-  db.run(`CREATE TABLE IF NOT EXISTS factsheet (
-    id INTEGER PRIMARY KEY CHECK (id = 1),
-    documents TEXT
-  )`);
-
-  db.get(`SELECT id FROM factsheet WHERE id = 1`, (err, row) => {
-    if (!row) {
-      const initialDocs = JSON.stringify({ menus: [] });
-      db.run(`INSERT INTO factsheet (id, documents) VALUES (1, ?)`, [initialDocs]);
+pool.connect((err, client, release) => {
+    if (err) {
+        console.error('Error connecting to Supabase database', err.stack);
+    } else {
+        console.log('Connected to Supabase PostgreSQL database.');
+        release();
+        initializeTables();
     }
-  });
-
-  const defaultDepts = [
-    { name: 'Kitchen / F&B', slug: 'kitchen-f-b' },
-    { name: 'Housekeeping', slug: 'housekeeping' },
-    { name: 'Front Office', slug: 'front-office' },
-    { name: 'Maintenance', slug: 'maintenance' }
-  ];
-
-  defaultDepts.forEach(d => {
-    db.run(`INSERT OR IGNORE INTO departments (name, slug) VALUES (?, ?)`, [d.name, d.slug]);
-  });
 });
 
-function parseCSVContent(fileContent, menuTitle) {
-  const lines = fileContent.split(/\r?\n/).filter(l => l.trim() !== '');
-  const items = [];
-  for (let i = 1; i < lines.length; i++) {
-    const cols = lines[i].split(',').map(c => c.trim().replace(/^["'](.*)["']$/, '$1'));
-    if (cols.length >= 2) {
-      items.push({
-        menuTitle: menuTitle,
-        name: cols[0],
-        category: cols[1] || 'Main Course',
-        price: parseFloat(cols[2]) || 0,
-        description: cols[3] || '',
-        icon: '🍽️'
-      });
+// Initialize required database tables if they don't exist
+async function initializeTables() {
+    try {
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS requests (
+                id SERIAL PRIMARY KEY,
+                hotel_id TEXT,
+                room TEXT,
+                guest_name TEXT,
+                service_type TEXT,
+                department TEXT,
+                details TEXT,
+                status TEXT DEFAULT 'Pending',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS departments (
+                id SERIAL PRIMARY KEY,
+                name TEXT UNIQUE NOT NULL
+            )
+        `);
+
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS department_services (
+                id SERIAL PRIMARY KEY,
+                department_id INTEGER REFERENCES departments(id) ON DELETE CASCADE,
+                name TEXT NOT NULL,
+                price NUMERIC DEFAULT 0
+            )
+        `);
+        console.log('Database tables verified/created successfully.');
+    } catch (err) {
+        console.error('Error initializing tables:', err);
     }
-  }
-  return items;
 }
 
-async function parsePDFMenu(filePath, menuTitle) {
-  const dataBuffer = fs.readFileSync(filePath);
-  const pdfData = await pdfParse(dataBuffer);
-  
-  const ignoredWords = new Set(['with', 'and', 'or', 'the', 'a', 'an', "'", '"', '–', '-', 's']);
-
-  const lines = pdfData.text
-    .split(/\r?\n/)
-    .map(l => l.trim())
-    .filter(l => {
-      const lower = l.toLowerCase();
-      return l.length > 2 && !ignoredWords.has(lower) && !lower.startsWith('with ');
-    });
-
-  const items = [];
-  let currentCategory = 'Main Course';
-
-  const categoryKeywords = {
-    'starter': 'Starters',
-    'appetiser': 'Starters',
-    'appetizer': 'Starters',
-    'soup': 'Starters',
-    'salad': 'Starters',
-    'main': 'Main Course',
-    'curry': 'Main Course',
-    'rice': 'Main Course',
-    'biryani': 'Main Course',
-    'bread': 'Breads',
-    'dessert': 'Desserts',
-    'sweet': 'Desserts',
-    'beverage': 'Beverages',
-    'drink': 'Beverages',
-    'bar': 'Beverages'
-  };
-
-  for (let line of lines) {
-    const lowerLine = line.toLowerCase();
-
-    let foundCatKey = Object.keys(categoryKeywords).find(k => lowerLine.includes(k) && line.length < 35);
-    if (foundCatKey && (lowerLine.includes('menu') || lowerLine.length < 20)) {
-      currentCategory = categoryKeywords[foundCatKey];
-      continue;
-    }
-
-    const priceMatch = line.match(/(\d{2,4})(\.\d{2})?$/);
-    if (priceMatch) {
-      const price = parseFloat(priceMatch[0]);
-      
-      let name = line
-        .replace(priceMatch[0], '')
-        .replace(/[\.\-\–\_]{2,}/g, ' ')
-        .replace(/^['"\s]+|['"\s]+$/g, '')
-        .replace(/['"‘’`]+$/, '')
-        .replace(/\s+/g, ' ')
-        .trim();
-
-      if (name.startsWith('Dce ')) name = 'Ice ' + name.slice(4);
-      if (name.startsWith('Dice ')) name = 'Ice ' + name.slice(5);
-
-      const lowerName = name.toLowerCase();
-      if (name.length > 2 && price > 0 && !ignoredWords.has(lowerName) && !lowerName.startsWith('with ')) {
-        items.push({
-          menuTitle: menuTitle,
-          name: name,
-          category: currentCategory,
-          price: price,
-          description: '',
-          icon: '🍽️'
-        });
-      }
-    }
-  }
-  return items;
-}
-
+// API: Upload and Parse Master Document (PDF / CSV)
 app.post('/api/upload-document', upload.single('menuFile'), async (req, res) => {
-  const title = req.body.title;
-  const file = req.file;
-
-  if (!title || !file) {
-    return res.status(400).json({ error: 'Title and file are required' });
-  }
-
-  const fileExtension = path.extname(file.originalname).toLowerCase();
-
-  db.get(`SELECT documents FROM factsheet WHERE id = 1`, async (err, row) => {
-    if (err) return res.status(500).json({ error: 'Database error' });
-
     try {
-      let docs = JSON.parse(row ? row.documents : '{"menus":[]}');
-      if (!docs.menus) docs.menus = [];
-
-      docs.menus.push({
-        title,
-        filename: file.originalname,
-        path: `/uploads/${file.filename}`,
-        uploadedAt: new Date().toISOString()
-      });
-
-      db.run(`UPDATE factsheet SET documents = ? WHERE id = 1`, [JSON.stringify(docs)], async (updateErr) => {
-        if (updateErr) return res.status(500).json({ error: 'Failed to update factsheet' });
-
-        let parsedItems = [];
-
-        if (fileExtension === '.csv') {
-          const data = fs.readFileSync(file.path, 'utf8');
-          parsedItems = parseCSVContent(data, title);
-        } else if (fileExtension === '.pdf') {
-          try {
-            parsedItems = await parsePDFMenu(file.path, title);
-          } catch (pdfErr) {
-            console.error('PDF parsing error:', pdfErr);
-          }
+        if (!req.file) {
+            return res.status(400).json({ success: false, error: 'No file uploaded.' });
         }
 
-        if (parsedItems.length > 0) {
-          const stmt = db.prepare(`INSERT INTO menu_items (menu_title, name, category, price, description, icon) VALUES (?, ?, ?, ?, ?, ?)`);
-          parsedItems.forEach(item => {
-            stmt.run(item.menuTitle, item.name, item.category, item.price, item.description, item.icon);
-          });
-          stmt.finalize();
+        let extractedText = '';
+        const filePath = req.file.path;
+
+        if (req.file.mimetype === 'application/pdf' || req.file.originalname.endsWith('.pdf')) {
+            const dataBuffer = fs.readFileSync(filePath);
+            const pdfData = await pdfParse(dataBuffer);
+            extractedText = pdfData.text;
+        } else {
+            extractedText = fs.readFileSync(filePath, 'utf8');
         }
 
-        res.json({ success: true, message: `File uploaded and ${parsedItems.length} items parsed successfully!` });
-      });
-    } catch (e) {
-      res.status(500).json({ error: 'Parsing error' });
+        // Clean up temporary file
+        fs.unlinkSync(filePath);
+
+        // Ensure "Kitchen / F&B" department exists to hold menu items
+        let deptResult = await pool.query("SELECT id FROM departments WHERE name = 'Kitchen / F&B'");
+        let deptId;
+        if (deptResult.rows.length === 0) {
+            const newDept = await pool.query("INSERT INTO departments (name) VALUES ('Kitchen / F&B') RETURNING id");
+            deptId = newDept.rows[0].id;
+        } else {
+            deptId = deptResult.rows[0].id;
+        }
+
+        // Parse lines into menu items
+        const lines = extractedText.split('\n').map(l => l.trim()).filter(l => l.length > 2);
+        let parsedCount = 0;
+
+        for (const line of lines) {
+            // Simple filter to avoid adding headers or long paragraphs as menu items
+            if (line.length < 50 && !line.includes('Page') && !line.includes('http')) {
+                // Check if item already exists under this department to prevent duplicates
+                const existing = await pool.query(
+                    'SELECT id FROM department_services WHERE department_id = $1 AND LOWER(name) = LOWER($2)',
+                    [deptId, line]
+                );
+                if (existing.rows.length === 0) {
+                    await pool.query(
+                        'INSERT INTO department_services (department_id, name, price) VALUES ($1, $2, $3)',
+                        [deptId, line, 0]
+                    );
+                    parsedCount++;
+                }
+            }
+        }
+
+        res.json({ success: true, message: `File uploaded and ${parsedCount} items parsed successfully!` });
+    } catch (err) {
+        console.error('Upload parsing error:', err);
+        res.status(500).json({ success: false, error: 'Failed to parse document.' });
     }
-  });
 });
 
-app.get('/api/factsheet', (req, res) => {
-  db.get(`SELECT documents FROM factsheet WHERE id = 1`, (err, row) => {
-    if (err) return res.status(500).json({ error: 'Database error' });
+// API: Get Departments
+app.get('/api/departments', async (req, res) => {
     try {
-      const documents = JSON.parse(row ? row.documents : '{"menus":[]}');
-      res.json({ documents });
-    } catch (e) {
-      res.json({ documents: { menus: [] } });
+        const result = await pool.query('SELECT * FROM departments ORDER BY id ASC');
+        res.json(result.rows);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Database error' });
     }
-  });
 });
 
-app.post('/api/departments', (req, res) => {
-  const { name } = req.body;
-  if (!name) return res.status(400).json({ error: 'Department name is required' });
-  const slug = name.toLowerCase().replace(/[^a-z0-9]/g, '-');
-
-  db.run(`INSERT OR IGNORE INTO departments (name, slug) VALUES (?, ?)`, [name, slug], function(err) {
-    if (err) return res.status(500).json({ error: 'Failed to create department' });
-    res.json({ success: true, departmentId: this.lastID, slug });
-  });
+// API: Create Department
+app.post('/api/departments', async (req, res) => {
+    const { name } = req.body;
+    try {
+        const result = await pool.query('INSERT INTO departments (name) VALUES ($1) RETURNING *', [name]);
+        res.json({ success: true, department: result.rows[0] });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ success: false, error: 'Department already exists or database error.' });
+    }
 });
 
-app.get('/api/departments', (req, res) => {
-  db.all(`SELECT * FROM departments`, [], (err, rows) => {
-    if (err) return res.status(500).json({ error: 'Failed to fetch departments' });
-    res.json(rows);
-  });
+// API: Get Department Services with Department Names for Admin Table
+app.get('/api/department-services', async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT ds.id, ds.name, ds.price, d.name AS department_name, ds.department_id 
+            FROM department_services ds
+            JOIN departments d ON ds.department_id = d.id
+            ORDER BY ds.id ASC
+        `);
+        res.json(result.rows);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Database error' });
+    }
 });
 
-app.post('/api/department-services', (req, res) => {
-  const { department_id, name, price, description } = req.body;
-  if (!department_id || !name) return res.status(400).json({ error: 'Department ID and service name are required' });
-
-  db.run(`INSERT INTO department_services (department_id, name, price, description) VALUES (?, ?, ?, ?)`, 
-    [department_id, name, price || 0, description || ''], function(err) {
-    if (err) return res.status(500).json({ error: 'Failed to add service' });
-    res.json({ success: true, serviceId: this.lastID });
-  });
+// API: Add Manual Service
+app.post('/api/department-services', async (req, res) => {
+    const { department_id, name, price } = req.body;
+    try {
+        const result = await pool.query(
+            'INSERT INTO department_services (department_id, name, price) VALUES ($1, $2, $3) RETURNING *',
+            [department_id, name, price || 0]
+        );
+        res.json({ success: true, service: result.rows[0] });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ success: false, error: 'Failed to add service' });
+    }
 });
 
-app.get('/api/department-services', (req, res) => {
-  db.all(`SELECT ds.*, d.name as department_name, d.slug FROM department_services ds JOIN departments d ON ds.department_id = d.id`, [], (err, rows) => {
-    if (err) return res.status(500).json({ error: 'Failed to fetch services' });
-    res.json(rows);
-  });
-});
-
-app.post('/api/upload-menu-items', (req, res) => {
-  const { menuTitle, items } = req.body;
-  if (!menuTitle || !items || !Array.isArray(items)) {
-    return res.status(400).json({ error: 'Invalid menu data' });
-  }
-
-  const stmt = db.prepare(`INSERT INTO menu_items (menu_title, name, category, price, description, icon) VALUES (?, ?, ?, ?, ?, ?)`);
-  items.forEach(item => {
-    stmt.run(menuTitle, item.name, item.category || 'Main Course', item.price || 0, item.description || '', item.icon || '🍽️');
-  });
-  stmt.finalize((finalizeErr) => {
-    if (finalizeErr) return res.status(500).json({ error: 'Failed to save items' });
-    res.json({ success: true, message: 'Menu items published successfully' });
-  });
-});
-
-app.get('/api/food-items', (req, res) => {
-  db.all(`SELECT * FROM menu_items`, [], (err, rows) => {
-    if (err) return res.status(500).json({ error: 'Failed to fetch items' });
-    res.json(rows);
-  });
-});
-
-app.post('/api/orders', (req, res) => {
-  const { room, department, items } = req.body;
-  if (!room || !department || !items) return res.status(400).json({ error: 'Missing fields' });
-
-  db.run(`INSERT INTO orders (room, department, items, status) VALUES (?, ?, ?, 'Pending')`, [room, department, items], function(err) {
-    if (err) return res.status(500).json({ error: 'Failed' });
-    res.json({ success: true, orderId: this.lastID });
-  });
-});
-
-app.get('/api/orders', (req, res) => {
-  db.all(`SELECT * FROM orders ORDER BY timestamp DESC`, [], (err, rows) => {
-    if (err) return res.status(500).json({ error: 'Failed' });
-    res.json(rows);
-  });
-});
-
-app.post('/api/orders/:id/status', (req, res) => {
-  db.run(`UPDATE orders SET status = ? WHERE id = ?`, [req.body.status, req.params.id], function(err) {
-    if (err) return res.status(500).json({ error: 'Failed' });
-    res.json({ success: true });
-  });
-});
-
-app.get('/food-menu', (req, res) => {
-  res.sendFile(path.join(__dirname, '../public/guest-menu.html'));
-});
-
-// Explicit route for Front Office Dashboard
-app.get('/frontoffice.html', (req, res) => {
-  res.sendFile(path.join(__dirname, '../public/frontoffice.html'));
-});
-
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '../public/index.html'));
+// API: Post Orders
+app.post('/api/orders', async (req, res) => {
+    const { room, department, items } = req.body;
+    try {
+        const result = await pool.query(
+            'INSERT INTO requests (room, department, details) VALUES ($1, $2, $3) RETURNING *',
+            [room, department, items]
+        );
+        res.json({ success: true, order: result.rows[0] });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Failed to save order' });
+    }
 });
 
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+    console.log(`Server is running on port ${PORT}`);
 });
