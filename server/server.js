@@ -125,7 +125,6 @@ app.get('/api/data', async (req, res) => {
         const menuResult = await pool.query('SELECT * FROM menus ORDER BY id DESC');
         const deptResult = await pool.query('SELECT * FROM departments ORDER BY id ASC');
         
-        // Default seed departments if empty
         let depts = deptResult.rows;
         if (depts.length === 0) {
             depts = [
@@ -143,14 +142,20 @@ app.get('/api/data', async (req, res) => {
     }
 });
 
-// 4. Guest Places Order
+// 4. Guest Places Order (Automatically Syncs Kitchen & F&B)
 app.post('/api/orders', async (req, res) => {
     try {
-        const { roomNumber, department, items, instructions } = req.body;
+        let { roomNumber, department, items, instructions } = req.body;
+        
+        // Ensure food/menu orders route properly for both Kitchen and F&B panels
+        if (department.toLowerCase().includes('kitchen') || department.toLowerCase().includes('f&b')) {
+            department = 'Kitchen / F&B';
+        }
+
         await pool.query(
             `INSERT INTO orders (room_number, department, items, instructions, status, created_at) 
              VALUES ($1, $2, $3, $4, 'Pending', NOW())`,
-            [roomNumber || '101', department || 'General', items || [], instructions || 'None']
+            [roomNumber || '101', department, items || [], instructions || 'None']
         );
         res.status(200).json({ success: true, message: 'Request sent to staff successfully!' });
     } catch (error) {
@@ -159,7 +164,7 @@ app.post('/api/orders', async (req, res) => {
     }
 });
 
-// 5. Get Orders for Staff Dashboards
+// 5. Get Orders for Staff Dashboards (Handles shared Kitchen/F&B syncing)
 app.get('/api/orders', async (req, res) => {
     try {
         const deptFilter = req.query.dept;
@@ -167,12 +172,16 @@ app.get('/api/orders', async (req, res) => {
         let values = [];
 
         if (deptFilter) {
-            query = 'SELECT * FROM orders WHERE department ILIKE $1 ORDER BY id DESC';
-            values = [`%${deptFilter}%`];
+            if (deptFilter.toLowerCase() === 'kitchen' || deptFilter.toLowerCase() === 'fnb') {
+                query = 'SELECT * FROM orders WHERE department ILIKE $1 OR department ILIKE $2 ORDER BY id DESC';
+                values = ['%kitchen%', '%f&b%'];
+            } else {
+                query = 'SELECT * FROM orders WHERE department ILIKE $1 ORDER BY id DESC';
+                values = [`%${deptFilter}%`];
+            }
         }
 
         const result = await pool.query(query, values);
-        // Map column names to frontend expectations
         const formattedOrders = result.rows.map(o => ({
             id: o.id,
             roomNumber: o.room_number,
@@ -242,7 +251,7 @@ validDepts.forEach(dept => {
                             const card = document.createElement('div');
                             card.className = 'order-card';
                             card.innerHTML = \`
-                                <h3>Room: \<b>\${o.roomNumber}\</b> <span style="font-size:14px; float:right; color:#a0aec0;">\${o.time}</span></h3>
+                                <h3>Room: <b>\${o.roomNumber}</b> <span style="font-size:14px; float:right; color:#a0aec0;">\${o.time}</span></h3>
                                 <p><strong>Items/Services:</strong> \${o.items.join(', ')}</p>
                                 <p><strong>Instructions:</strong> \${o.instructions}</p>
                                 <p><strong>Status:</strong> <span style="color: #4ea8de;">\${o.status}</span></p>
