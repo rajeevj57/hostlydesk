@@ -206,7 +206,6 @@ app.get('/api/orders', async (req, res) => {
 
         if (deptFilter) {
             const lowerFilter = deptFilter.toLowerCase();
-            // If viewing Kitchen or F&B, catch food/beverage/kitchen variations
             if (lowerFilter.includes('kitchen') || lowerFilter.includes('f&b') || lowerFilter.includes('food') || lowerFilter.includes('coffee')) {
                 query = 'SELECT * FROM orders WHERE department ILIKE $1 OR department ILIKE $2 OR department ILIKE $3 OR department ILIKE $4 ORDER BY id DESC';
                 values = ['%kitchen%', '%f&b%', '%food%', '%coffee%'];
@@ -247,13 +246,18 @@ app.post('/api/orders/status', async (req, res) => {
 });
 
 // ==========================================
-// BACKWARD-COMPATIBLE .HTML & SHORTCUT ROUTES
+// BACKWARD-COMPATIBLE .HTML & SHORTCUT ROUTES (WITH PROPER SPACING)
 // ==========================================
-// Prevents any "Cannot GET /spa.html" errors permanently
 app.get('/:dept.html', (req, res) => {
-    let deptName = req.params.dept;
-    if (deptName === 'fnb' || deptName === 'kitchen') deptName = 'Kitchen / F&B';
-    else deptName = deptName.charAt(0).toUpperCase() + deptName.slice(1);
+    let deptKey = req.params.dept.toLowerCase();
+    let deptName = deptKey.charAt(0).toUpperCase() + deptKey.slice(1);
+    
+    if (deptKey === 'fnb' || deptKey === 'kitchen') deptName = 'Kitchen / F&B';
+    else if (deptKey === 'frontoffice') deptName = 'Front Office';
+    else if (deptKey === 'housekeeping') deptName = 'Housekeeping';
+    else if (deptKey === 'maintenance') deptName = 'Maintenance';
+    else if (deptKey === 'spa') deptName = 'Spa';
+
     res.redirect(`/staff?dept=${encodeURIComponent(deptName)}`);
 });
 
@@ -262,10 +266,11 @@ shortcutDepts.forEach(shortcut => {
     app.get(`/${shortcut}`, (req, res) => {
         let realName = shortcut.charAt(0).toUpperCase() + shortcut.slice(1);
         if (shortcut === 'kitchen' || shortcut === 'fnb') realName = 'Kitchen / F&B';
-        if (shortcut === 'housekeeping') realName = 'Housekeeping';
-        if (shortcut === 'frontoffice') realName = 'Front Office';
-        if (shortcut === 'maintenance') realName = 'Maintenance';
-        if (shortcut === 'spa') realName = 'Spa';
+        else if (shortcut === 'housekeeping') realName = 'Housekeeping';
+        else if (shortcut === 'frontoffice') realName = 'Front Office';
+        else if (shortcut === 'maintenance') realName = 'Maintenance';
+        else if (shortcut === 'spa') realName = 'Spa';
+
         res.redirect(`/staff?dept=${encodeURIComponent(realName)}`);
     });
 });
