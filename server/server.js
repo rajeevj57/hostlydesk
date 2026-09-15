@@ -1,4 +1,5 @@
 const express = require('express');
+const { Pool } = require('pg');
 const multer = require('multer');
 const fs = require('fs');
 const path = require('path');
@@ -11,22 +12,59 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, '../public')));
 
-// In-memory data store so everything works immediately without external database errors
-let storedMenus = [];
-let storedDepartments = [
-    { id: 1, name: 'Kitchen / F&B' },
-    { id: 2, name: 'Housekeeping' },
-    { id: 3, name: 'Front Office' },
-    { id: 4, name: 'Maintenance' }
-];
-let liveOrders = [];
+// PostgreSQL Connection Pool using Supabase
+const pool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: { rejectUnauthorized: false }
+});
+
+// Automatically create tables on startup if they don't exist
+pool.query('SELECT NOW()', async (err, res) => {
+    if (err) {
+        console.error('Database connection error:', err.message);
+    } else {
+        console.log('Connected to Supabase successfully.');
+        try {
+            await pool.query(`
+                CREATE TABLE IF NOT EXISTS menus (
+                    id SERIAL PRIMARY KEY,
+                    title TEXT NOT NULL,
+                    content TEXT,
+                    created_at TIMESTAMP DEFAULT NOW()
+                );
+            `);
+            await pool.query(`
+                CREATE TABLE IF NOT EXISTS departments (
+                    id SERIAL PRIMARY KEY,
+                    name TEXT NOT NULL UNIQUE,
+                    services TEXT[],
+                    created_at TIMESTAMP DEFAULT NOW()
+                );
+            `);
+            await pool.query(`
+                CREATE TABLE IF NOT EXISTS orders (
+                    id SERIAL PRIMARY KEY,
+                    room_number TEXT,
+                    department TEXT,
+                    items TEXT[],
+                    instructions TEXT,
+                    status TEXT DEFAULT 'Pending',
+                    created_at TIMESTAMP DEFAULT NOW()
+                );
+            `);
+            console.log('Database tables verified/created successfully.');
+        } catch (tableErr) {
+            console.error('Table creation error:', tableErr.message);
+        }
+    }
+});
 
 const upload = multer({ 
     dest: 'uploads/',
     limits: { fileSize: 10 * 1024 * 1024 } 
 });
 
-// 1. Upload & Parse Menu/Hotel Detail
+// 1. Upload & Parse Menu/Document (Saved Permanently to Database)
 app.post('/api/upload', upload.single('menuFile'), async (req, res) => {
     try {
         if (!req.file) {
@@ -46,76 +84,125 @@ app.post('/api/upload', upload.single('menuFile'), async (req, res) => {
             fileContent = fs.readFileSync(filePath, 'utf8');
         }
 
-        const newMenu = {
-            id: Date.now(),
-            title: documentTitle,
-            content: fileContent,
-            date: new Date().toLocaleTimeString()
-        };
+        await pool.query(
+            'INSERT INTO menus (title, content, created_at) VALUES ($1, $2, NOW())',
+            [documentTitle, fileContent]
+        );
 
-        storedMenus.unshift(newMenu);
         fs.unlinkSync(filePath);
-
-        res.status(200).json({ success: true, message: 'Uploaded and parsed successfully!' });
+        res.status(200).json({ success: true, message: 'Uploaded, parsed, and saved permanently!' });
     } catch (error) {
         console.error('Upload error:', error);
         res.status(500).json({ error: error.message });
     }
 });
 
-// 2. Create Custom Department
-app.post('/api/departments', (req, res) => {
-    const { departmentName } = req.body;
-    if (!departmentName) return res.status(400).json({ error: 'Name required' });
+// 2. Create Department & Services (Saved Permanently to Database)
+app.post('/api/departments', async (req, res) => {
+    try {
+        const { departmentName, services } = req.body;
+        if (!departmentName) return res.status(400).json({ error: 'Department name required' });
 
-    const newDept = { id: Date.now(), name: departmentName };
-    storedDepartments.push(newDept);
-    res.status(200).json({ success: true, message: 'Department created!', department: newDept });
-});
+        const serviceList = services ? services.split(',').map(s => s.trim()).filter(Boolean) : [];
 
-// 3. Get Departments & Menus for Guest View
-app.get('/api/data', (req, res) => {
-    res.json({ success: true, menus: storedMenus, departments: storedDepartments });
-});
+        await pool.query(
+            `INSERT INTO departments (name, services, created_at) 
+             VALUES ($1, $2, NOW()) 
+             ON CONFLICT (name) DO UPDATE SET services = $2`,
+            [departmentName, serviceList]
+        );
 
-// 4. Guest Places Order / Request (e.g., Extra Towel, AC Not Cooling, Food Items)
-app.post('/api/orders', (req, res) => {
-    const { roomNumber, department, items, instructions } = req.body;
-    const newOrder = {
-        id: Date.now(),
-        roomNumber: roomNumber || '101',
-        department: department || 'General',
-        items: items || [],
-        instructions: instructions || '',
-        status: 'Pending', // Pending, In Progress, Complete
-        time: new Date().toLocaleTimeString()
-    };
-    liveOrders.unshift(newOrder);
-    res.status(200).json({ success: true, message: 'Order sent to department successfully!', order: newOrder });
-});
-
-// 5. Get Orders for Staff/Department Dashboards
-app.get('/api/orders', (req, res) => {
-    const deptFilter = req.query.dept;
-    if (deptFilter) {
-        const filtered = liveOrders.filter(o => o.department.toLowerCase().includes(deptFilter.toLowerCase()));
-        return res.json({ success: true, orders: filtered });
+        res.status(200).json({ success: true, message: 'Department saved permanently!' });
+    } catch (error) {
+        console.error('Department error:', error);
+        res.status(500).json({ error: error.message });
     }
-    res.json({ success: true, orders: liveOrders });
 });
 
-// 6. Update Order Status (Pending -> In Progress -> Complete)
-app.post('/api/orders/status', (req, res) => {
-    const { orderId, status } = req.body;
-    const order = liveOrders.find(o => o.id == orderId);
-    if (order) {
-        order.status = status;
-        return res.json({ success: true, message: 'Status updated!' });
+// 3. Get All Menus and Departments for Guest View
+app.get('/api/data', async (req, res) => {
+    try {
+        const menuResult = await pool.query('SELECT * FROM menus ORDER BY id DESC');
+        const deptResult = await pool.query('SELECT * FROM departments ORDER BY id ASC');
+        
+        // Default seed departments if empty
+        let depts = deptResult.rows;
+        if (depts.length === 0) {
+            depts = [
+                { name: 'Kitchen / F&B', services: ['Tea / Coffee', 'Starter: Soup', 'Main Course: Paneer Handi', 'Dessert: Ice Cream'] },
+                { name: 'Housekeeping', services: ['Extra Towel', 'Bed Linen Change', 'Room Cleaning'] },
+                { name: 'Front Office', services: ['Express Checkout', 'Wake-up Call', 'Luggage Assistance'] },
+                { name: 'Maintenance', services: ['AC Not Cooling', 'Plumbing Issue', 'Electrical Repair'] }
+            ];
+        }
+
+        res.json({ success: true, menus: menuResult.rows, departments: depts });
+    } catch (error) {
+        console.error('Data fetch error:', error);
+        res.status(500).json({ error: error.message });
     }
-    res.status(404).json({ error: 'Order not found' });
 });
 
-// Department Dynamic Pages Route (/kitchen, /housekeeping, /frontoffice, /maintenance)
+// 4. Guest Places Order
+app.post('/api/orders', async (req, res) => {
+    try {
+        const { roomNumber, department, items, instructions } = req.body;
+        await pool.query(
+            `INSERT INTO orders (room_number, department, items, instructions, status, created_at) 
+             VALUES ($1, $2, $3, $4, 'Pending', NOW())`,
+            [roomNumber || '101', department || 'General', items || [], instructions || 'None']
+        );
+        res.status(200).json({ success: true, message: 'Request sent to staff successfully!' });
+    } catch (error) {
+        console.error('Order error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// 5. Get Orders for Staff Dashboards
+app.get('/api/orders', async (req, res) => {
+    try {
+        const deptFilter = req.query.dept;
+        let query = 'SELECT * FROM orders ORDER BY id DESC';
+        let values = [];
+
+        if (deptFilter) {
+            query = 'SELECT * FROM orders WHERE department ILIKE $1 ORDER BY id DESC';
+            values = [`%${deptFilter}%`];
+        }
+
+        const result = await pool.query(query, values);
+        // Map column names to frontend expectations
+        const formattedOrders = result.rows.map(o => ({
+            id: o.id,
+            roomNumber: o.room_number,
+            department: o.department,
+            items: o.items,
+            instructions: o.instructions,
+            status: o.status,
+            time: new Date(o.created_at).toLocaleTimeString()
+        }));
+
+        res.json({ success: true, orders: formattedOrders });
+    } catch (error) {
+        console.error('Fetch orders error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// 6. Update Order Status
+app.post('/api/orders/status', async (req, res) => {
+    try {
+        const { orderId, status } = req.body;
+        await pool.query('UPDATE orders SET status = $1 WHERE id = $2', [status, orderId]);
+        res.json({ success: true, message: 'Status updated!' });
+    } catch (error) {
+        console.error('Status update error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Department Dynamic Pages Route
 const validDepts = ['kitchen', 'housekeeping', 'frontoffice', 'maintenance', 'fnb'];
 validDepts.forEach(dept => {
     app.get(`/${dept}`, (req, res) => {
@@ -132,9 +219,6 @@ validDepts.forEach(dept => {
                     .order-card { background: #22223b; padding: 15px; margin-bottom: 15px; border-radius: 6px; border-left: 5px solid #4ea8de; }
                     button { padding: 6px 12px; background: #1d3557; color: #fff; border: none; border-radius: 4px; cursor: pointer; margin-right: 5px; }
                     button:hover { background: #457b9d; }
-                    .status-pending { border-left-color: #e63946; }
-                    .status-progress { border-left-color: #fca311; }
-                    .status-complete { border-left-color: #2a9d8f; }
                     a { color: #4ea8de; display: inline-block; margin-bottom: 20px; text-decoration: none; }
                 </style>
             </head>
@@ -142,7 +226,6 @@ validDepts.forEach(dept => {
                 <div class="container">
                     <a href="/admin.html">← Back to Admin Panel</a>
                     <h1>${dept} Department Staff View</h1>
-                    <p style="text-align:center; color:#a0aec0;">Live requests and orders from guest rooms</p>
                     <div id="deptOrders">Loading live requests...</div>
                 </div>
                 <script>
@@ -156,19 +239,15 @@ validDepts.forEach(dept => {
                         }
                         container.innerHTML = '';
                         data.orders.forEach(o => {
-                            let borderClass = 'status-pending';
-                            if(o.status === 'In Progress') borderClass = 'status-progress';
-                            if(o.status === 'Complete') borderClass = 'status-complete';
-
                             const card = document.createElement('div');
-                            card.className = 'order-card ' + borderClass;
+                            card.className = 'order-card';
                             card.innerHTML = \`
-                                <h3>Room: \${o.roomNumber} <span style="font-size:14px; float:right; color:#a0aec0;">\${o.time}</span></h3>
-                                <p><strong>Items/Requests:</strong> \${o.items.join(', ') || 'General Request'}</p>
-                                <p><strong>Instructions:</strong> \${o.instructions || 'None'}</p>
+                                <h3>Room: \<b>\${o.roomNumber}\</b> <span style="font-size:14px; float:right; color:#a0aec0;">\${o.time}</span></h3>
+                                <p><strong>Items/Services:</strong> \${o.items.join(', ')}</p>
+                                <p><strong>Instructions:</strong> \${o.instructions}</p>
                                 <p><strong>Status:</strong> <span style="color: #4ea8de;">\${o.status}</span></p>
                                 <div style="margin-top:10px;">
-                                    <button onclick="updateStatus(\${o.id}, 'Pending')">Set Pending</button>
+                                    <button onclick="updateStatus(\${o.id}, 'Pending')">Pending</button>
                                     <button onclick="updateStatus(\${o.id}, 'In Progress')">In Progress</button>
                                     <button onclick="updateStatus(\${o.id}, 'Complete')">Complete</button>
                                 </div>
