@@ -197,7 +197,7 @@ app.post('/api/orders', async (req, res) => {
     }
 });
 
-// 5. Get Orders for Staff Dashboards (Bulletproof Matching for F&B, Housekeeping, Front Office, Maintenance, Spa, etc.)
+// 5. Get Orders for Staff Dashboards (Robust Space-Insensitive & Keyword Matching)
 app.get('/api/orders', async (req, res) => {
     try {
         const deptFilter = req.query.dept || '';
@@ -207,19 +207,10 @@ app.get('/api/orders', async (req, res) => {
         let values = [];
 
         if (lowerFilter.includes('kitchen') || lowerFilter.includes('f&b') || lowerFilter.includes('food') || lowerFilter.includes('coffee')) {
-            query = 'SELECT * FROM orders WHERE LOWER(department) LIKE $1 OR LOWER(department) LIKE $2 OR LOWER(department) LIKE $3 OR LOWER(department) LIKE $4 ORDER BY id DESC';
+            query = 'SELECT * FROM orders WHERE LOWER(department) ILIKE $1 OR LOWER(department) ILIKE $2 OR LOWER(department) ILIKE $3 OR LOWER(department) ILIKE $4 ORDER BY id DESC';
             values = ['%kitchen%', '%f&b%', '%food%', '%coffee%'];
-        } else if (lowerFilter.includes('housekeeping')) {
-            query = 'SELECT * FROM orders WHERE LOWER(department) LIKE $1 ORDER BY id DESC';
-            values = ['%housekeeping%'];
-        } else if (lowerFilter.includes('front') || lowerFilter.includes('office')) {
-            query = 'SELECT * FROM orders WHERE LOWER(department) LIKE $1 OR LOWER(department) LIKE $2 ORDER BY id DESC';
-            values = ['%front office%', '%frontoffice%'];
-        } else if (lowerFilter.includes('maintenance')) {
-            query = 'SELECT * FROM orders WHERE LOWER(department) LIKE $1 ORDER BY id DESC';
-            values = ['%maintenance%'];
         } else if (lowerFilter) {
-            query = 'SELECT * FROM orders WHERE LOWER(department) LIKE $1 ORDER BY id DESC';
+            query = 'SELECT * FROM orders WHERE LOWER(department) ILIKE $1 OR REPLACE(LOWER(department), \' \', \'\') ILIKE REPLACE($1, \' \', \'\') ORDER BY id DESC';
             values = [`%${lowerFilter}%`];
         }
 
@@ -254,28 +245,36 @@ app.post('/api/orders/status', async (req, res) => {
 });
 
 // ==========================================
-// BACKWARD-COMPATIBLE .HTML & SHORTCUT ROUTES
+// ACCURATE .HTML & SHORTCUT REDIRECT ROUTES
 // ==========================================
 app.get('/:dept.html', (req, res) => {
-    let deptKey = req.params.dept.toLowerCase();
-    let deptName = deptKey.charAt(0).toUpperCase() + deptKey.slice(1);
+    let deptKey = req.params.dept.toLowerCase().trim();
+    let deptName = 'Staff';
     
-    if (deptKey === 'fnb' || deptKey === 'kitchen') deptName = 'Kitchen / F&B';
-    else if (deptKey === 'frontoffice') deptName = 'Front Office';
-    else if (deptKey === 'housekeeping') deptName = 'Housekeeping';
-    else if (deptKey === 'maintenance') deptName = 'Maintenance';
-    else if (deptKey === 'spa') deptName = 'Spa';
+    if (deptKey === 'fnb' || deptKey === 'kitchen') {
+        deptName = 'Kitchen / F&B';
+    } else if (deptKey === 'front-office' || deptKey === 'frontoffice') {
+        deptName = 'Front Office';
+    } else if (deptKey === 'housekeeping') {
+        deptName = 'Housekeeping';
+    } else if (deptKey === 'maintenance') {
+        deptName = 'Maintenance';
+    } else if (deptKey === 'spa') {
+        deptName = 'Spa';
+    } else {
+        deptName = deptKey.charAt(0).toUpperCase() + deptKey.slice(1);
+    }
 
     res.redirect(`/staff?dept=${encodeURIComponent(deptName)}`);
 });
 
-const shortcutDepts = ['kitchen', 'housekeeping', 'frontoffice', 'maintenance', 'fnb', 'spa', 'laundry', 'valet'];
+const shortcutDepts = ['kitchen', 'housekeeping', 'frontoffice', 'front-office', 'maintenance', 'fnb', 'spa', 'laundry', 'valet'];
 shortcutDepts.forEach(shortcut => {
     app.get(`/${shortcut}`, (req, res) => {
         let realName = shortcut.charAt(0).toUpperCase() + shortcut.slice(1);
         if (shortcut === 'kitchen' || shortcut === 'fnb') realName = 'Kitchen / F&B';
         else if (shortcut === 'housekeeping') realName = 'Housekeeping';
-        else if (shortcut === 'frontoffice') realName = 'Front Office';
+        else if (shortcut === 'frontoffice' || shortcut === 'front-office') realName = 'Front Office';
         else if (shortcut === 'maintenance') realName = 'Maintenance';
         else if (shortcut === 'spa') realName = 'Spa';
 
