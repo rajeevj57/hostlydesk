@@ -125,7 +125,7 @@ app.delete('/api/departments/:id', async (req, res) => {
     }
 });
 
-// 2. Create Department & Services (Dynamic)
+// 2. Create Department & Services
 app.post('/api/departments', async (req, res) => {
     try {
         const { departmentName, services } = req.body;
@@ -154,7 +154,6 @@ app.get('/api/data', async (req, res) => {
         const deptResult = await pool.query('SELECT * FROM departments ORDER BY id ASC');
         
         let depts = deptResult.rows;
-        // Seed default foundational departments if none exist in DB yet
         if (depts.length === 0) {
             const defaults = [
                 { name: 'Kitchen / F&B', services: ['Tea / Coffee', 'Starter: Soup', 'Main Course: Paneer Handi', 'Dessert: Ice Cream'] },
@@ -179,14 +178,14 @@ app.get('/api/data', async (req, res) => {
     }
 });
 
-// 4. Guest Places Order (Dynamic Routing)
+// 4. Guest Places Order (Accurate Department Routing)
 app.post('/api/orders', async (req, res) => {
     try {
         let { roomNumber, department, items, instructions } = req.body;
         
         if (!department) department = 'General';
 
-        // Keep Kitchen & F&B unified if needed
+        // Keep Kitchen and F&B unified
         if (department.toLowerCase().includes('kitchen') || department.toLowerCase().includes('f&b')) {
             department = 'Kitchen / F&B';
         }
@@ -196,7 +195,7 @@ app.post('/api/orders', async (req, res) => {
              VALUES ($1, $2, $3, $4, 'Pending', NOW())`,
             [roomNumber || '101', department, items || [], instructions || 'None']
         );
-        res.status(200).json({ success: true, message: 'Request sent to staff successfully!' });
+        res.status(200).json({ success: true, message: `Request sent to ${department} successfully!` });
     } catch (error) {
         console.error('Order error:', error);
         res.status(500).json({ error: error.message });
@@ -211,7 +210,7 @@ app.get('/api/orders', async (req, res) => {
         let values = [];
 
         if (deptFilter) {
-            if (deptFilter.toLowerCase() === 'kitchen' || deptFilter.toLowerCase() === 'f&b') {
+            if (deptFilter.toLowerCase() === 'kitchen' || deptFilter.toLowerCase() === 'fnb') {
                 query = 'SELECT * FROM orders WHERE department ILIKE $1 OR department ILIKE $2 ORDER BY id DESC';
                 values = ['%kitchen%', '%f&b%'];
             } else {
@@ -251,9 +250,25 @@ app.post('/api/orders/status', async (req, res) => {
 });
 
 // ==========================================
+// BACKWARD-COMPATIBLE SHORTCUT ROUTES
+// ==========================================
+// This ensures old links like /kitchen, /spa, /housekeeping never show Cannot GET
+const shortcutDepts = ['kitchen', 'housekeeping', 'frontoffice', 'maintenance', 'fnb', 'spa', 'laundry', 'valet'];
+shortcutDepts.forEach(shortcut => {
+    app.get(`/${shortcut}`, (req, res) => {
+        let realName = shortcut.toUpperCase();
+        if (shortcut === 'kitchen' || shortcut === 'fnb') realName = 'Kitchen / F&B';
+        if (shortcut === 'housekeeping') realName = 'Housekeeping';
+        if (shortcut === 'frontoffice') realName = 'Front Office';
+        if (shortcut === 'maintenance') realName = 'Maintenance';
+        if (shortcut === 'spa') realName = 'Spa';
+        res.redirect(`/staff?dept=${encodeURIComponent(realName)}`);
+    });
+});
+
+// ==========================================
 // UNIVERSAL DYNAMIC STAFF DASHBOARD ROUTE
 // ==========================================
-// This single route handles ANY department created by the manager automatically!
 app.get('/staff', (req, res) => {
     const deptName = req.query.dept || 'Staff';
     res.send(`
@@ -275,7 +290,7 @@ app.get('/staff', (req, res) => {
         <body>
             <div class="container">
                 <a href="/admin.html">← Back to Admin Panel</a>
-                <h1 id="deptTitle">${deptName} Department Staff View</h1>
+                <h1 id="deptTitle">${deptName} Dashboard</h1>
                 <div id="deptOrders">Loading live requests...</div>
             </div>
             <script>
