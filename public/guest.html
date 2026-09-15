@@ -25,7 +25,7 @@
             <span style="color: #4ea8de;">Instant Service & Ordering</span>
         </div>
 
-        <input type="text" id="searchInput" placeholder="Search keyword (e.g. fish, coffee, towel, ac)..." oninput="filterCatalog()">
+        <input type="text" id="searchInput" placeholder="Search keyword (e.g. fish, towel, ac, coffee)..." oninput="filterCatalog()">
 
         <div id="catalogContainer">Loading menus and services...</div>
     </div>
@@ -40,54 +40,81 @@
         let allDepartments = [];
         let cart = [];
 
+        // Built-in standard hotel services so guests can always request them
+        const defaultDepartments = [
+            { name: 'Housekeeping', services: ['Extra Towel', 'Bed Linen Change', 'Room Cleaning', 'Toiletries Refill'] },
+            { name: 'Maintenance', services: ['AC Not Cooling', 'Plumbing / Leaking Tap', 'Electrical / Light Repair', 'TV / Remote Issue'] },
+            { name: 'Front Office', services: ['Express Checkout', 'Wake-up Call', 'Luggage Assistance', 'Taxi Booking'] }
+        ];
+
         async function loadData() {
             try {
                 const res = await fetch('/api/data');
                 const data = await res.json();
                 allMenus = data.menus || [];
-                allDepartments = data.departments || [];
+                
+                // Merge database departments with default departments if missing
+                const dbDepts = data.departments || [];
+                const mergedDeptsMap = new Map();
+                
+                defaultDepartments.forEach(d => mergedDeptsMap.set(d.name.toLowerCase(), d));
+                dbDepts.forEach(d => mergedDeptsMap.set(d.name.toLowerCase(), d));
+                
+                allDepartments = Array.from(mergedDeptsMap.values());
                 renderAll(allMenus, allDepartments);
             } catch (err) {
                 document.getElementById('catalogContainer').innerHTML = '<p style="color:#ff6b6b; text-align:center;">Error loading catalog data.</p>';
             }
         }
 
+        // Clean up weird PDF backticks and formatting artifacts
+        function cleanText(text) {
+            if (!text) return '';
+            return text
+                .replace(/`/g, '₹') // Replace weird backticks with proper Rupee symbol if it's pricing
+                .replace(/[\u0000-\u001F\u007F-\u009F]/g, "") // Remove control chars
+                .trim();
+        }
+
         function renderAll(menus, depts) {
             const container = document.getElementById('catalogContainer');
             container.innerHTML = '';
 
-            // Render Custom Departments & Services
+            // Render Departments (Housekeeping, Maintenance, Front Office, etc.)
             depts.forEach(dept => {
                 let itemsHTML = '';
                 const services = dept.services || [];
                 services.forEach(service => {
+                    const cleanedService = cleanText(service);
                     itemsHTML += `
                         <div class="item-row">
-                            <span>${service}</span>
-                            <button onclick="addToCart('${dept.name}', '${service}')">Select +</button>
+                            <span>${cleanedService}</span>
+                            <button onclick="addToCart('${dept.name}', '${cleanedService}')">Select +</button>
                         </div>
                     `;
                 });
                 container.innerHTML += `
                     <div class="section-card">
                         <h3 style="color:#4ea8de; margin-top:0;">${dept.name}</h3>
-                        ${itemsHTML || '<p style="color:#a0aec0; font-size:14px;">No services listed.</p>'}
+                        ${itemsHTML}
                     </div>
                 `;
             });
 
-            // Render Uploaded Menus from Database
+            // Render Uploaded Menus from Database (Cleaned up)
             menus.forEach(menu => {
                 let linesHTML = '';
                 const lines = (menu.content || '').split('\n').filter(l => l.trim().length > 2);
                 lines.forEach(line => {
-                    const cleanLine = line.trim().replace(/'/g, "");
-                    linesHTML += `
-                        <div class="item-row">
-                            <span>${cleanLine}</span>
-                            <button onclick="addToCart('Kitchen / F&B', '${cleanLine}')">Select +</button>
-                        </div>
-                    `;
+                    const cleanedLine = cleanText(line);
+                    if (cleanedLine) {
+                        linesHTML += `
+                            <div class="item-row">
+                                <span>${cleanedLine}</span>
+                                <button onclick="addToCart('Kitchen / F&B', '${cleanedLine.replace(/'/g, "")}')">Select +</button>
+                            </div>
+                        `;
+                    }
                 });
                 container.innerHTML += `
                     <div class="section-card">
@@ -107,7 +134,7 @@
 
             const filteredDepts = allDepartments.map(dept => {
                 const matched = (dept.services || []).filter(s => s.toLowerCase().includes(query));
-                return matched.length > 0 ? { ...dept, services: matched } : null;
+                return matched.length > 0 || dept.name.toLowerCase().includes(query) ? { ...dept, services: matched.length > 0 ? matched : dept.services } : null;
             }).filter(Boolean);
 
             const filteredMenus = allMenus.map(menu => {
@@ -126,7 +153,7 @@
 
         async function submitOrder() {
             if (cart.length === 0) return;
-            const instructions = prompt('Any special instructions? (e.g. send immediately, less spicy):', '') || 'None';
+            const instructions = prompt('Any special instructions? (e.g. send immediately, urgent):', '') || 'None';
             
             const targetDept = cart[0].department;
             const itemNames = cart.map(c => c.item);
