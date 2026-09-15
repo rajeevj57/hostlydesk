@@ -6,7 +6,7 @@ const fs = require('fs');
 const path = require('path');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 10000;
 
 // Middleware
 app.use(express.json());
@@ -15,11 +15,10 @@ app.use(express.static(path.join(__dirname, '../public')));
 // Multer setup for handling file uploads temporarily
 const upload = multer({ dest: 'uploads/' });
 
-// Database Setup (Supabase / PostgreSQL) - Forced IPv4 (family: 4) to bypass Render IPv6 network restriction
+// Database Setup (Supabase Pooler) - Configured for IPv4 compatibility on Render
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
-    ssl: { rejectUnauthorized: false },
-    family: 4
+    ssl: { rejectUnauthorized: false }
 });
 
 pool.connect((err, client, release) => {
