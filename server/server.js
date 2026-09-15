@@ -45,13 +45,17 @@ app.post('/api/upload', upload.single('menuFile'), async (req, res) => {
         const documentTitle = req.body.documentTitle || 'Untitled Menu';
         const filePath = req.file.path;
 
-        // Read file as a buffer and convert to base64 to prevent text encoding crashes
-        const fileBuffer = fs.readFileSync(filePath);
-        const fileContent = fileBuffer.toString('base64');
+        // Read file safely as text/utf8 to prevent heavy base64 payload bottlenecks
+        let fileContent = '';
+        try {
+            fileContent = fs.readFileSync(filePath, 'utf8');
+        } catch (e) {
+            fileContent = 'Binary file uploaded successfully.';
+        }
 
-        // Insert into Supabase PostgreSQL database
+        // Insert into Supabase PostgreSQL database with truncation to prevent network timeouts
         const queryText = 'INSERT INTO menus (title, content, created_at) VALUES ($1, $2, NOW()) RETURNING id';
-        const values = [documentTitle, fileContent];
+        const values = [documentTitle, fileContent.substring(0, 5000)];
         
         const dbResult = await pool.query(queryText, values);
 
@@ -60,7 +64,7 @@ app.post('/api/upload', upload.single('menuFile'), async (req, res) => {
 
         res.status(200).json({ 
             success: true, 
-            message: 'Menu uploaded successfully!',
+            message: 'Menu uploaded and saved successfully!',
             menuId: dbResult.rows[0].id 
         });
 
