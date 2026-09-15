@@ -6,101 +6,135 @@
     <title>HostlyDesk - Guest Portal</title>
     <style>
         body { font-family: Arial, sans-serif; background-color: #0d1b2a; color: #fff; margin: 0; padding: 15px; }
-        .container { max-width: 600px; margin: 0 auto; background: #1b263b; padding: 20px; border-radius: 8px; }
+        .container { max-width: 600px; margin: 0 auto; background: #1b263b; padding: 20px; border-radius: 8px; margin-bottom: 90px; }
         h1 { color: #4ea8de; text-align: center; font-size: 22px; }
-        .room-bar { background: #22223b; padding: 10px; border-radius: 6px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; }
+        .room-bar { background: #22223b; padding: 10px; border-radius: 6px; margin-bottom: 15px; display: flex; justify-content: space-between; }
         input[type="text"] { width: 100%; padding: 12px; background: #0d1b2a; border: 1px solid #415a77; color: #fff; border-radius: 4px; box-sizing: border-box; font-size: 16px; margin-bottom: 15px; }
-        .item-card { background: #22223b; padding: 12px; border-radius: 6px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #415a77; }
-        button { padding: 8px 14px; background: #1d3557; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        .section-card { background: #22223b; padding: 15px; border-radius: 6px; margin-bottom: 15px; border: 1px solid #415a77; }
+        .item-row { display: flex; justify-content: space-between; align-items: center; background: #0d1b2a; padding: 10px; margin-top: 8px; border-radius: 4px; font-size: 14px; }
+        button { padding: 6px 14px; background: #1d3557; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
         button:hover { background: #457b9d; }
-        .cart-bar { position: fixed; bottom: 0; left: 0; right: 0; background: #1d3557; padding: 15px; text-align: center; border-top: 2px solid #4ea8de; }
+        .cart-bar { position: fixed; bottom: 0; left: 0; right: 0; background: #1d3557; padding: 15px; text-align: center; border-top: 2px solid #4ea8de; display: none; z-index: 100; }
     </style>
 </head>
 <body>
-
-    <div class="container" style="margin-bottom: 70px;">
-        <h1>Welcome Guest</h1>
+    <div class="container">
+        <h1>HostlyDesk Guest Portal</h1>
         <div class="room-bar">
             <span>Room No: <strong>101</strong></span>
-            <span style="color: #4ea8de;">HostlyDesk Service</span>
+            <span style="color: #4ea8de;">Instant Service & Ordering</span>
         </div>
 
-        <h3>Search Menus & Services</h3>
-        <input type="text" id="searchInput" placeholder="Type keyword (e.g. coffee, starter, towel, ac)..." oninput="filterCatalog()">
+        <input type="text" id="searchInput" placeholder="Search keyword (e.g. fish, coffee, towel, ac)..." oninput="filterCatalog()">
 
         <div id="catalogContainer">Loading menus and services...</div>
     </div>
 
-    <div class="cart-bar" id="cartBar" style="display:none;">
-        <span id="cartCount">0 items selected</span> 
-        <button onclick="submitOrder()" style="background: #2a9d8f; margin-left: 15px; font-weight: bold;">Send Request / Order</button>
+    <div class="cart-bar" id="cartBar">
+        <span id="cartCount" style="font-size: 16px;">0 items selected</span> 
+        <button onclick="submitOrder()" style="background: #2a9d8f; margin-left: 15px;">Send Request to Staff</button>
     </div>
 
     <script>
         let allMenus = [];
+        let allDepartments = [];
         let cart = [];
 
         async function loadData() {
             const res = await fetch('/api/data');
             const data = await res.json();
             allMenus = data.menus;
-            renderCatalog(allMenus);
+            allDepartments = data.departments;
+            renderAll(allMenus, allDepartments);
         }
 
-        function renderCatalog(menus) {
+        function renderAll(menus, depts) {
             const container = document.getElementById('catalogContainer');
-            if(menus.length === 0) {
-                container.innerHTML = '<p style="color:#a0aec0; text-align:center;">No menus or hotel guides uploaded yet by admin.</p>';
-                return;
-            }
             container.innerHTML = '';
-            menus.forEach(m => {
-                const card = document.createElement('div');
-                card.style.marginBottom = '20px';
-                card.innerHTML = `
-                    <h4 style="color:#4ea8de; margin-bottom:5px;">${m.title}</h4>
-                    <div style="background:#0d1b2a; padding:10px; border-radius:4px; font-size:14px; white-space:pre-wrap; max-height:150px; overflow-y:auto;">${m.content}</div>
+
+            // Render Custom Departments & Services first
+            depts.forEach(dept => {
+                let itemsHTML = '';
+                dept.services.forEach(service => {
+                    itemsHTML += `
+                        <div class="item-row">
+                            <span>${service}</span>
+                            <button onclick="addToCart('${dept.name}', '${service}')">Select +</button>
+                        </div>
+                    `;
+                });
+                container.innerHTML += `
+                    <div class="section-card">
+                        <h3 style="color:#4ea8de; margin-top:0;">${dept.name}</h3>
+                        ${itemsHTML}
+                    </div>
                 `;
-                container.appendChild(card);
+            });
+
+            // Render Uploaded Menus (Splitting text lines into clickable items)
+            menus.forEach(menu => {
+                let linesHTML = '';
+                const lines = menu.content.split('\n').filter(l => l.trim().length > 2);
+                lines.forEach(line => {
+                    linesHTML += `
+                        <div class="item-row">
+                            <span>${line.trim()}</span>
+                            <button onclick="addToCart('Kitchen / F&B', '${line.trim().replace(/'/g, "")}')">Select +</button>
+                        </div>
+                    `;
+                });
+                container.innerHTML += `
+                    <div class="section-card">
+                        <h3 style="color:#4ea8de; margin-top:0;">Menu: ${menu.title}</h3>
+                        <div style="max-height: 350px; overflow-y: auto;">${linesHTML}</div>
+                    </div>
+                `;
             });
         }
 
         function filterCatalog() {
             const query = document.getElementById('searchInput').value.toLowerCase();
-            if(!query) {
-                renderCatalog(allMenus);
+            if (!query) {
+                renderAll(allMenus, allDepartments);
                 return;
             }
-            const filtered = allMenus.map(m => {
-                const lines = m.content.split('\n').filter(l => l.toLowerCase().includes(query));
-                return lines.length > 0 ? { title: m.title, content: lines.join('\n') } : null;
+
+            // Filter departments
+            const filteredDepts = allDepartments.map(dept => {
+                const matched = dept.services.filter(s => s.toLowerCase().includes(query));
+                return matched.length > 0 ? { ...dept, services: matched } : null;
             }).filter(Boolean);
 
-            const container = document.getElementById('catalogContainer');
-            if(filtered.length === 0) {
-                container.innerHTML = '<p style="color:#a0aec0; text-align:center;">No matching items found for your keyword.</p>';
-            } else {
-                renderCatalog(filtered);
-            }
+            // Filter menus
+            const filteredMenus = allMenus.map(menu => {
+                const lines = menu.content.split('\n').filter(l => l.toLowerCase().includes(query));
+                return lines.length > 0 ? { ...menu, content: lines.join('\n') } : null;
+            }).filter(Boolean);
+
+            renderAll(filteredMenus, filteredDepts);
         }
 
-        // Quick request helper for testing specific requests
-        function addToCart(itemText) {
-            cart.push(itemText);
+        function addToCart(deptName, itemName) {
+            cart.push({ department: deptName, item: itemName });
             document.getElementById('cartBar').style.display = 'block';
             document.getElementById('cartCount').textContent = cart.length + ' item(s) selected';
         }
 
         async function submitOrder() {
-            const promptText = prompt('Any special instructions? (e.g. Less spicy, send immediately):', '');
+            if (cart.length === 0) return;
+            const instructions = prompt('Any special instructions? (e.g. send immediately, less spicy):', '') || 'None';
+            
+            const targetDept = cart[0].department;
+            const itemNames = cart.map(c => c.item);
+
             const res = await fetch('/api/orders', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({
                     roomNumber: '101',
-                    department: 'Kitchen / Housekeeping',
-                    items: cart.length > 0 ? cart : ['General Search Request'],
-                    instructions: promptText || 'None'
+                    department: targetDept,
+                    items: itemNames,
+                    instructions: instructions
                 })
             });
             const result = await res.json();
