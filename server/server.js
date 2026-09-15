@@ -3,6 +3,7 @@ const { Pool } = require('pg');
 const multer = require('multer');
 const fs = require('fs');
 const path = require('path');
+const pdfParse = require('pdf-parse');
 
 const app = express();
 const port = process.env.PORT || 10000;
@@ -60,7 +61,7 @@ const upload = multer({
     limits: { fileSize: 10 * 1024 * 1024 } 
 });
 
-// --- ROUTE 1: Upload and parse menu files ---
+// --- ROUTE 1: Upload, Parse PDF/Text, and Save Menu ---
 app.post('/api/upload', upload.single('menuFile'), async (req, res) => {
     try {
         if (!req.file) {
@@ -69,24 +70,32 @@ app.post('/api/upload', upload.single('menuFile'), async (req, res) => {
 
         const documentTitle = req.body.documentTitle || 'Untitled Menu';
         const filePath = req.file.path;
+        const originalName = req.file.originalname.toLowerCase();
 
         let fileContent = '';
-        try {
+
+        // Check if the file is a PDF and parse it using pdf-parse
+        if (originalName.endsWith('.pdf')) {
+            const dataBuffer = fs.readFileSync(filePath);
+            const parsedPdf = await pdfParse(dataBuffer);
+            fileContent = parsedPdf.text; // Extracts the actual text content of the PDF
+        } else {
+            // Read standard text, csv, or txt files directly
             fileContent = fs.readFileSync(filePath, 'utf8');
-        } catch (e) {
-            fileContent = 'Binary file uploaded successfully.';
         }
 
+        // Insert into Supabase PostgreSQL database with truncation safeguard
         const queryText = 'INSERT INTO menus (title, content, created_at) VALUES ($1, $2, NOW()) RETURNING id';
         const values = [documentTitle, fileContent.substring(0, 5000)];
         
         const dbResult = await pool.query(queryText, values);
 
+        // Clean up uploaded temporary file
         fs.unlinkSync(filePath);
 
         res.status(200).json({ 
             success: true, 
-            message: 'Menu uploaded and saved successfully!',
+            message: 'Menu uploaded, parsed, and saved successfully!',
             menuId: dbResult.rows[0].id 
         });
 
