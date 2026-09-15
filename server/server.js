@@ -68,7 +68,7 @@ const upload = multer({
     limits: { fileSize: 10 * 1024 * 1024 } 
 });
 
-// 1. Upload & Parse Menu/Document (Saved Permanently to Database)
+// 1. Upload & Parse Menu/Document
 app.post('/api/upload', upload.single('menuFile'), async (req, res) => {
     try {
         if (!req.file) {
@@ -101,7 +101,31 @@ app.post('/api/upload', upload.single('menuFile'), async (req, res) => {
     }
 });
 
-// 2. Create Department & Services (Saved Permanently to Database)
+// Delete Menu Route
+app.delete('/api/menus/:id', async (req, res) => {
+    try {
+        const menuId = req.params.id;
+        await pool.query('DELETE FROM menus WHERE id = $1', [menuId]);
+        res.json({ success: true, message: 'Menu deleted successfully!' });
+    } catch (error) {
+        console.error('Delete menu error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Delete Department Route
+app.delete('/api/departments/:id', async (req, res) => {
+    try {
+        const deptId = req.params.id;
+        await pool.query('DELETE FROM departments WHERE id = $1', [deptId]);
+        res.json({ success: true, message: 'Department deleted successfully!' });
+    } catch (error) {
+        console.error('Delete department error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// 2. Create Department & Services (Dynamic)
 app.post('/api/departments', async (req, res) => {
     try {
         const { departmentName, services } = req.body;
@@ -123,20 +147,29 @@ app.post('/api/departments', async (req, res) => {
     }
 });
 
-// 3. Get All Menus and Departments for Guest View
+// 3. Get All Menus and Departments
 app.get('/api/data', async (req, res) => {
     try {
         const menuResult = await pool.query('SELECT * FROM menus ORDER BY id DESC');
         const deptResult = await pool.query('SELECT * FROM departments ORDER BY id ASC');
         
         let depts = deptResult.rows;
+        // Seed default foundational departments if none exist in DB yet
         if (depts.length === 0) {
-            depts = [
+            const defaults = [
                 { name: 'Kitchen / F&B', services: ['Tea / Coffee', 'Starter: Soup', 'Main Course: Paneer Handi', 'Dessert: Ice Cream'] },
                 { name: 'Housekeeping', services: ['Extra Towel', 'Bed Linen Change', 'Room Cleaning'] },
                 { name: 'Front Office', services: ['Express Checkout', 'Wake-up Call', 'Luggage Assistance'] },
                 { name: 'Maintenance', services: ['AC Not Cooling', 'Plumbing Issue', 'Electrical Repair'] }
             ];
+            for (let d of defaults) {
+                await pool.query(
+                    `INSERT INTO departments (name, services, created_at) VALUES ($1, $2, NOW()) ON CONFLICT (name) DO NOTHING`,
+                    [d.name, d.services]
+                );
+            }
+            const refreshed = await pool.query('SELECT * FROM departments ORDER BY id ASC');
+            depts = refreshed.rows;
         }
 
         res.json({ success: true, menus: menuResult.rows, departments: depts });
@@ -146,11 +179,14 @@ app.get('/api/data', async (req, res) => {
     }
 });
 
-// 4. Guest Places Order (Automatically Syncs Kitchen & F&B)
+// 4. Guest Places Order (Dynamic Routing)
 app.post('/api/orders', async (req, res) => {
     try {
         let { roomNumber, department, items, instructions } = req.body;
         
+        if (!department) department = 'General';
+
+        // Keep Kitchen & F&B unified if needed
         if (department.toLowerCase().includes('kitchen') || department.toLowerCase().includes('f&b')) {
             department = 'Kitchen / F&B';
         }
@@ -175,7 +211,7 @@ app.get('/api/orders', async (req, res) => {
         let values = [];
 
         if (deptFilter) {
-            if (deptFilter.toLowerCase() === 'kitchen' || deptFilter.toLowerCase() === 'fnb') {
+            if (deptFilter.toLowerCase() === 'kitchen' || deptFilter.toLowerCase() === 'f&b') {
                 query = 'SELECT * FROM orders WHERE department ILIKE $1 OR department ILIKE $2 ORDER BY id DESC';
                 values = ['%kitchen%', '%f&b%'];
             } else {
@@ -214,74 +250,79 @@ app.post('/api/orders/status', async (req, res) => {
     }
 });
 
-// Department Dynamic Pages Route
-const validDepts = ['kitchen', 'housekeeping', 'frontoffice', 'maintenance', 'fnb', 'spa'];
-validDepts.forEach(dept => {
-    app.get(`/${dept}`, (req, res) => {
-        res.send(`
-            <!DOCTYPE html>
-            <html lang="en">
-            <head>
-                <meta charset="UTF-8">
-                <title>HostlyDesk - ${dept.toUpperCase()} Dashboard</title>
-                <style>
-                    body { font-family: Arial, sans-serif; background: #0d1b2a; color: #fff; padding: 30px; }
-                    .container { max-width: 800px; margin: 0 auto; background: #1b263b; padding: 30px; border-radius: 8px; border: 1px solid #415a77; }
-                    h1 { color: #4ea8de; text-transform: uppercase; text-align: center; }
-                    .order-card { background: #22223b; padding: 15px; margin-bottom: 15px; border-radius: 6px; border-left: 5px solid #4ea8de; }
-                    button { padding: 6px 12px; background: #1d3557; color: #fff; border: none; border-radius: 4px; cursor: pointer; margin-right: 5px; }
-                    button:hover { background: #457b9d; }
-                    a { color: #4ea8de; display: inline-block; margin-bottom: 20px; text-decoration: none; }
-                </style>
-            </head>
-            <body>
-                <div class="container">
-                    <a href="/admin.html">← Back to Admin Panel</a>
-                    <h1>${dept} Department Staff View</h1>
-                    <div id="deptOrders">Loading live requests...</div>
-                </div>
-                <script>
-                    async function loadDeptOrders() {
-                        const res = await fetch('/api/orders?dept=${dept}');
-                        const data = await res.json();
-                        const container = document.getElementById('deptOrders');
-                        if(data.orders.length === 0) {
-                            container.innerHTML = '<p style="text-align:center; color:#a0aec0;">No pending requests from rooms currently.</p>';
-                            return;
-                        }
-                        container.innerHTML = '';
-                        data.orders.forEach(o => {
-                            const card = document.createElement('div');
-                            card.className = 'order-card';
-                            card.innerHTML = \`
-                                <h3>Room: <b>\${o.roomNumber}</b> <span style="font-size:14px; float:right; color:#a0aec0;">\${o.time}</span></h3>
-                                <p><strong>Items/Services:</strong> \${o.items.join(', ')}</p>
-                                <p><strong>Instructions:</strong> \${o.instructions}</p>
-                                <p><strong>Status:</strong> <span style="color: #4ea8de;">\${o.status}</span></p>
-                                <div style="margin-top:10px;">
-                                    <button onclick="updateStatus(\${o.id}, 'Pending')">Pending</button>
-                                    <button onclick="updateStatus(\${o.id}, 'In Progress')">In Progress</button>
-                                    <button onclick="updateStatus(\${o.id}, 'Complete')">Complete</button>
-                                </div>
-                            \`;
-                            container.appendChild(card);
-                        });
+// ==========================================
+// UNIVERSAL DYNAMIC STAFF DASHBOARD ROUTE
+// ==========================================
+// This single route handles ANY department created by the manager automatically!
+app.get('/staff', (req, res) => {
+    const deptName = req.query.dept || 'Staff';
+    res.send(`
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <title>HostlyDesk - ${deptName} Dashboard</title>
+            <style>
+                body { font-family: Arial, sans-serif; background: #0d1b2a; color: #fff; padding: 30px; }
+                .container { max-width: 800px; margin: 0 auto; background: #1b263b; padding: 30px; border-radius: 8px; border: 1px solid #415a77; }
+                h1 { color: #4ea8de; text-transform: uppercase; text-align: center; }
+                .order-card { background: #22223b; padding: 15px; margin-bottom: 15px; border-radius: 6px; border-left: 5px solid #4ea8de; }
+                button { padding: 6px 12px; background: #1d3557; color: #fff; border: none; border-radius: 4px; cursor: pointer; margin-right: 5px; }
+                button:hover { background: #457b9d; }
+                a { color: #4ea8de; display: inline-block; margin-bottom: 20px; text-decoration: none; }
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <a href="/admin.html">← Back to Admin Panel</a>
+                <h1 id="deptTitle">${deptName} Department Staff View</h1>
+                <div id="deptOrders">Loading live requests...</div>
+            </div>
+            <script>
+                const urlParams = new URLSearchParams(window.location.search);
+                const currentDept = urlParams.get('dept') || 'Kitchen / F&B';
+                document.getElementById('deptTitle').textContent = currentDept + ' Dashboard';
+
+                async function loadDeptOrders() {
+                    const res = await fetch('/api/orders?dept=' + encodeURIComponent(currentDept));
+                    const data = await res.json();
+                    const container = document.getElementById('deptOrders');
+                    if(data.orders.length === 0) {
+                        container.innerHTML = '<p style="text-align:center; color:#a0aec0;">No pending requests from rooms currently.</p>';
+                        return;
                     }
-                    async function updateStatus(id, status) {
-                        await fetch('/api/orders/status', {
-                            method: 'POST',
-                            headers: {'Content-Type': 'application/json'},
-                            body: JSON.stringify({ orderId: id, status: status })
-                        });
-                        loadDeptOrders();
-                    }
-                    setInterval(loadDeptOrders, 3000);
+                    container.innerHTML = '';
+                    data.orders.forEach(o => {
+                        const card = document.createElement('div');
+                        card.className = 'order-card';
+                        card.innerHTML = \`
+                            <h3>Room: <b>\${o.roomNumber}</b> <span style="font-size:14px; float:right; color:#a0aec0;">\${o.time}</span></h3>
+                            <p><strong>Items/Services:</strong> \${o.items.join(', ')}</p>
+                            <p><strong>Instructions:</strong> \${o.instructions}</p>
+                            <p><strong>Status:</strong> <span style="color: #4ea8de;">\${o.status}</span></p>
+                            <div style="margin-top:10px;">
+                                <button onclick="updateStatus(\${o.id}, 'Pending')">Pending</button>
+                                <button onclick="updateStatus(\${o.id}, 'In Progress')">In Progress</button>
+                                <button onclick="updateStatus(\${o.id}, 'Complete')">Complete</button>
+                            </div>
+                        \`;
+                        container.appendChild(card);
+                    });
+                }
+                async function updateStatus(id, status) {
+                    await fetch('/api/orders/status', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({ orderId: id, status: status })
+                    });
                     loadDeptOrders();
-                </script>
-            </body>
-            </html>
-        `);
-    });
+                }
+                setInterval(loadDeptOrders, 3000);
+                loadDeptOrders();
+            </script>
+        </body>
+        </html>
+    `);
 });
 
 const server = app.listen(port, () => {
