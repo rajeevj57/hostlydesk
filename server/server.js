@@ -12,7 +12,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, '../public')));
 
-// PostgreSQL Connection Pool using Supabase Pooler
+// PostgreSQL Connection Pool using Supabase Pooler (Transaction port 6543)
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
     ssl: {
@@ -29,8 +29,11 @@ pool.query('SELECT NOW()', (err, res) => {
     }
 });
 
-// Configure Multer for file uploads
-const upload = multer({ dest: 'uploads/' });
+// Configure Multer for file uploads with a 10MB limit
+const upload = multer({ 
+    dest: 'uploads/',
+    limits: { fileSize: 10 * 1024 * 1024 } 
+});
 
 // Upload and parse route
 app.post('/api/upload', upload.single('menuFile'), async (req, res) => {
@@ -42,7 +45,7 @@ app.post('/api/upload', upload.single('menuFile'), async (req, res) => {
         const documentTitle = req.body.documentTitle || 'Untitled Menu';
         const filePath = req.file.path;
 
-        // Read uploaded file content (supports text/csv or basic parsing logic)
+        // Read uploaded file content
         const fileContent = fs.readFileSync(filePath, 'utf8');
 
         // Insert into Supabase PostgreSQL database
@@ -66,6 +69,9 @@ app.post('/api/upload', upload.single('menuFile'), async (req, res) => {
     }
 });
 
-app.listen(port, () => {
+const server = app.listen(port, () => {
     console.log(`Server is running on port ${port}`);
 });
+
+// Increase server timeout to 5 minutes (300000ms) to prevent timeout errors on large PDF uploads
+server.setTimeout(300000);
