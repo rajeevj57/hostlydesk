@@ -41,9 +41,9 @@ pool.query('SELECT NOW()', async (err, res) => {
                     created_at TIMESTAMP DEFAULT NOW()
                 );
             `);
-            // Ensure services column exists even if table was already created previously
             await pool.query(`
                 ALTER TABLE departments ADD COLUMN IF NOT EXISTS services TEXT[];
+                ALTER TABLE departments ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT NOW();
             `);
             await pool.query(`
                 CREATE TABLE IF NOT EXISTS orders (
