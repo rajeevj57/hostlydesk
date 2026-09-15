@@ -65,10 +65,14 @@
             }
         }
 
+        // Clean up weird PDF text formatting and automatically space out stuck prices
         function cleanText(text) {
             if (!text) return '';
             return text
                 .replace(/`/g, '₹')
+                // Automatically add clean spacing if numbers/prices are stuck directly to letters
+                .replace(/([0-9₹]+)([a-zA-Z])/g, '$1 $2')
+                .replace(/([a-zA-Z])([0-9₹]+)/g, '$1 $2')
                 .replace(/[\u0000-\u001F\u007F-\u009F]/g, "")
                 .trim();
         }
