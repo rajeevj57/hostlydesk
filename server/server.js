@@ -45,7 +45,7 @@ app.post('/api/upload', upload.single('menuFile'), async (req, res) => {
         const documentTitle = req.body.documentTitle || 'Untitled Menu';
         const filePath = req.file.path;
 
-        // Read file as a buffer to safely handle PDFs and convert to base64
+        // Read file as a buffer and convert to base64 to prevent text encoding crashes
         const fileBuffer = fs.readFileSync(filePath);
         const fileContent = fileBuffer.toString('base64');
 
@@ -74,5 +74,5 @@ const server = app.listen(port, () => {
     console.log(`Server is running on port ${port}`);
 });
 
-// Increase server timeout to 5 minutes (300000ms) to prevent timeout errors on large PDF uploads
+// Increase server timeout to 5 minutes (300000ms) to prevent timeouts
 server.setTimeout(300000);
