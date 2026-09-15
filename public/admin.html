@@ -29,7 +29,7 @@
             background: #22223b;
             padding: 20px;
             border-radius: 6px;
-            margin-bottom: 20px;
+            margin-bottom: 25px;
             border: 1px solid #415a77;
         }
         label {
@@ -45,6 +45,7 @@
             border: 1px solid #415a77;
             color: #fff;
             border-radius: 4px;
+            box-sizing: border-box;
         }
         button {
             width: 100%;
@@ -60,9 +61,9 @@
         button:hover {
             background: #457b9d;
         }
-        #statusMessage {
+        .status-message {
             text-align: center;
-            margin-top: 15px;
+            margin-top: 10px;
             font-weight: bold;
             color: #4ea8de;
         }
@@ -73,7 +74,7 @@
     <div class="container">
         <h1>HostlyDesk Admin Panel</h1>
 
-        <!-- Upload Master Menu Form -->
+        <!-- 1. Upload Master Menu Form -->
         <div class="card">
             <h3>Upload Master Menu / Document</h3>
             <form id="uploadForm">
@@ -83,26 +84,38 @@
                 <label for="menuFile">Select PDF, TXT, or CSV File</label>
                 <input type="file" id="menuFile" name="menuFile" required>
 
-                <button type="submit" id="submitBtn">Upload & Parse</button>
+                <button type="submit" id="submitUploadBtn">Upload & Parse</button>
             </form>
-            <div id="statusMessage"></div>
+            <div id="uploadStatus" class="status-message"></div>
+        </div>
+
+        <!-- 2. Manage Custom Departments & Services Form -->
+        <div class="card">
+            <h3>Manage Custom Departments & Services</h3>
+            <form id="departmentForm">
+                <label for="departmentName">New Department Name (e.g., Spa & Wellness, Valet, Laundry)</label>
+                <input type="text" id="departmentName" name="departmentName" placeholder="Spa & Wellness" required>
+
+                <button type="submit" id="submitDeptBtn">Create Department</button>
+            </form>
+            <div id="deptStatus" class="status-message"></div>
         </div>
     </div>
 
     <script>
+        // Handle Menu Upload Form Submission
         document.getElementById('uploadForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             
             const formData = new FormData(e.target);
-            const statusDiv = document.getElementById('statusMessage');
-            const submitBtn = document.getElementById('submitBtn');
+            const statusDiv = document.getElementById('uploadStatus');
+            const submitBtn = document.getElementById('submitUploadBtn');
             
             submitBtn.disabled = true;
             statusDiv.textContent = 'Uploading & Parsing... Please wait...';
 
-            // Create an AbortController with a 5-minute timeout (300000ms) to prevent browser drops
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 300000);
+            const timeoutId = setTimeout(() => controller.abort(), 300000); // 5 minutes
 
             try {
                 const response = await fetch('/api/upload', {
@@ -112,7 +125,6 @@
                 });
 
                 clearTimeout(timeoutId);
-
                 const result = await response.json();
 
                 if (response.ok) {
@@ -128,6 +140,42 @@
                 } else {
                     alert('Upload failed due to a network error: ' + error.message);
                 }
+            } finally {
+                submitBtn.disabled = false;
+                statusDiv.textContent = '';
+            }
+        });
+
+        // Handle Department Creation Form Submission
+        document.getElementById('departmentForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const departmentNameInput = document.getElementById('departmentName').value;
+            const statusDiv = document.getElementById('deptStatus');
+            const submitBtn = document.getElementById('submitDeptBtn');
+            
+            submitBtn.disabled = true;
+            statusDiv.textContent = 'Creating department...';
+
+            try {
+                const response = await fetch('/api/departments', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ departmentName: departmentNameInput })
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    alert('Success: ' + (result.message || 'Department created successfully!'));
+                    location.reload();
+                } else {
+                    alert('Creation failed: ' + (result.error || 'Unknown server error'));
+                }
+            } catch (error) {
+                alert('Request failed due to a network error: ' + error.message);
             } finally {
                 submitBtn.disabled = false;
                 statusDiv.textContent = '';
