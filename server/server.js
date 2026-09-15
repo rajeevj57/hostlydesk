@@ -45,8 +45,9 @@ app.post('/api/upload', upload.single('menuFile'), async (req, res) => {
         const documentTitle = req.body.documentTitle || 'Untitled Menu';
         const filePath = req.file.path;
 
-        // Read uploaded file content
-        const fileContent = fs.readFileSync(filePath, 'utf8');
+        // Read file as a buffer to safely handle PDFs and convert to base64
+        const fileBuffer = fs.readFileSync(filePath);
+        const fileContent = fileBuffer.toString('base64');
 
         // Insert into Supabase PostgreSQL database
         const queryText = 'INSERT INTO menus (title, content, created_at) VALUES ($1, $2, NOW()) RETURNING id';
@@ -59,7 +60,7 @@ app.post('/api/upload', upload.single('menuFile'), async (req, res) => {
 
         res.status(200).json({ 
             success: true, 
-            message: 'Menu uploaded and parsed successfully!',
+            message: 'Menu uploaded successfully!',
             menuId: dbResult.rows[0].id 
         });
 
