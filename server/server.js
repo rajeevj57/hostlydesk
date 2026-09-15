@@ -1,3 +1,6 @@
+const dns = require('dns');
+dns.setDefaultResultOrder('ipv4first'); // Forces Node.js to prefer IPv4 and bypass Render's IPv6 restriction
+
 const express = require('express');
 const { Pool } = require('pg');
 const multer = require('multer');
@@ -15,7 +18,7 @@ app.use(express.static(path.join(__dirname, '../public')));
 // Multer setup for handling file uploads temporarily
 const upload = multer({ dest: 'uploads/' });
 
-// Database Setup (Supabase Pooler) - Configured for IPv4 compatibility on Render
+// Database Setup (Supabase / PostgreSQL)
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
     ssl: { rejectUnauthorized: false }
