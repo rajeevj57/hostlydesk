@@ -197,22 +197,30 @@ app.post('/api/orders', async (req, res) => {
     }
 });
 
-// 5. Get Orders for Staff Dashboards (Flexible Case-Insensitive Matching)
+// 5. Get Orders for Staff Dashboards (Bulletproof Matching for F&B, Housekeeping, Front Office, Maintenance, Spa, etc.)
 app.get('/api/orders', async (req, res) => {
     try {
-        const deptFilter = req.query.dept;
+        const deptFilter = req.query.dept || '';
+        const lowerFilter = deptFilter.toLowerCase().trim();
+
         let query = 'SELECT * FROM orders ORDER BY id DESC';
         let values = [];
 
-        if (deptFilter) {
-            const lowerFilter = deptFilter.toLowerCase();
-            if (lowerFilter.includes('kitchen') || lowerFilter.includes('f&b') || lowerFilter.includes('food') || lowerFilter.includes('coffee')) {
-                query = 'SELECT * FROM orders WHERE department ILIKE $1 OR department ILIKE $2 OR department ILIKE $3 OR department ILIKE $4 ORDER BY id DESC';
-                values = ['%kitchen%', '%f&b%', '%food%', '%coffee%'];
-            } else {
-                query = 'SELECT * FROM orders WHERE department ILIKE $1 ORDER BY id DESC';
-                values = [`%${deptFilter}%`];
-            }
+        if (lowerFilter.includes('kitchen') || lowerFilter.includes('f&b') || lowerFilter.includes('food') || lowerFilter.includes('coffee')) {
+            query = 'SELECT * FROM orders WHERE LOWER(department) LIKE $1 OR LOWER(department) LIKE $2 OR LOWER(department) LIKE $3 OR LOWER(department) LIKE $4 ORDER BY id DESC';
+            values = ['%kitchen%', '%f&b%', '%food%', '%coffee%'];
+        } else if (lowerFilter.includes('housekeeping')) {
+            query = 'SELECT * FROM orders WHERE LOWER(department) LIKE $1 ORDER BY id DESC';
+            values = ['%housekeeping%'];
+        } else if (lowerFilter.includes('front') || lowerFilter.includes('office')) {
+            query = 'SELECT * FROM orders WHERE LOWER(department) LIKE $1 OR LOWER(department) LIKE $2 ORDER BY id DESC';
+            values = ['%front office%', '%frontoffice%'];
+        } else if (lowerFilter.includes('maintenance')) {
+            query = 'SELECT * FROM orders WHERE LOWER(department) LIKE $1 ORDER BY id DESC';
+            values = ['%maintenance%'];
+        } else if (lowerFilter) {
+            query = 'SELECT * FROM orders WHERE LOWER(department) LIKE $1 ORDER BY id DESC';
+            values = [`%${lowerFilter}%`];
         }
 
         const result = await pool.query(query, values);
@@ -246,7 +254,7 @@ app.post('/api/orders/status', async (req, res) => {
 });
 
 // ==========================================
-// BACKWARD-COMPATIBLE .HTML & SHORTCUT ROUTES (WITH PROPER SPACING)
+// BACKWARD-COMPATIBLE .HTML & SHORTCUT ROUTES
 // ==========================================
 app.get('/:dept.html', (req, res) => {
     let deptKey = req.params.dept.toLowerCase();
