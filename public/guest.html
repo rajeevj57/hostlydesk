@@ -25,7 +25,7 @@
             <span style="color: #4ea8de;">Instant Service & Ordering</span>
         </div>
 
-        <input type="text" id="searchInput" placeholder="Search keyword (e.g. fish, towel, ac, coffee)..." oninput="filterCatalog()">
+        <input type="text" id="searchInput" placeholder="Search keyword (e.g. fish, towel, ac, massage)..." oninput="filterCatalog()">
 
         <div id="catalogContainer">Loading menus and services...</div>
     </div>
@@ -40,7 +40,6 @@
         let allDepartments = [];
         let cart = [];
 
-        // Built-in standard hotel services so guests can always request them
         const defaultDepartments = [
             { name: 'Housekeeping', services: ['Extra Towel', 'Bed Linen Change', 'Room Cleaning', 'Toiletries Refill'] },
             { name: 'Maintenance', services: ['AC Not Cooling', 'Plumbing / Leaking Tap', 'Electrical / Light Repair', 'TV / Remote Issue'] },
@@ -53,7 +52,6 @@
                 const data = await res.json();
                 allMenus = data.menus || [];
                 
-                // Merge database departments with default departments if missing
                 const dbDepts = data.departments || [];
                 const mergedDeptsMap = new Map();
                 
@@ -67,12 +65,11 @@
             }
         }
 
-        // Clean up weird PDF backticks and formatting artifacts
         function cleanText(text) {
             if (!text) return '';
             return text
-                .replace(/`/g, '₹') // Replace weird backticks with proper Rupee symbol if it's pricing
-                .replace(/[\u0000-\u001F\u007F-\u009F]/g, "") // Remove control chars
+                .replace(/`/g, '₹')
+                .replace(/[\u0000-\u001F\u007F-\u009F]/g, "")
                 .trim();
         }
 
@@ -80,7 +77,6 @@
             const container = document.getElementById('catalogContainer');
             container.innerHTML = '';
 
-            // Render Departments (Housekeeping, Maintenance, Front Office, etc.)
             depts.forEach(dept => {
                 let itemsHTML = '';
                 const services = dept.services || [];
@@ -101,7 +97,6 @@
                 `;
             });
 
-            // Render Uploaded Menus from Database (Cleaned up)
             menus.forEach(menu => {
                 let linesHTML = '';
                 const lines = (menu.content || '').split('\n').filter(l => l.trim().length > 2);
@@ -170,7 +165,7 @@
                     })
                 });
                 const result = await res.json();
-                alert(result.message);
+                alert(result.message); // Displays exact dynamic message like "Request sent to Housekeeping successfully!"
                 cart = [];
                 document.getElementById('cartBar').style.display = 'none';
             } catch (err) {
