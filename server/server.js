@@ -178,7 +178,7 @@ app.get('/api/data', async (req, res) => {
     }
 });
 
-// 4. Guest Places Order (Exact Department Matching)
+// 4. Guest Places Order
 app.post('/api/orders', async (req, res) => {
     try {
         let { roomNumber, department, items, instructions } = req.body;
@@ -197,7 +197,7 @@ app.post('/api/orders', async (req, res) => {
     }
 });
 
-// 5. Get Orders for Staff Dashboards (Fixed Exact Match Filtering)
+// 5. Get Orders for Staff Dashboards (Flexible Case-Insensitive Matching)
 app.get('/api/orders', async (req, res) => {
     try {
         const deptFilter = req.query.dept;
@@ -205,10 +205,11 @@ app.get('/api/orders', async (req, res) => {
         let values = [];
 
         if (deptFilter) {
-            // If viewing Kitchen or F&B, show both to make sure orders aren't missed
-            if (deptFilter.toLowerCase().includes('kitchen') || deptFilter.toLowerCase().includes('f&b')) {
-                query = 'SELECT * FROM orders WHERE department ILIKE $1 OR department ILIKE $2 OR department ILIKE $3 ORDER BY id DESC';
-                values = ['%kitchen%', '%f&b%', '%coffee shop%'];
+            const lowerFilter = deptFilter.toLowerCase();
+            // If viewing Kitchen or F&B, catch food/beverage/kitchen variations
+            if (lowerFilter.includes('kitchen') || lowerFilter.includes('f&b') || lowerFilter.includes('food') || lowerFilter.includes('coffee')) {
+                query = 'SELECT * FROM orders WHERE department ILIKE $1 OR department ILIKE $2 OR department ILIKE $3 OR department ILIKE $4 ORDER BY id DESC';
+                values = ['%kitchen%', '%f&b%', '%food%', '%coffee%'];
             } else {
                 query = 'SELECT * FROM orders WHERE department ILIKE $1 ORDER BY id DESC';
                 values = [`%${deptFilter}%`];
@@ -246,8 +247,16 @@ app.post('/api/orders/status', async (req, res) => {
 });
 
 // ==========================================
-// BACKWARD-COMPATIBLE SHORTCUT ROUTES
+// BACKWARD-COMPATIBLE .HTML & SHORTCUT ROUTES
 // ==========================================
+// Prevents any "Cannot GET /spa.html" errors permanently
+app.get('/:dept.html', (req, res) => {
+    let deptName = req.params.dept;
+    if (deptName === 'fnb' || deptName === 'kitchen') deptName = 'Kitchen / F&B';
+    else deptName = deptName.charAt(0).toUpperCase() + deptName.slice(1);
+    res.redirect(`/staff?dept=${encodeURIComponent(deptName)}`);
+});
+
 const shortcutDepts = ['kitchen', 'housekeeping', 'frontoffice', 'maintenance', 'fnb', 'spa', 'laundry', 'valet'];
 shortcutDepts.forEach(shortcut => {
     app.get(`/${shortcut}`, (req, res) => {
@@ -286,7 +295,7 @@ app.get('/staff', (req, res) => {
             <div class="container">
                 <a href="/admin.html">← Back to Admin Panel</a>
                 <h1 id="deptTitle">${deptName} Dashboard</h1>
-                <div id="deptOrders">Loading live requests...</div>
+                <div id="deptOrders">Listening for orders...</div>
             </div>
             <script>
                 const urlParams = new URLSearchParams(window.location.search);
@@ -294,31 +303,35 @@ app.get('/staff', (req, res) => {
                 document.getElementById('deptTitle').textContent = currentDept + ' Dashboard';
 
                 async function loadDeptOrders() {
-                    const res = await fetch('/api/orders?dept=' + encodeURIComponent(currentDept));
-                    const data = await res.json();
-                    const container = document.getElementById('deptOrders');
-                    if(data.orders.length === 0) {
-                        container.innerHTML = '<p style="text-align:center; color:#a0aec0;">No pending requests from rooms currently.</p>';
-                        return;
+                    try {
+                        const res = await fetch('/api/orders?dept=' + encodeURIComponent(currentDept));
+                        const data = await res.json();
+                        const container = document.getElementById('deptOrders');
+                        if(!data.orders || data.orders.length === 0) {
+                            container.innerHTML = '<p style="text-align:center; color:#a0aec0;">No pending requests from rooms currently.</p>';
+                            return;
+                        }
+                        container.innerHTML = '';
+                        data.orders.forEach(o => {
+                            const card = document.createElement('div');
+                            card.className = 'order-card';
+                            card.innerHTML = \`
+                                <h3>Room: <b>\${o.roomNumber}</b> <span style="font-size:14px; float:right; color:#a0aec0;">\${o.time}</span></h3>
+                                <p><strong>Department:</strong> \${o.department}</p>
+                                <p><strong>Items/Services:</strong> \${o.items.join(', ')}</p>
+                                <p><strong>Instructions:</strong> \${o.instructions}</p>
+                                <p><strong>Status:</strong> <span style="color: #4ea8de;">\${o.status}</span></p>
+                                <div style="margin-top:10px;">
+                                    <button onclick="updateStatus(\${o.id}, 'Pending')">Pending</button>
+                                    <button onclick="updateStatus(\${o.id}, 'In Progress')">In Progress</button>
+                                    <button onclick="updateStatus(\${o.id}, 'Complete')">Complete</button>
+                                </div>
+                            \`;
+                            container.appendChild(card);
+                        });
+                    } catch (err) {
+                        console.error('Polling error:', err);
                     }
-                    container.innerHTML = '';
-                    data.orders.forEach(o => {
-                        const card = document.createElement('div');
-                        card.className = 'order-card';
-                        card.innerHTML = \`
-                            <h3>Room: <b>\${o.roomNumber}</b> <span style="font-size:14px; float:right; color:#a0aec0;">\${o.time}</span></h3>
-                            <p><strong>Department:</strong> \${o.department}</p>
-                            <p><strong>Items/Services:</strong> \${o.items.join(', ')}</p>
-                            <p><strong>Instructions:</strong> \${o.instructions}</p>
-                            <p><strong>Status:</strong> <span style="color: #4ea8de;">\${o.status}</span></p>
-                            <div style="margin-top:10px;">
-                                <button onclick="updateStatus(\${o.id}, 'Pending')">Pending</button>
-                                <button onclick="updateStatus(\${o.id}, 'In Progress')">In Progress</button>
-                                <button onclick="updateStatus(\${o.id}, 'Complete')">Complete</button>
-                            </div>
-                        \`;
-                        container.appendChild(card);
-                    });
                 }
                 async function updateStatus(id, status) {
                     await fetch('/api/orders/status', {
