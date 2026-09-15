@@ -1,6 +1,3 @@
-const dns = require('dns');
-dns.setDefaultResultOrder('ipv4first'); // Forces Node.js to prefer IPv4 and bypass Render's IPv6 restriction
-
 const express = require('express');
 const { Pool } = require('pg');
 const multer = require('multer');
@@ -11,14 +8,11 @@ const path = require('path');
 const app = express();
 const PORT = process.env.PORT || 10000;
 
-// Middleware
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '../public')));
 
-// Multer setup for handling file uploads temporarily
 const upload = multer({ dest: 'uploads/' });
 
-// Database Setup (Supabase / PostgreSQL)
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
     ssl: { rejectUnauthorized: false }
@@ -34,7 +28,6 @@ pool.connect((err, client, release) => {
     }
 });
 
-// Initialize required database tables if they don't exist
 async function initializeTables() {
     try {
         await pool.query(`
@@ -72,7 +65,6 @@ async function initializeTables() {
     }
 }
 
-// API: Upload and Parse Master Document (PDF / CSV) with Full Error Trace
 app.post('/api/upload-document', upload.single('menuFile'), async (req, res) => {
     try {
         if (!req.file) {
@@ -103,7 +95,6 @@ app.post('/api/upload-document', upload.single('menuFile'), async (req, res) => 
             return res.status(400).json({ success: false, error: 'Could not extract text from this PDF.' });
         }
 
-        // Ensure "Kitchen / F&B" department exists to hold menu items
         let deptResult = await pool.query("SELECT id FROM departments WHERE name = 'Kitchen / F&B'");
         let deptId;
         if (deptResult.rows.length === 0) {
@@ -139,7 +130,6 @@ app.post('/api/upload-document', upload.single('menuFile'), async (req, res) => 
     }
 });
 
-// API: Get Departments
 app.get('/api/departments', async (req, res) => {
     try {
         const result = await pool.query('SELECT * FROM departments ORDER BY id ASC');
@@ -150,7 +140,6 @@ app.get('/api/departments', async (req, res) => {
     }
 });
 
-// API: Create Department
 app.post('/api/departments', async (req, res) => {
     const { name } = req.body;
     try {
@@ -162,7 +151,6 @@ app.post('/api/departments', async (req, res) => {
     }
 });
 
-// API: Get Department Services with Department Names for Admin Table
 app.get('/api/department-services', async (req, res) => {
     try {
         const result = await pool.query(`
@@ -178,7 +166,6 @@ app.get('/api/department-services', async (req, res) => {
     }
 });
 
-// API: Add Manual Service
 app.post('/api/department-services', async (req, res) => {
     const { department_id, name, price } = req.body;
     try {
@@ -193,7 +180,6 @@ app.post('/api/department-services', async (req, res) => {
     }
 });
 
-// API: Post Orders
 app.post('/api/orders', async (req, res) => {
     const { room, department, items } = req.body;
     try {
