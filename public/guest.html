@@ -41,21 +41,26 @@
         let cart = [];
 
         async function loadData() {
-            const res = await fetch('/api/data');
-            const data = await res.json();
-            allMenus = data.menus;
-            allDepartments = data.departments;
-            renderAll(allMenus, allDepartments);
+            try {
+                const res = await fetch('/api/data');
+                const data = await res.json();
+                allMenus = data.menus || [];
+                allDepartments = data.departments || [];
+                renderAll(allMenus, allDepartments);
+            } catch (err) {
+                document.getElementById('catalogContainer').innerHTML = '<p style="color:#ff6b6b; text-align:center;">Error loading catalog data.</p>';
+            }
         }
 
         function renderAll(menus, depts) {
             const container = document.getElementById('catalogContainer');
             container.innerHTML = '';
 
-            // Render Custom Departments & Services first
+            // Render Custom Departments & Services
             depts.forEach(dept => {
                 let itemsHTML = '';
-                dept.services.forEach(service => {
+                const services = dept.services || [];
+                services.forEach(service => {
                     itemsHTML += `
                         <div class="item-row">
                             <span>${service}</span>
@@ -66,27 +71,28 @@
                 container.innerHTML += `
                     <div class="section-card">
                         <h3 style="color:#4ea8de; margin-top:0;">${dept.name}</h3>
-                        ${itemsHTML}
+                        ${itemsHTML || '<p style="color:#a0aec0; font-size:14px;">No services listed.</p>'}
                     </div>
                 `;
             });
 
-            // Render Uploaded Menus (Splitting text lines into clickable items)
+            // Render Uploaded Menus from Database
             menus.forEach(menu => {
                 let linesHTML = '';
-                const lines = menu.content.split('\n').filter(l => l.trim().length > 2);
+                const lines = (menu.content || '').split('\n').filter(l => l.trim().length > 2);
                 lines.forEach(line => {
+                    const cleanLine = line.trim().replace(/'/g, "");
                     linesHTML += `
                         <div class="item-row">
-                            <span>${line.trim()}</span>
-                            <button onclick="addToCart('Kitchen / F&B', '${line.trim().replace(/'/g, "")}')">Select +</button>
+                            <span>${cleanLine}</span>
+                            <button onclick="addToCart('Kitchen / F&B', '${cleanLine}')">Select +</button>
                         </div>
                     `;
                 });
                 container.innerHTML += `
                     <div class="section-card">
                         <h3 style="color:#4ea8de; margin-top:0;">Menu: ${menu.title}</h3>
-                        <div style="max-height: 350px; overflow-y: auto;">${linesHTML}</div>
+                        <div style="max-height: 350px; overflow-y: auto;">${linesHTML || '<p style="color:#a0aec0; font-size:14px;">No text found in document.</p>'}</div>
                     </div>
                 `;
             });
@@ -99,15 +105,13 @@
                 return;
             }
 
-            // Filter departments
             const filteredDepts = allDepartments.map(dept => {
-                const matched = dept.services.filter(s => s.toLowerCase().includes(query));
+                const matched = (dept.services || []).filter(s => s.toLowerCase().includes(query));
                 return matched.length > 0 ? { ...dept, services: matched } : null;
             }).filter(Boolean);
 
-            // Filter menus
             const filteredMenus = allMenus.map(menu => {
-                const lines = menu.content.split('\n').filter(l => l.toLowerCase().includes(query));
+                const lines = (menu.content || '').split('\n').filter(l => l.toLowerCase().includes(query));
                 return lines.length > 0 ? { ...menu, content: lines.join('\n') } : null;
             }).filter(Boolean);
 
@@ -127,20 +131,24 @@
             const targetDept = cart[0].department;
             const itemNames = cart.map(c => c.item);
 
-            const res = await fetch('/api/orders', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({
-                    roomNumber: '101',
-                    department: targetDept,
-                    items: itemNames,
-                    instructions: instructions
-                })
-            });
-            const result = await res.json();
-            alert(result.message);
-            cart = [];
-            document.getElementById('cartBar').style.display = 'none';
+            try {
+                const res = await fetch('/api/orders', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        roomNumber: '101',
+                        department: targetDept,
+                        items: itemNames,
+                        instructions: instructions
+                    })
+                });
+                const result = await res.json();
+                alert(result.message);
+                cart = [];
+                document.getElementById('cartBar').style.display = 'none';
+            } catch (err) {
+                alert('Failed to send order. Please try again.');
+            }
         }
 
         loadData();
