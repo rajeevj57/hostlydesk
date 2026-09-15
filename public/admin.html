@@ -3,180 +3,137 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HostlyDesk - Admin Panel</title>
+    <title>HostlyDesk Admin Panel</title>
     <style>
         body {
             font-family: Arial, sans-serif;
-            background-color: #0f172a;
-            color: #f8fafc;
+            background-color: #0d1b2a;
+            color: #ffffff;
             margin: 0;
             padding: 20px;
         }
         .container {
             max-width: 800px;
             margin: 0 auto;
-            background: #1e293b;
+            background: #1b263b;
             padding: 30px;
-            border-radius: 12px;
+            border-radius: 8px;
             box-shadow: 0 4px 15px rgba(0,0,0,0.3);
         }
         h1 {
             text-align: center;
-            color: #38bdf8;
+            color: #4ea8de;
             margin-bottom: 30px;
         }
-        .section {
-            background: #0f172a;
+        .card {
+            background: #22223b;
             padding: 20px;
-            border-radius: 8px;
-            margin-bottom: 25px;
-            border: 1px solid #334155;
-        }
-        h2 {
-            font-size: 1.2rem;
-            color: #38bdf8;
-            margin-top: 0;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            border: 1px solid #415a77;
         }
         label {
             display: block;
             margin-bottom: 8px;
-            font-size: 0.9rem;
-            color: #94a3b8;
+            color: #e0e1dd;
         }
         input[type="text"], input[type="file"] {
             width: 100%;
             padding: 10px;
             margin-bottom: 15px;
-            background: #1e293b;
-            border: 1px solid #475569;
-            border-radius: 6px;
+            background: #0d1b2a;
+            border: 1px solid #415a77;
             color: #fff;
-            box-sizing: border-box;
+            border-radius: 4px;
         }
         button {
-            background: #0284c7;
+            width: 100%;
+            padding: 12px;
+            background: #1d3557;
             color: white;
             border: none;
-            padding: 10px 20px;
-            border-radius: 6px;
+            border-radius: 4px;
+            font-size: 16px;
             cursor: pointer;
-            font-weight: bold;
-            width: 100%;
-            transition: background 0.2s;
+            transition: background 0.3s;
         }
         button:hover {
-            background: #0369a1;
+            background: #457b9d;
         }
-        button:disabled {
-            background: #475569;
-            cursor: not-allowed;
+        #statusMessage {
+            text-align: center;
+            margin-top: 15px;
+            font-weight: bold;
+            color: #4ea8de;
         }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <h1>HostlyDesk Admin Panel</h1>
+    <div class="container">
+        <h1>HostlyDesk Admin Panel</h1>
 
-    <!-- Upload Master Document Section -->
-    <div class="section">
-        <h2>Upload Master Menu / Document</h2>
-        <form id="uploadForm">
-            <label for="documentTitle">Document Title (e.g., Room Service Menu, Spa Catalog)</label>
-            <input type="text" id="documentTitle" name="documentTitle" placeholder="Coffee-Shop" required>
+        <!-- Upload Master Menu Form -->
+        <div class="card">
+            <h3>Upload Master Menu / Document</h3>
+            <form id="uploadForm">
+                <label for="documentTitle">Document Title (e.g., Room Service Menu, Spa Catalog)</label>
+                <input type="text" id="documentTitle" name="documentTitle" placeholder="coffee shop" required>
 
-            <label for="menuFile">Select PDF or CSV File</label>
-            <input type="file" id="menuFile" name="menuFile" accept=".pdf,.csv" required>
+                <label for="menuFile">Select PDF, TXT, or CSV File</label>
+                <input type="file" id="menuFile" name="menuFile" required>
 
-            <button type="submit" id="uploadSubmitBtn">Upload File to Server</button>
-        </form>
+                <button type="submit" id="submitBtn">Upload & Parse</button>
+            </form>
+            <div id="statusMessage"></div>
+        </div>
     </div>
 
-    <!-- Manage Custom Departments & Services -->
-    <div class="section">
-        <h2>Manage Custom Departments & Services</h2>
-        <form id="departmentForm">
-            <label for="newDeptName">New Department Name (e.g., Spa & Wellness, Valet, Laundry)</label>
-            <input type="text" id="newDeptName" name="newDeptName" placeholder="Spa & Wellness" required>
-            <button type="submit" id="deptSubmitBtn">+ Create Department</button>
-        </form>
-    </div>
-</div>
+    <script>
+        document.getElementById('uploadForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = new FormData(e.target);
+            const statusDiv = document.getElementById('statusMessage');
+            const submitBtn = document.getElementById('submitBtn');
+            
+            submitBtn.disabled = true;
+            statusDiv.textContent = 'Uploading & Parsing... Please wait...';
 
-<script>
-document.getElementById('uploadForm').addEventListener('submit', async function(e) {
-    e.preventDefault();
-    
-    const formData = new FormData(this);
-    const submitBtn = document.getElementById('uploadSubmitBtn');
-    
-    if (submitBtn) {
-        submitBtn.disabled = true;
-        submitBtn.textContent = 'Uploading & Parsing... Please wait...';
-    }
+            // Create an AbortController with a 5-minute timeout (300000ms) to prevent browser drops
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 300000);
 
-    try {
-        const response = await fetch('/api/upload-document', {
-            method: 'POST',
-            body: formData
+            try {
+                const response = await fetch('/api/upload', {
+                    method: 'POST',
+                    body: formData,
+                    signal: controller.signal
+                });
+
+                clearTimeout(timeoutId);
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    alert('Success: ' + (result.message || 'Menu uploaded successfully!'));
+                    location.reload();
+                } else {
+                    alert('Upload failed: ' + (result.error || 'Unknown server error'));
+                }
+            } catch (error) {
+                clearTimeout(timeoutId);
+                if (error.name === 'AbortError') {
+                    alert('Upload timed out because the server took too long to respond.');
+                } else {
+                    alert('Upload failed due to a network error: ' + error.message);
+                }
+            } finally {
+                submitBtn.disabled = false;
+                statusDiv.textContent = '';
+            }
         });
-
-        const result = await response.json();
-
-        if (response.ok && result.success) {
-            alert(result.message || 'File uploaded and parsed successfully!');
-            location.reload();
-        } else {
-            alert('Upload failed: ' + (result.error || 'Unknown server error.'));
-        }
-    } catch (err) {
-        console.error('Upload network error:', err);
-        alert('Upload failed due to a network or connection timeout error.');
-    } finally {
-        if (submitBtn) {
-            submitBtn.disabled = false;
-            submitBtn.textContent = 'Upload File to Server';
-        }
-    }
-});
-
-document.getElementById('departmentForm').addEventListener('submit', async function(e) {
-    e.preventDefault();
-    
-    const name = document.getElementById('newDeptName').value;
-    const submitBtn = document.getElementById('deptSubmitBtn');
-    
-    if (submitBtn) {
-        submitBtn.disabled = true;
-        submitBtn.textContent = 'Creating...';
-    }
-
-    try {
-        const response = await fetch('/api/departments', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name })
-        });
-
-        const result = await response.json();
-
-        if (response.ok && result.success) {
-            alert('Department created successfully!');
-            location.reload();
-        } else {
-            alert('Failed: ' + (result.error || 'Department already exists.'));
-        }
-    } catch (err) {
-        console.error('Department network error:', err);
-        alert('Failed to connect to server.');
-    } finally {
-        if (submitBtn) {
-            submitBtn.disabled = false;
-            submitBtn.textContent = '+ Create Department';
-        }
-    }
-});
-</script>
+    </script>
 
 </body>
 </html>
