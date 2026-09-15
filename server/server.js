@@ -197,7 +197,7 @@ app.post('/api/orders', async (req, res) => {
     }
 });
 
-// 5. Get Orders for Staff Dashboards (Robust Space-Insensitive & Keyword Matching)
+// 5. Get Orders for Staff Dashboards (Exact & Case-Insensitive Match)
 app.get('/api/orders', async (req, res) => {
     try {
         const deptFilter = req.query.dept || '';
@@ -207,11 +207,10 @@ app.get('/api/orders', async (req, res) => {
         let values = [];
 
         if (lowerFilter.includes('kitchen') || lowerFilter.includes('f&b') || lowerFilter.includes('food') || lowerFilter.includes('coffee')) {
-            query = 'SELECT * FROM orders WHERE LOWER(department) ILIKE $1 OR LOWER(department) ILIKE $2 OR LOWER(department) ILIKE $3 OR LOWER(department) ILIKE $4 ORDER BY id DESC';
-            values = ['%kitchen%', '%f&b%', '%food%', '%coffee%'];
-        } else if (lowerFilter) {
-            query = 'SELECT * FROM orders WHERE LOWER(department) ILIKE $1 OR REPLACE(LOWER(department), \' \', \'\') ILIKE REPLACE($1, \' \', \'\') ORDER BY id DESC';
-            values = [`%${lowerFilter}%`];
+            query = "SELECT * FROM orders WHERE LOWER(department) LIKE '%kitchen%' OR LOWER(department) LIKE '%f&b%' OR LOWER(department) LIKE '%food%' ORDER BY id DESC";
+        } else if (deptFilter) {
+            query = 'SELECT * FROM orders WHERE LOWER(department) = LOWER($1) ORDER BY id DESC';
+            values = [deptFilter.trim()];
         }
 
         const result = await pool.query(query, values);
@@ -260,7 +259,7 @@ app.get('/:dept.html', (req, res) => {
     } else if (deptKey === 'maintenance') {
         deptName = 'Maintenance';
     } else if (deptKey === 'spa') {
-        deptName = 'Spa';
+        deptName = 'SPA'; // Matches exact database casing
     } else {
         deptName = deptKey.charAt(0).toUpperCase() + deptKey.slice(1);
     }
@@ -276,7 +275,7 @@ shortcutDepts.forEach(shortcut => {
         else if (shortcut === 'housekeeping') realName = 'Housekeeping';
         else if (shortcut === 'frontoffice' || shortcut === 'front-office') realName = 'Front Office';
         else if (shortcut === 'maintenance') realName = 'Maintenance';
-        else if (shortcut === 'spa') realName = 'Spa';
+        else if (shortcut === 'spa') realName = 'SPA';
 
         res.redirect(`/staff?dept=${encodeURIComponent(realName)}`);
     });
