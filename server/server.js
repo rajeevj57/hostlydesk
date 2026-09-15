@@ -178,17 +178,12 @@ app.get('/api/data', async (req, res) => {
     }
 });
 
-// 4. Guest Places Order (Accurate Department Routing)
+// 4. Guest Places Order (Exact Department Matching)
 app.post('/api/orders', async (req, res) => {
     try {
         let { roomNumber, department, items, instructions } = req.body;
         
         if (!department) department = 'General';
-
-        // Keep Kitchen and F&B unified
-        if (department.toLowerCase().includes('kitchen') || department.toLowerCase().includes('f&b')) {
-            department = 'Kitchen / F&B';
-        }
 
         await pool.query(
             `INSERT INTO orders (room_number, department, items, instructions, status, created_at) 
@@ -202,7 +197,7 @@ app.post('/api/orders', async (req, res) => {
     }
 });
 
-// 5. Get Orders for Staff Dashboards
+// 5. Get Orders for Staff Dashboards (Fixed Exact Match Filtering)
 app.get('/api/orders', async (req, res) => {
     try {
         const deptFilter = req.query.dept;
@@ -210,9 +205,10 @@ app.get('/api/orders', async (req, res) => {
         let values = [];
 
         if (deptFilter) {
-            if (deptFilter.toLowerCase() === 'kitchen' || deptFilter.toLowerCase() === 'fnb') {
-                query = 'SELECT * FROM orders WHERE department ILIKE $1 OR department ILIKE $2 ORDER BY id DESC';
-                values = ['%kitchen%', '%f&b%'];
+            // If viewing Kitchen or F&B, show both to make sure orders aren't missed
+            if (deptFilter.toLowerCase().includes('kitchen') || deptFilter.toLowerCase().includes('f&b')) {
+                query = 'SELECT * FROM orders WHERE department ILIKE $1 OR department ILIKE $2 OR department ILIKE $3 ORDER BY id DESC';
+                values = ['%kitchen%', '%f&b%', '%coffee shop%'];
             } else {
                 query = 'SELECT * FROM orders WHERE department ILIKE $1 ORDER BY id DESC';
                 values = [`%${deptFilter}%`];
@@ -252,11 +248,10 @@ app.post('/api/orders/status', async (req, res) => {
 // ==========================================
 // BACKWARD-COMPATIBLE SHORTCUT ROUTES
 // ==========================================
-// This ensures old links like /kitchen, /spa, /housekeeping never show Cannot GET
 const shortcutDepts = ['kitchen', 'housekeeping', 'frontoffice', 'maintenance', 'fnb', 'spa', 'laundry', 'valet'];
 shortcutDepts.forEach(shortcut => {
     app.get(`/${shortcut}`, (req, res) => {
-        let realName = shortcut.toUpperCase();
+        let realName = shortcut.charAt(0).toUpperCase() + shortcut.slice(1);
         if (shortcut === 'kitchen' || shortcut === 'fnb') realName = 'Kitchen / F&B';
         if (shortcut === 'housekeeping') realName = 'Housekeeping';
         if (shortcut === 'frontoffice') realName = 'Front Office';
@@ -312,6 +307,7 @@ app.get('/staff', (req, res) => {
                         card.className = 'order-card';
                         card.innerHTML = \`
                             <h3>Room: <b>\${o.roomNumber}</b> <span style="font-size:14px; float:right; color:#a0aec0;">\${o.time}</span></h3>
+                            <p><strong>Department:</strong> \${o.department}</p>
                             <p><strong>Items/Services:</strong> \${o.items.join(', ')}</p>
                             <p><strong>Instructions:</strong> \${o.instructions}</p>
                             <p><strong>Status:</strong> <span style="color: #4ea8de;">\${o.status}</span></p>
