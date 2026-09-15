@@ -18,7 +18,7 @@ const pool = new Pool({
     ssl: { rejectUnauthorized: false }
 });
 
-// Automatically create tables on startup if they don't exist
+// Automatically create tables and ensure columns exist on startup
 pool.query('SELECT NOW()', async (err, res) => {
     if (err) {
         console.error('Database connection error:', err.message);
@@ -41,6 +41,10 @@ pool.query('SELECT NOW()', async (err, res) => {
                     created_at TIMESTAMP DEFAULT NOW()
                 );
             `);
+            // Ensure services column exists even if table was already created previously
+            await pool.query(`
+                ALTER TABLE departments ADD COLUMN IF NOT EXISTS services TEXT[];
+            `);
             await pool.query(`
                 CREATE TABLE IF NOT EXISTS orders (
                     id SERIAL PRIMARY KEY,
@@ -52,7 +56,7 @@ pool.query('SELECT NOW()', async (err, res) => {
                     created_at TIMESTAMP DEFAULT NOW()
                 );
             `);
-            console.log('Database tables verified/created successfully.');
+            console.log('Database tables verified/updated successfully.');
         } catch (tableErr) {
             console.error('Table creation error:', tableErr.message);
         }
@@ -147,7 +151,6 @@ app.post('/api/orders', async (req, res) => {
     try {
         let { roomNumber, department, items, instructions } = req.body;
         
-        // Ensure food/menu orders route properly for both Kitchen and F&B panels
         if (department.toLowerCase().includes('kitchen') || department.toLowerCase().includes('f&b')) {
             department = 'Kitchen / F&B';
         }
@@ -164,7 +167,7 @@ app.post('/api/orders', async (req, res) => {
     }
 });
 
-// 5. Get Orders for Staff Dashboards (Handles shared Kitchen/F&B syncing)
+// 5. Get Orders for Staff Dashboards
 app.get('/api/orders', async (req, res) => {
     try {
         const deptFilter = req.query.dept;
@@ -212,7 +215,7 @@ app.post('/api/orders/status', async (req, res) => {
 });
 
 // Department Dynamic Pages Route
-const validDepts = ['kitchen', 'housekeeping', 'frontoffice', 'maintenance', 'fnb'];
+const validDepts = ['kitchen', 'housekeeping', 'frontoffice', 'maintenance', 'fnb', 'spa'];
 validDepts.forEach(dept => {
     app.get(`/${dept}`, (req, res) => {
         res.send(`
