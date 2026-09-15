@@ -20,7 +20,7 @@
     <div class="container">
         <h1>HostlyDesk Admin Panel</h1>
 
-        <!-- Upload Master Menu -->
+        <!-- 1. Upload Master Menu -->
         <div class="card">
             <h3>Upload Master Menu / Document</h3>
             <form id="uploadForm">
@@ -33,7 +33,7 @@
             <div id="uploadStatus" class="status"></div>
         </div>
 
-        <!-- Manage Departments & Services -->
+        <!-- 2. Manage Departments & Services -->
         <div class="card">
             <h3>Manage Custom Departments & Services</h3>
             <form id="departmentForm">
@@ -50,33 +50,56 @@
     </div>
 
     <script>
+        // Handle Menu Upload Form
         document.getElementById('uploadForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const formData = new FormData(e.target);
             const status = document.getElementById('uploadStatus');
             status.textContent = 'Uploading & Parsing...';
-            const res = await fetch('/api/upload', { method: 'POST', body: formData });
-            const result = await res.json();
-            alert(result.message);
-            status.textContent = '';
-            location.reload();
+            
+            try {
+                const res = await fetch('/api/upload', { method: 'POST', body: formData });
+                const result = await res.json();
+                if (res.ok) {
+                    alert(result.message || 'Menu uploaded successfully!');
+                    location.reload();
+                } else {
+                    alert('Upload failed: ' + (result.error || 'Unknown error'));
+                }
+            } catch (err) {
+                alert('Network error during upload.');
+            } finally {
+                status.textContent = '';
+            }
         });
 
+        // Handle Department Creation Form
         document.getElementById('departmentForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const name = document.getElementById('departmentName').value;
             const services = document.getElementById('departmentServices').value;
             const status = document.getElementById('deptStatus');
             status.textContent = 'Creating department...';
-            const res = await fetch('/api/departments', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ departmentName: name, services: services })
-            });
-            const result = await res.json();
-            alert(result.message);
-            status.textContent = '';
-            location.reload();
+
+            try {
+                const res = await fetch('/api/departments', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ departmentName: name, services: services })
+                });
+                const result = await res.json();
+
+                if (res.ok) {
+                    alert(result.message || 'Department created successfully!');
+                    location.reload();
+                } else {
+                    alert('Failed: ' + (result.error || 'Unknown error'));
+                }
+            } catch (err) {
+                alert('Network error while creating department.');
+            } finally {
+                status.textContent = '';
+            }
         });
     </script>
 </body>
