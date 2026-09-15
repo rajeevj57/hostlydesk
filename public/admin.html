@@ -3,184 +3,180 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HostlyDesk - Manager Admin Dashboard</title>
+    <title>HostlyDesk - Admin Panel</title>
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 20px; background: #0f172a; color: #f8fafc; }
-        .container { max-width: 800px; margin: 0 auto; }
-        .card { background: #1e293b; padding: 20px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        h2 { margin-top: 0; color: #38bdf8; font-size: 20px; }
-        .form-group { margin-bottom: 15px; }
-        label { display: block; margin-bottom: 5px; font-size: 14px; color: #94a3b8; }
-        input, select, textarea { width: 100%; padding: 10px; border: 1px solid #475569; background: #0f172a; color: #fff; border-radius: 6px; box-sizing: border-box; }
-        button { background: #2563eb; color: white; border: none; padding: 10px 20px; border-radius: 6px; font-weight: bold; cursor: pointer; }
-        button:hover { background: #1d4ed8; }
-        .btn-green { background: #16a34a; }
-        .btn-green:hover { background: #15803d; }
-        table { width: 100%; margin-top: 10px; border-collapse: collapse; font-size: 14px; }
-        th, td { padding: 8px; text-align: left; border-bottom: 1px solid #334155; }
-        th { color: #94a3b8; }
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #0f172a;
+            color: #f8fafc;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: #1e293b;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+        h1 {
+            text-align: center;
+            color: #38bdf8;
+            margin-bottom: 30px;
+        }
+        .section {
+            background: #0f172a;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+            border: 1px solid #334155;
+        }
+        h2 {
+            font-size: 1.2rem;
+            color: #38bdf8;
+            margin-top: 0;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+            color: #94a3b8;
+        }
+        input[type="text"], input[type="file"] {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+            background: #1e293b;
+            border: 1px solid #475569;
+            border-radius: 6px;
+            color: #fff;
+            box-sizing: border-box;
+        }
+        button {
+            background: #0284c7;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            width: 100%;
+            transition: background 0.2s;
+        }
+        button:hover {
+            background: #0369a1;
+        }
+        button:disabled {
+            background: #475569;
+            cursor: not-allowed;
+        }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Hotel Admin Dashboard</h1>
-        <p style="color: #94a3b8; margin-bottom: 25px;">Manage your hotel menu documents, items, and custom operational departments.</p>
 
-        <!-- 1. Upload PDF / CSV Menu -->
-        <div class="card">
-            <h2>Upload Master Document / PDF / CSV</h2>
-            <form id="uploadForm" onsubmit="uploadDocument(event)">
-                <div class="form-group">
-                    <label>Document Title (e.g., Room Service Menu)</label>
-                    <input type="text" id="docTitle" required placeholder="Room Service Menu">
-                </div>
-                <div class="form-group">
-                    <label>Select PDF or CSV File</label>
-                    <input type="file" id="menuFile" accept=".pdf,.csv" required>
-                </div>
-                <button type="submit">Upload File to Server</button>
-            </form>
-        </div>
+<div class="container">
+    <h1>HostlyDesk Admin Panel</h1>
 
-        <!-- 2. Manage Dynamic Departments & Services -->
-        <div class="card">
-            <h2>Manage Custom Departments & Services</h2>
-            <form id="deptForm" onsubmit="createDepartment(event)">
-                <div class="form-group">
-                    <label>New Department Name (e.g., Spa & Wellness, Valet, Laundry)</label>
-                    <input type="text" id="deptName" required placeholder="Spa & Wellness">
-                </div>
-                <button type="submit" class="btn-green">+ Create Department</button>
-            </form>
+    <!-- Upload Master Document Section -->
+    <div class="section">
+        <h2>Upload Master Menu / Document</h2>
+        <form id="uploadForm">
+            <label for="documentTitle">Document Title (e.g., Room Service Menu, Spa Catalog)</label>
+            <input type="text" id="documentTitle" name="documentTitle" placeholder="Coffee-Shop" required>
 
-            <hr style="border: 0; border-top: 1px solid #334155; margin: 20px 0;">
+            <label for="menuFile">Select PDF or CSV File</label>
+            <input type="file" id="menuFile" name="menuFile" accept=".pdf,.csv" required>
 
-            <form id="serviceForm" onsubmit="addService(event)">
-                <div class="form-group">
-                    <label>Select Department</label>
-                    <select id="serviceDeptId" required>
-                        <option value="">-- Choose Department --</option>
-                    </select>
-                </div>
-                <div style="display: flex; gap: 10px;">
-                    <div class="form-group" style="flex: 2;">
-                        <label>Service Name (e.g., Body Massage, Head Wash)</label>
-                        <input type="text" id="serviceName" required placeholder="Body Massage">
-                    </div>
-                    <div class="form-group" style="flex: 1;">
-                        <label>Price (₹)</label>
-                        <input type="number" id="servicePrice" required placeholder="1200">
-                    </div>
-                </div>
-                <button type="submit">+ Add Service to Department</button>
-            </form>
-
-            <h3 style="font-size: 16px; margin-top: 20px; color: #38bdf8;">Existing Department Services</h3>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Department</th>
-                        <th>Service Name</th>
-                        <th>Price</th>
-                    </tr>
-                </thead>
-                <tbody id="servicesTableBody">
-                    <tr><td colspan="3" style="color: #64748b; text-align: center;">Loading services...</td></tr>
-                </tbody>
-            </table>
-        </div>
+            <button type="submit" id="uploadSubmitBtn">Upload File to Server</button>
+        </form>
     </div>
 
-    <script>
-        async function uploadDocument(e) {
-            e.preventDefault();
-            const title = document.getElementById('docTitle').value;
-            const fileInput = document.getElementById('menuFile').files[0];
+    <!-- Manage Custom Departments & Services -->
+    <div class="section">
+        <h2>Manage Custom Departments & Services</h2>
+        <form id="departmentForm">
+            <label for="newDeptName">New Department Name (e.g., Spa & Wellness, Valet, Laundry)</label>
+            <input type="text" id="newDeptName" name="newDeptName" placeholder="Spa & Wellness" required>
+            <button type="submit" id="deptSubmitBtn">+ Create Department</button>
+        </form>
+    </div>
+</div>
 
-            const formData = new FormData();
-            formData.append('title', title);
-            formData.append('menuFile', fileInput);
+<script>
+document.getElementById('uploadForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    const submitBtn = document.getElementById('uploadSubmitBtn');
+    
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Uploading & Parsing... Please wait...';
+    }
 
-            const res = await fetch('/api/upload-document', { method: 'POST', body: formData });
-            const data = await res.json();
-            if (data.success) {
-                alert(data.message);
-                document.getElementById('uploadForm').reset();
-            } else {
-                alert('Upload failed: ' + data.error);
-            }
+    try {
+        const response = await fetch('/api/upload-document', {
+            method: 'POST',
+            body: formData
+        });
+
+        const result = await response.json();
+
+        if (response.ok && result.success) {
+            alert(result.message || 'File uploaded and parsed successfully!');
+            location.reload();
+        } else {
+            alert('Upload failed: ' + (result.error || 'Unknown server error.'));
         }
-
-        async function loadDepartmentsAndServices() {
-            try {
-                const deptRes = await fetch('/api/departments');
-                const departments = await deptRes.json();
-                const select = document.getElementById('serviceDeptId');
-                select.innerHTML = '<option value="">-- Choose Department --</option>';
-                departments.forEach(d => {
-                    select.innerHTML += `<option value="${d.id}">${d.name}</option>`;
-                });
-
-                const servRes = await fetch('/api/department-services');
-                const services = await servRes.json();
-                const tbody = document.getElementById('servicesTableBody');
-                if (services.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="3" style="color: #64748b; text-align: center;">No custom services added yet.</td></tr>';
-                    return;
-                }
-
-                tbody.innerHTML = services.map(s => `
-                    <tr>
-                        <td><strong>${s.department_name}</strong></td>
-                        <td>${s.name}</td>
-                        <td>₹${s.price}</td>
-                    </tr>
-                `).join('');
-            } catch (err) {
-                console.error('Failed to load department data');
-            }
+    } catch (err) {
+        console.error('Upload network error:', err);
+        alert('Upload failed due to a network or connection timeout error.');
+    } finally {
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Upload File to Server';
         }
+    }
+});
 
-        async function createDepartment(e) {
-            e.preventDefault();
-            const name = document.getElementById('deptName').value;
-            const res = await fetch('/api/departments', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name })
-            });
-            const data = await res.json();
-            if (data.success) {
-                alert('Department created successfully!');
-                document.getElementById('deptName').value = '';
-                loadDepartmentsAndServices();
-            } else {
-                alert('Error: ' + data.error);
-            }
+document.getElementById('departmentForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const name = document.getElementById('newDeptName').value;
+    const submitBtn = document.getElementById('deptSubmitBtn');
+    
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Creating...';
+    }
+
+    try {
+        const response = await fetch('/api/departments', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name })
+        });
+
+        const result = await response.json();
+
+        if (response.ok && result.success) {
+            alert('Department created successfully!');
+            location.reload();
+        } else {
+            alert('Failed: ' + (result.error || 'Department already exists.'));
         }
-
-        async function addService(e) {
-            e.preventDefault();
-            const department_id = document.getElementById('serviceDeptId').value;
-            const name = document.getElementById('serviceName').value;
-            const price = document.getElementById('servicePrice').value;
-
-            const res = await fetch('/api/department-services', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ department_id, name, price })
-            });
-            const data = await res.json();
-            if (data.success) {
-                alert('Service added successfully!');
-                document.getElementById('serviceForm').reset();
-                loadDepartmentsAndServices();
-            } else {
-                alert('Error: ' + data.error);
-            }
+    } catch (err) {
+        console.error('Department network error:', err);
+        alert('Failed to connect to server.');
+    } finally {
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = '+ Create Department';
         }
+    }
+});
+</script>
 
-        loadDepartmentsAndServices();
-    </script>
 </body>
 </html>
